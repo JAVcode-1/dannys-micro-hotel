@@ -1,0 +1,109 @@
+---
+tags: [supabase, setup, phase-00, security, architecture]
+status: approved-platform-unconfigured
+version: 1.3
+updated: 2026-11-12
+---
+# 22 — Supabase Setup and Integration Plan
+
+> [!important] Status
+> **Supabase platform is selected by the project requester** as of 2026-11-12. This page is a **setup plan, not evidence of a created Supabase account, project, migrated database, enabled Auth provider, uploaded bucket, or deployed application**. Implement it phase by phase; do not mark tasks done without observed evidence.
+
+## A. What Supabase does in our architecture
+
+| Supabase product | Hotel use | Decision level |
+|---|---|---|
+| **PostgreSQL** | Durable source of truth for 15 physical rooms, packages, inventory claims, reservations, payments, reviews and audits | **Confirmed Supabase database platform** |
+| **Supabase Auth** | Individual staff accounts, registered guests and email OTP flows for guests without app accounts | **Recommended integration; configure in Phase 02** |
+| **Supabase Storage** | Private GCash proof screenshots; optionally a public bucket for hotel room photos and published hotel QR | **Recommended integration; configure in Phase 05 / 03** |
+| Supabase Realtime | Optional non-authoritative dashboard updates | **Deferred**; not required for Phase 01 or booking correctness |
+| Supabase Edge Functions | Optional supporting jobs | **Deferred**; the separate Express backend is retained |
+
+## B. Pre-coding checklist: first setup
+
+- [ ] Obtain access to a Supabase organization. **Do not share a password, token, secret key, or database URL in chat.**
+- [ ] Create a dedicated **development** Supabase project (not production). Record the project nickname, region, responsible owner and hosting budget **without recording credentials**.
+- [ ] Open **Project Dashboard → Connect**; choose a DB connection method supported by the planned Express host. For a persistent IPv6-capable backend, direct is appropriate; otherwise use **session pooler** on IPv4-only hosts.
+- [ ] Identify **Project URL** and **publishable API key** for the React Auth client (safe for public clients only with RLS). Store `SUPABASE_SECRET_KEY` and `DATABASE_URL` in backend secrets only.
+- [ ] Decide local workflow: (A) Supabase CLI + compatible Docker runtime for full local Auth/Storage/Postgres, or (B) a separate hosted dev project when local stack is impractical. Local DB install **is not mandatory** with hosted Supabase.
+- [ ] Agree on the migration workflow: SQL files under `supabase/migrations/`; no unmanaged manual production schema changes.
+
+**Exit evidence:** Screenshot or private note that the development project exists, CLI/config strategy chosen, and safe connectivity demonstrated **without exposing keys**.
+
+## C. Recommended environment placeholders
+
+```dotenv
+# frontend/.env.example — these are placeholders, not real secrets
+VITE_API_URL=http://localhost:4000/api/v1
+VITE_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_example_only
+
+# backend/.env.example — never expose these to the browser
+PORT=4000
+SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_example_only
+SUPABASE_SECRET_KEY=SERVER_ONLY_SET_IN_SECRET_MANAGER
+DATABASE_URL=SERVER_ONLY_POSTGRES_CONNECTION_STRING
+```
+
+- Commit **only** `.env.example`. Real `.env*` files must be ignored by Git.
+- Secret keys **bypass Row Level Security**; server authorization is mandatory for each protected operation.
+- Do not print sensitive headers, OTP tokens, raw guest identities or payment proof URLs in logs.
+
+## D. Phase 01: migration strategy
+
+- [ ] Create `supabase/` CLI config with `supabase init` **during coding F02**, not in this docs package.
+- [ ] Create first SQL migration in `supabase/migrations`; store only fictitious seed room codes until actual room identifiers are confirmed.
+- [ ] Run migrations against the **local/dev target only**; verify fresh reset and generated TypeScript types.
+- [ ] Preserve migration history and prohibit direct production schema experiments.
+- [ ] Use a dedicated PostgreSQL integration test target to test simultaneous holds and cross-channel booking constraints.
+
+**Note:** Current Supabase CLI docs describe target selection with `--remote` for hosted projects. Check your installed CLI version and confirm target before applying migrations; never execute destructive resets on production.
+
+## E. Phase 02: authentication
+
+- [ ] Use Supabase Auth managed credentials/sessions for individual staff (invite/approval only; never let public signup acquire Staff/Admin permission).
+- [ ] Add a `staff_accounts` table with `auth_user_id` reference and `active` state; every privileged action verifies both the Auth identity **and** active staff membership.
+- [ ] Plan email OTP for guests who don't maintain a hotel account; use Supabase Auth templates with a six-digit token and confirm actual OTP expiration/rate limits in dashboard. A managed Auth user ID can exist without a full **registered guest profile**.
+- [ ] Bind guest reservation access to verified email identity plus reservation ownership; public reference alone is insufficient.
+- [ ] Test stolen/replayed/expired OTP, revoked staff and horizontal access to another guest's reservation.
+
+## F. Phase 03/05: Storage and GCash proofs
+
+- [ ] Create `payment-proofs` as a **private** bucket, with MIME/size restrictions and retention policy.
+- [ ] Restrict guest upload to the appropriate reservation/payment review using signed policy or API-brokered upload; never permit guest listing of another guest's files.
+- [ ] Show payment-proof images to verified Staff/Admin using short-lived signed URLs issued only after authorization.
+- [ ] Keep hotel public room photos/GCash static QR separate from payment proofs; a `hotel-media` public-read bucket is optional, with writes restricted to staff.
+- [ ] Staff confirms payment only after checking the real GCash ledger and matching amount/reference; proof upload alone never confirms a booking.
+
+## G. Database and business logic boundaries
+
+- **All** guest and staff business reads/writes route through Express for consistent authorization and price/capacity rules.
+- For availability, reserve inventory in **one Postgres transaction** using lock ordering, hold lifecycle, potential physical allocation and overlap constraints. Never `SELECT` over HTTP then `INSERT` later as an apparently atomic decision.
+- Use App-specific roles, RLS policies for every exposed surface, structured audit records, idempotency keys, and safe retry behavior. Elevated database access is backend-only.
+- Keep immutable financial records and centavos; snapshots preserve booked rates even if staff later change catalog pricing.
+
+## H. Deployment and costs to verify
+
+- Separate dev/staging/production **projects**, not just a single project with a flag.
+- Supabase hosts the database and managed services, **not our standalone Node/Express server or Vite website by default**. Pick independent hosting in Phase 09.
+- Verify the current plan's database size, storage and bandwidth quotas, Auth email rate limits/custom SMTP, backups/restore options and available connection networking. Do not assume production backup/point-in-time recovery on free plans.
+
+## I. Acceptance checklist before calling Supabase connected
+
+- [ ] Supabase project and environment recorded by developer (without credential disclosure).
+- [ ] Dev migration successfully applied and safely repeatable.
+- [ ] API health check can reach dev database with no secret returned to frontend.
+- [ ] Auth demo confirms valid identity; invalid or revoked staff cannot use staff routes.
+- [ ] Private proof storage blocks anonymous/direct public access.
+- [ ] Concurrent capacity test succeeds with actual PostgreSQL transactions.
+
+## Official references
+
+- [Supabase database connections](https://supabase.com/docs/guides/database/connecting-to-postgres)
+- [Supabase local workflow and migrations](https://supabase.com/docs/guides/local-development/cli-workflows)
+- [Supabase Auth email OTP](https://supabase.com/docs/guides/auth/auth-email-passwordless)
+- [Supabase Storage access controls](https://supabase.com/docs/guides/storage/security/access-control)
+- [Supabase keys and privileges](https://supabase.com/docs/guides/getting-started/api-keys)
+
+See [[05-tech-stack]] · [[06-architecture]] · [[07-database-schema]] · [[21-before-coding-checklist]] · [[phases/01-foundation-and-tooling]].

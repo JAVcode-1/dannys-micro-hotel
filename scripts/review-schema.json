@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "lens": {"type": "string", "enum": ["correctness", "security", "quality"]},
+    "score": {"type": "integer", "minimum": 1, "maximum": 5},
+    "summary": {"type": "string"},
+    "files_reviewed": {"type": "array", "items": {"type": "string"}},
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "properties": {
+          "severity": {"type": "string", "enum": ["blocking", "major", "minor"]},
+          "file": {"type": "string"},
+          "issue": {"type": "string"},
+          "fix": {"type": "string"}
+        },
+        "required": ["severity", "file", "issue", "fix"]
+      }
+    },
+    "limitations": {"type": "array", "items": {"type": "string"}}
+  },
+  "required": ["lens", "score", "summary", "files_reviewed", "findings", "limitations"]
+}

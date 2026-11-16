@@ -1,0 +1,90 @@
+---
+tags: [requirements, source-of-truth]
+status: approved-baseline-with-pending-settings
+---
+# 02 — Business & Functional Requirements
+
+> [!important] Priority
+> These are the latest agreed rules. Older assumptions (such as a Family Executive 3-hour package, strict *standard* room capacity or pay-at-hotel online reservations) are superseded.
+
+## Property and packages
+
+| Category | Inventory | Duration | Price (PHP) |
+|---|---:|---:|---:|
+| Double Standard | 10 rooms | 3h | ₱200 |
+| Double Standard | 10 rooms | 6h | ₱400 |
+| Double Standard | 10 rooms | 12h | ₱600 |
+| Double Standard | 10 rooms | 24h | ₱1,000 |
+| Family Executive | 5 rooms | 6h | ₱600 |
+| Family Executive | 5 rooms | 12h | ₱900 |
+| Family Executive | 5 rooms | 24h | ₱1,200 |
+
+There is **no 3h Family Executive package**. Multi-day stays consist of permitted packaged blocks (e.g., Family 48h = 24h + 24h). Rates/packages can be changed by staff; historical reservation pricing must never be recomputed from the latest rate. Price combination rule for competing equally long choices is an open configuration decision; see [[18-backlog]].
+
+## Occupants and extra bed
+
+- **Standard, advisory occupancy only:** Double Standard usually 2 persons, or 3 when one is a child; Family Executive normally 3 persons, often 5–6 with an extra bed.
+- Hotel permits more than **standard/comfortable occupancy**; no per-person extra charge. Never misrepresent these figures as a verified statutory or fire-safety maximum. Any absolute legal/safety limit remains pending verification.
+- Only Family Executive offers an optional extra bed: **₱100 per extra bed, paid once for a continuous stay**, not per hour/day/package; avoid recharging the same extra-bed item on an approved extension. Quantity/stock policy requires confirmation.
+- Store primary guest contact for the whole reservation and occupant counts per booked room. Minor ID may be checked by staff, verification status/time/staff recorded; do not default to storing ID photos or infer checking alone establishes legal eligibility.
+
+## Booking inventory model
+
+- Both online and staff/walk-in entries consume **one shared live room inventory**; no reserved walk-in allotment.
+- Guest selects category, dates/start time, allowed duration(s), number of rooms and occupants; actual room number is assigned later by staff.
+- One reservation may have multiple booked-room items, each with **independent** package(s), scheduled start/end, check-in/out, status, occupants, extensions, and cancellations. Overall primary guest and payment account are shared, but monetary charges/refunds trace to line items.
+- Availability checks all overlapping holds, confirmed room bookings, physically blocked rooms, maintenance, and cleaning turnover; use database-level concurrency/transaction safeguards.
+
+## Online reservations — manual GCash verification
+
+- Online guest must pay **full reservation amount before confirmation**, via hotel-owned QR uploaded/configured by staff.
+- Guest uploads payment screenshot **and** transaction reference, subject to authenticity and duplicate-reference checks. Screenshot/reference are NOT proof of actual receipt; staff verifies against the hotel's actual GCash transaction record.
+- Create temporary 30-minute category-capacity hold while payment proof is being submitted; 5m on-screen reminder, 15m and 25m email nudges if feasible.
+- If no proof at 30m, hold expires/releases. If guest actually paid but failed to submit before expiry, staff reconcile money and availability; with guest consent propose a replacement schedule/room or manually refund verified payment.
+- If proof submitted within 30m, capacity remains protected pending staff review, even after the initial hold expires; 15m review target, overdue at 15m, urgent at 30m, critical at 60m; do not silently auto-release just because staff are late.
+- After actual staff confirmation of payment and safe final availability transaction, mark reservation confirmed. Reject/reconcile fraudulent/duplicate proof safely.
+- No-account guest uses email OTP; guests with accounts may also book. Throttle OTP/proof submission and protect images.
+
+## Walk-ins and payment ledger
+
+- Walk-ins: **cash, GCash, or mixed installments**; at least **50% of the selected booking amount** before normal room access. GCash verified by staff, cash recorded by receiving staff.
+- Walk-in stay begins when **Staff/Admin actually confirms check-in and room access**, not at arrival or deposit collection. Checkout time = this official start + purchased duration.
+- Online late check-in does not slide scheduled checkout automatically. Online one-hour arrival grace starts at scheduled arrival; after grace, staff review/flag no-show manually; no automatic release.
+- Outstanding balance must normally be paid before checkout; exception with documented unpaid departure must exist to prevent an indefinitely occupied room.
+- Extensions require ≥50% of extension charge before activation. Additional purchased duration starts from **the original scheduled checkout**, even if request arrives 15 minutes late. Availability/turnover and staff approval are mandatory. Full balance due at normal final checkout.
+
+## Changes, cancellation, no-show
+
+- Online full refund for free cancellation **within 1 hour after staff payment verification and reservation confirmation**, only before **that room** has checked in; not a package-specific 24h-before-arrival rule. Rescheduling does not restart the cancellation clock.
+- Individual room cancellations permitted in a multi-room reservation, while other rooms remain booked. Staff processes eligible GCash refunds manually, logs refund recipient/reference, and safely releases the cancelled item's capacity.
+- Customers request rescheduling; only staff approves/rejects after conflict-safe availability check. Can change an individual booked-room schedule, with audit and price adjustments as necessary.
+- Staff may mark a no-show after manual review; confirmed online no-show generally nonrefundable according to disclosed policy and applicable law. No auto-cancel or auto-release after grace timer.
+- Approved early check-in for online guests requires available Ready room; paid duration preserved with moved earlier end unless separate paid extension.
+
+## Checkout, housekeeping, maintenance
+
+- Countdown from persisted server timestamps; survives page close/reload; warning thresholds configurable (e.g., 30/15/5 minutes). Reaching zero flags overdue but **never auto-checks out**.
+- Staff may grant chargeable overtime or free overtime. Every waiver stores reason, authorizing staff, timestamp and waived minutes.
+- Cleaning/turnover buffer configurable; physical room must also be manually marked **Ready** before next guest enters. Buffer expiry alone never marks Ready.
+- Maintenance: block room, record reason/repair progress, exclude from feasible room allocation, flag any already scheduled booking requiring room reassignment. Staff manually restores Ready after clearance.
+
+## Policy and organization
+
+- Single Staff/Admin permissions tier with **individual staff login**, actions auditable per staff user.
+- No-smoking policy shown/acknowledged. Incident logged; configurable penalty only applied after explicit staff review, or waived with a recorded reason. Disclose policy beforehand and confirm legal enforceability.
+- Cloud-first v1. During internet outage use manual log and reconcile after recovery; connected backup/mobile hotspot recommended because remote online bookings can continue while hotel's local internet is down.
+- Use Asia/Manila for business-local scheduling, 12-hour AM/PM in **all user-facing UI**.
+
+## Source-of-truth links
+
+[[04-feature-specification]] · [[07-database-schema]] · [[17-decisions]] · [[18-backlog]]
+
+## Verified Guest Reviews & Private Feedback — Phase 08 enhancement (D-038)
+
+- Public website visitors may browse hotel information, room rates/availability and **published reviews/average ratings** without logging in, booking, or entering an email. Browsing alone **never** permits a review.
+- Only the verified **primary guest** associated with a real reservation that has at least one **staff-recorded check-in and subsequent completed checkout** may submit a public hotel rating/review. Both online and walk-in guests qualify; a booking alone, payment proof, cancelled/no-show reservation, or mere account registration does **not** qualify.
+- **At most one public rating/review per completed reservation**, not one per room item. An online guest with an account uses authenticated ownership; no-account online guests use their **already-verified booking email** and an expiring, single-use, reservation-scoped review link. Walk-ins must have a verified contact method to claim review access; the verified-email invitation flow is proposed, with another secure staff-assisted path pending confirmation.
+- Public rating is **1–5 stars**, with an optional written comment; private feedback is separately selected, never published, and accessible only to authorized staff. The backend enforces eligibility, rate limiting and uniqueness with database constraints, not merely a disabled UI button.
+- Eligible genuine **1-star through 5-star** reviews receive equal publication treatment. Staff can reply publicly; they cannot edit a guest's words/stars. Staff may **temporarily hide and restore** policy-violating reviews (e.g., threats, spam, personal data, fraudulent submission) only with a documented reason and actor/timestamp audit. Negative sentiment alone is **not** a removal reason. Potentially suspicious submissions may await content moderation, not a blanket staff positivity-approval gate.
+- The public aggregate displays eligible **published** ratings, including negative ratings. Private feedback never affects public averages. Keep review links/tokens, contact information and moderation logs private, apply documented retention/privacy policy, and test against forged IDs/OTP/link replay.
+- **Implementation timing:** optional **Phase 08 enhancement**, after authoritative reservation and checkout workflows exist. Not part of initial Phase 01 foundation; feature must not be activated without the acceptance tests in [[15-testing-plan]]. Full design: [[24-verified-guest-reviews]].

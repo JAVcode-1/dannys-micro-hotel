@@ -1,0 +1,18 @@
+flowchart LR
+  Guest[Online Guest] --> Web[React + TypeScript]
+  Staff[Staff/Admin] --> Web
+  Web --> API[Express API]
+  API --> Auth[Auth / Email OTP]
+  API --> Booking[Reservation Service]
+  API --> Inv[Availability + Hold Engine]
+  API --> Money[Payment Review + Ledger]
+  API --> Stay[Stay Countdown + Operations]
+  API --> Catalog[Category + Package Catalog]
+  Auth --> PG[(PostgreSQL)]
+  Booking --> PG
+  Inv --> PG
+  Money --> PG
+  Stay --> PG
+  Catalog --> PG
+  Money --> Files[Private GCash proof storage]
+  API --> Mail[Email notifications]

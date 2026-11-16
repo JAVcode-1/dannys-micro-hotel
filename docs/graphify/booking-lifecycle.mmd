@@ -1,0 +1,17 @@
+flowchart TD
+  A[Guest chooses allowed packages & independent schedules] --> B{Atomic category capacity feasible?}
+  B -- No --> X[Offer different available schedule]
+  B -- Yes --> C[Create 30-minute payment-proof hold]
+  C --> D{Proof and reference submitted before deadline?}
+  D -- No --> E[Expire hold and release claims]
+  E --> F[If money transferred anyway: staff reconciliation]
+  D -- Yes --> G[Protected pending manual GCash review]
+  G --> H{Staff verified actual GCash transfer?}
+  H -- No / disputed --> I[Reject / investigate; avoid silent paid-money loss]
+  H -- Yes --> J{Final atomic feasibility + verification transaction succeeds?}
+  J -- No --> K[Staff reconcile conflict / alternative or manual refund]
+  J -- Yes --> L[Confirm reservation & each room-item]
+  L --> M[Staff assigns Ready physical room and checks guest in]
+  M --> N[Count down to scheduled end; overdue means flag only]
+  N --> O[Staff checkout; mark Needs Cleaning]
+  O --> P[Staff cleaning + Ready action]

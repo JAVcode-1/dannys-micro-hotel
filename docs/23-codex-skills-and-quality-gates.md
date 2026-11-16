@@ -1,0 +1,3 @@
+# Codex quality gates
+
+Original user-supplied Claude skills remain unchanged in `.agents/skills/`. Codex's native reviewer definitions are in `.codex/agents/`. Execute the local Windows tool setup from `QUALITY-GATE-SETUP.md`, then run `scripts/run-quality-gate.ps1` before closing each code task. This checks actual scanners and launches three independent read-only Codex CLI reviews of uncommitted code. The original skill requirement for reviewer-panel consensus is implemented as: no blocking/major issues, no score 3 or lower, at least two scores of 5. A code task is **not complete** if any mandatory tool fails, even when there are no findings. This is a companion document and does not change hotel business decisions.

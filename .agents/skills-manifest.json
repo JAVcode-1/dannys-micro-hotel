@@ -1,0 +1,30 @@
+{
+  "source": "user-uploaded Claude skill ZIPs",
+  "integrity": "SKILL.md files copied byte-for-byte without changes",
+  "skills": [
+    {
+      "skill": "code-structure",
+      "source_zip": "code-structure.zip",
+      "path": ".agents/skills/code-structure/SKILL.md",
+      "sha256": "fbf00bb6fa98aa1372c1d1edfa0949eaed0e51734c72b80a904627d4b90ad0d8",
+      "byte_count": 3414,
+      "altered": false
+    },
+    {
+      "skill": "scanloop",
+      "source_zip": "scanloop.zip",
+      "path": ".agents/skills/scanloop/SKILL.md",
+      "sha256": "4a01d34b765264ba3219da4e77c9a002b5b1cd3ee1975e2d5167faa9ea2756ae",
+      "byte_count": 9987,
+      "altered": false
+    },
+    {
+      "skill": "greploop",
+      "source_zip": "greploop.zip",
+      "path": ".agents/skills/greploop/SKILL.md",
+      "sha256": "2df553a400132936b880ef24aa9dd200eebaf0bbfb38d2e48c99e36b429b943b",
+      "byte_count": 11047,
+      "altered": false
+    }
+  ]
+}

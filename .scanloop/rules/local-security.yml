@@ -1,0 +1,23 @@
+# Offline-local baseline rules. Deliberately small; NOT the full remote registry packs.
+# Do not use Semgrep --config auto or remote registry during routine scans.
+rules:
+  - id: dannys-no-eval
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Do not use eval() to execute dynamic code.
+    pattern: eval(...)
+  - id: dannys-no-function-constructor
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Avoid dynamic Function constructor (code injection risk).
+    pattern: new Function(...)
+  - id: dannys-no-insecure-innerhtml
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: Review assignments to innerHTML; use safe text or sanitization.
+    pattern: $E.innerHTML = $VALUE
+  - id: dannys-no-childprocess-exec
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: Shell execution requires strict review; avoid interpolated commands.
+    pattern: exec($CMD, ...)

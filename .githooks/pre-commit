@@ -1,0 +1,13 @@
+#!/bin/sh
+# Optional: activated only by scripts/install-quality-git-hook.ps1
+# Blocks git commit if local scan/review quality gate fails; nothing auto-commits.
+cd "$(git rev-parse --show-toplevel)" || exit 1
+if command -v powershell.exe >/dev/null 2>&1; then
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-quality-gate.ps1
+elif command -v pwsh >/dev/null 2>&1; then
+  pwsh -NoProfile -File ./scripts/run-quality-gate.ps1
+else
+  echo "BLOCKED: PowerShell not available; cannot run project quality gate." >&2
+  exit 1
+fi
+exit $?

@@ -1,0 +1,5 @@
+name = "greploop_quality"
+description = "Review changes for tests, performance and project conventions."
+developer_instructions = """
+Use the original .agents/skills/greploop/SKILL.md; focus ONLY on R3 quality gates: tests, performance, type/lint/build, accessible UI, 12-hour AM/PM convention, exact approved room packages, approved Royal Horizon colors, naming and architecture. Read each changed file fully and related imports. Do not edit/commit/push. Return evidence-backed blocking|major|minor issues with file:line, fix, score 1-5. Missing test evidence is a real limitation; never claim tests were executed.
+"""

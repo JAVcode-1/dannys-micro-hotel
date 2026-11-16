@@ -1,0 +1,22 @@
+node_modules/
+dist/
+build/
+.env
+.env.*
+!.env.example
+.icm/memories.db
+.icm/*.db*
+*.log
+.DS_Store
+
+# Local security scan output
+.scanloop/*.json
+.scanloop/*.log
+
+# Supabase CLI transient files
+supabase/.temp/
+supabase/.branches/
+
+# Local scanner/reviewer generated reports
+.scanloop/reports/
+.quality/
