@@ -4,7 +4,7 @@ status: docs-first-handoff
 ---
 # Session Context — StayTrack / Danny's Micro Hotel
 
-**Project status:** Phase 01 F01 complete; F02 hosted development migration and connectivity implemented, with the mandatory quality gate still pending; F03 and later phases have not started. This is not a deployed application.
+**Project status:** Phase 01 F01 complete; F02 quality gate pending; F03 testing and CI prepared as an unverified checkpoint. Later phases have not started. This is not a deployed application.
 
 ## Read first
 
@@ -45,7 +45,8 @@ Guests and anonymous visitors may **read** published verified ratings; only the 
 
 ## Next action
 
-F01 evidence is in [[14-milestones]] and [[phases/01-foundation-and-tooling]]. F02 implementation is at an owner-authorized development checkpoint; D-040 defers fresh isolated migration/reset and fictitious seed tests. The catalog migration was applied previously. The latest hosted gate confirmed migration history and a no-pending-migration dry run, then stopped when Supabase CLI type generation exited 1; the scan and independent review stages did not run in that attempt. On 2026-11-18, local build, typecheck, lint, format check, and 16 application tests passed. F02 quality-gate verification remains pending; F03 has not started.
+F01 evidence is in [[14-milestones]] and [[phases/01-foundation-and-tooling]]. F02 implementation is at an owner-authorized development checkpoint; D-040 defers fresh isolated migration/reset and fictitious seed tests. The catalog migration was applied previously. The latest hosted gate confirmed migration history and a no-pending-migration dry run, then stopped when Supabase CLI type generation exited 1; the scan and independent review stages did not run in that attempt. F02 quality-gate verification remains pending.
+F03 now has a component test and a GitHub Actions workflow with an isolated loopback PostgreSQL service. The existing API unit/integration suite remains in place. Local build, typecheck, lint, format check and 17 application tests passed. No isolated DB server was available locally, so its migration/constraint test and the first CI run remain unverified. Gitleaks and four local Semgrep rules found no issues; OSV found one existing `picomatch` advisory, leaving the security gate failed. Two independent review passes ran; the second scored 4/5 correctness, 3/5 security and 3/5 quality, so review also remains failed. No Phase 02 authorization endpoint exists yet; an unauthorized access test remains deferred.
 
 ## Supabase implementation guardrails (2026-11-12)
 

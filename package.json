@@ -19,6 +19,7 @@
     "format": "prettier --write frontend backend packages/shared scripts/*.mjs package.json eslint.config.mjs",
     "format:check": "prettier --check frontend backend packages/shared scripts/*.mjs package.json eslint.config.mjs",
     "test": "npm run test -w backend && npm run test -w frontend",
+    "test:db": "npm run test:db -w backend",
     "verify:f02:types": "node scripts/verify-f02-types.mjs"
   },
   "devDependencies": {

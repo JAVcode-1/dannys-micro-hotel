@@ -39,6 +39,9 @@ status: in-progress
 
 **Acceptance:** Automated baseline test suite and builds pass from a clean checkout; reviewer can repeat tests.
 
+**F03 checkpoint (2026-11-18):** The React foundation component has a semantic render test; existing database configuration and readiness unit/API tests remain in place. GitHub Actions runs npm build, typecheck, lint, format and application tests with blank hosted credentials, then runs a PostgreSQL constraint test against its own loopback `staytrack_test` service. The DB test refuses any other host or database name and rolls back its migration and invalid insert. It creates Supabase's `anon` and `authenticated` roles inside that rollback transaction so the catalog SQL can run on plain PostgreSQL. No isolated PostgreSQL instance was available for a local execution, and the GitHub Actions run has not yet been observed. There is no protected API route in Phase 01, so unauthorized access enforcement remains a Phase 02 test. Keep F03 unchecked until CI and isolated DB evidence exist. The local security gate found one OSV advisory in the existing `picomatch` lockfile dependency, so it did not pass.
+**Review status:** Two independent three-session review passes ran. The first found the missing PostgreSQL roles in the CI test and a misleading 404 authorization test; both were corrected. The second reported correctness 4/5, security 3/5 and quality 3/5. Its remaining blockers are the existing OSV advisory and the unexecuted isolated database/CI test. The review gate did not pass.
+
 ## Exit gate
 
 - [ ] F01, F02 and F03 acceptance evidence recorded in [[14-milestones]].

@@ -100,3 +100,7 @@ See [[18-backlog]].
 **Explicitly deferred, not passed:** A second fresh isolated database migration, reset rehearsal and fictitious seed execution/count checks. Risk: an unnoticed fresh-install or seed defect could obstruct recovery or later physical inventory setup. Require isolated non-hosted testing before relying on a rebuild or activating physical inventory; this decision does not waive security or implementation findings. F03 and the Phase 01 exit gate remain separate.
 
 **2026-11-18 checkpoint authorization:** The owner approved committing and pushing current F02 work as a development checkpoint while final verification remains pending. This does not change D-040 acceptance or the mandatory scan and independent review thresholds. The latest hosted gate stopped at Supabase CLI type generation; F02 is not marked Done.
+
+## D-041 — F03 isolated test database boundary (2026-11-18)
+
+**Implementation choice:** GitHub Actions uses its own PostgreSQL 17 service and a loopback `staytrack_test` URL. The F03 constraint test rejects any other host or database name before opening a connection, applies the F02 catalog migration only inside a transaction and rolls it back. CI provides no hosted Supabase credentials. Local isolated database execution and the first CI run remain unverified; this decision does not waive the F02 gate or future authorization tests.
