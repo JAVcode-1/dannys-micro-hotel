@@ -10,9 +10,10 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src test",
     "test": "npm run build && node --test test/*.test.mjs",
-    "test:db": "node --test test/db-constraints.integration.mjs"
+    "test:db": "node --test test/*.integration.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.119.0",
     "express": "^5.0.0",
     "pg": "^8.23.1"
   },

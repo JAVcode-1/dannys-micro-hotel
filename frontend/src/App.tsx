@@ -1,4 +1,12 @@
+import StaffLogin from "./StaffLogin";
+
 export default function App() {
+  if (typeof window !== "undefined" && window.location.pathname === "/staff")
+    return (
+      <main className="min-h-svh bg-canvas px-6 py-16 text-main">
+        <StaffLogin />
+      </main>
+    );
   return (
     <main className="min-h-svh bg-canvas px-6 py-8 text-main sm:px-10">
       <div className="mx-auto flex max-w-5xl flex-col gap-16">

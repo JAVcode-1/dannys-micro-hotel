@@ -31,51 +31,47 @@ Provide for each task: changed files, dependency, implementation summary, test e
 - Never call Supabase Data APIs separately and assume an availability check plus a booking insert is atomic: use a single DB transaction and locking.
 
 
-## Mandatory original Claude skills — Codex project workflow (D-037)
+## Development workflow — Build → Quick Test → Fix Critical Issues → Commit → Push → Next Feature
 
 These are the **original, unmodified user-provided Claude skills**, stored verbatim at:
 - `.agents/skills/code-structure/SKILL.md`
 - `.agents/skills/scanloop/SKILL.md`
 - `.agents/skills/greploop/SKILL.md`
 
-**For EVERY source-code implementation, bug fix, refactor, or database migration task in this repository:**
+1. Implement one documented roadmap feature at a time. Read the active phase task before changing code. Apply `code-structure`'s action/service rules when logic is genuinely shared; do not add layers for one-off logic.
+2. After each feature, run `npm run build`, `npm run typecheck`, `npm run lint`, and `npm test`. Fix failing checks and confirmed critical security or correctness defects before proceeding.
+3. For authentication, database migrations, reservations, and payments, perform the essential security and authorization checks before using them with real data. Keep migrations unapplied until separately approved; document isolated database and hosted checks that have not run.
+4. Review the in-scope diff and staged files for secrets and sensitive data. Commit and push a **development checkpoint** to the current `main` branch after the essential checks pass. A checkpoint does not mark a feature, phase, migration, or deployment Done.
+5. Record deferred tests and unresolved findings honestly. Never claim a scanner, independent review, migration test, or hosted acceptance passed when it did not. Do not require a perfect 5/5 independent reviewer score for an ordinary development checkpoint.
+6. Reserve the complete scanloop/greploop quality gate and comprehensive testing for major milestones and predeployment verification. Preserve the original skill files and executable security scripts; run them when the gate is required or the task warrants them. Never weaken a security check to obtain a passing result.
+7. Update the relevant Obsidian milestone, decision, and context notes. Continue to the next documented feature only when instructed.
 
-1. **Before editing code**, read ALL THREE `SKILL.md` files, read the relevant `docs/phases/` task, and apply `code-structure`'s action/service responsibility rules where its extraction trigger fits. Do not create artificial service layers for one-off logic.
-2. **After implementing**, execute real project build/typecheck/test/lint gates when configured. Then apply the ORIGINAL `scanloop` procedures, running installed scanners where available, with version-appropriate commands; do not silently skip checks. If no scanner executes, write **SCAN NOT PERFORMED** and DO NOT claim a clean security scan. Never install security tools, contact outside services, or transmit source/secrets without approval.
-3. **Before declaring any coding task complete**, apply the ORIGINAL `greploop` review criteria: changed files in full, related callers, correctness, security/contracts, and quality/testing, logging all blocking/major findings and fixing confirmed issues. Use available independent Codex reviewer agents when supported; **Claude-only subagent types are not natively guaranteed in Codex**. If unavailable, explicitly label the result **single-agent review / independent panel unavailable**, and NEVER claim a three-agent panel or 5/5 agreement that did not occur. Follow its five-iteration cap when an actual loop is feasible.
-4. Report the skill name and exact file path read, scanners actually run/skipped and why, reviewers actually used, tests actually run, remaining findings and milestone status. If a mandatory gate cannot run, mark it **BLOCKED / UNVERIFIED**, not Done.
-5. After a completed development task passes all mandatory gates, follow the GitHub workflow below without asking again. Do not commit or push blocked or unverified work. Do not automatically merge, checkout a PR, or stash working files. Do not change the original skill files; this project-specific policy controls Codex actions.
-6. For the initial folder/git bootstrap when no baseline diff exists, perform the non-destructive checks that are possible, log the absence of a base branch or installed scanners, and mark review steps honestly **PENDING** until a proper baseline exists. Never fabricate a clean diff.
-7. The original skills are preserved exactly, including Claude-specific terms and external scanner/tool requirements. **Where an exact instruction is impossible in Codex, do not pretend it ran.** Follow the remaining applicable steps and clearly record the limitation. No instruction file can technically guarantee that an AI agent obeys all steps: for the strongest triggering, explicitly mention `$code-structure $scanloop $greploop` in your Codex coding prompt.
-
-**Start new coding tasks with:** `Read AGENTS.md and $code-structure $scanloop $greploop (original files). Work only on the active phase task. Do not mark Done without genuine scan + review + tests; report any missing tools.`
-
-See `CODEX-START-HERE.md` for exact setup/validation and `CODEX-FIRST-TASK-PROMPT.md` for the first coding prompt.
+See `CODEX-START-HERE.md` and `QUALITY-GATE-SETUP.md` for the existing setup and full-gate procedures.
 
 
-## Codex native reviewer agents + executable quality gate (D-038)
+## Full quality gate for major milestones and predeployment (D-038)
 
 The three original Claude skill files under `.agents/skills/` remain UNMODIFIED. Current Codex releases support native reviewer subagents.
 
-Before marking ANY coding or migration task Done:
+Before marking a major milestone or predeployment gate Done:
 
 1. Read original `code-structure`, `scanloop`, and `greploop` files; implement one documented phase item.
 2. Run build/typecheck/lint/tests for affected frontend/backend components; record actual results.
 3. Execute `powershell -NoProfile -File .\scripts\run-scanloop.ps1`. Missing required scanners, scanner errors or scan findings BLOCK completion. A local Semgrep starter ruleset has limited coverage; do not describe it as a comprehensive scan.
 4. **Run 3 independent read-only Codex reviews** (correctness, security, quality) for original greploop. Native Codex subagents defined at `.codex/agents/greploop_{correctness,security,quality}.toml` are available during interactive sessions; the reproducible scripted baseline is `powershell -NoProfile -File .\scripts\run-greploop-review.ps1`, which uses 3 separate authenticated Codex CLI sessions. The scripted reviews are the mandatory evidence gate; native interactive reviewers are optional additional assurance, not a substitute for the executable gate. No need to run duplicate native reviewers if CLI gate was run. Verify findings, fix confirmed issues, rerun scans/tests/review up to 5 iterations. If sessions cannot run, status is **BLOCKED / REVIEW NOT PERFORMED**, never fake consensus.
-5. The executable `powershell -NoProfile -File .\scripts\run-quality-gate.ps1` requires installed scanners AND independent Codex CLI review. Before completing any coding phase, it MUST exit 0, and code-specific tests must also pass. Do not fake a report or mark the milestone Done if a check is missing.
+5. The executable `powershell -NoProfile -File .\scripts\run-quality-gate.ps1` requires installed scanners AND independent Codex CLI review. For a major milestone or predeployment gate, it MUST exit 0, and code-specific tests must also pass. Do not fake a report or mark the milestone Done if a check is missing.
 6. Follow the GitHub workflow below after successful verification; never disclose secrets. Security tools run only on local repository; **OSV sends dependency names and versions to its vulnerability service by default** unless separately configured for offline mode. Scanner setup performs network installs only when the user executes the setup script. Independent Codex CLI reviews use the user's authenticated Codex service and may transmit project code to that service under the user's configured privacy settings.
 
-## GitHub workflow after every completed development task
+## GitHub workflow after each verified development checkpoint
 
 The project owner has approved this workflow for future completed development tasks. Apply it without requesting repeat authorization.
 
-1. Run and record the required task-specific tests, builds, TypeScript/lint checks, security scans, and independent code reviews. The mandatory quality gate must pass. If any required check fails or cannot run, report the blocker; do not commit or push.
-2. Update only the relevant Obsidian milestone and decision/context documents after successful verification. Mark checklist items Done only when their acceptance evidence exists.
+1. Run and record `npm run build`, `npm run typecheck`, `npm run lint`, and `npm test`. Fix failures and confirmed critical security or correctness issues. For sensitive features, record essential authorization and security checks. A full quality gate is required for major milestones and predeployment, not ordinary development checkpoints.
+2. Update only the relevant Obsidian milestone and decision/context documents. Mark checklist items Done only when their acceptance evidence exists; keep unapplied migrations and deferred tests pending.
 3. Inspect `git status` and review the complete in-scope diff, including untracked files. Keep unrelated or unfinished work out of the commit.
 4. Check the proposed staged content for `.env` files, passwords, API secrets, Supabase credentials, payment proofs, guest data, and other sensitive files. Never stage or commit them. `.env.example` may contain placeholders only.
 5. Stage only files for the completed task using explicit paths. Review the staged diff and staged file list before committing.
-6. Create a descriptive Conventional Commit for the completed task, then push that commit to the existing `origin` GitHub remote on the current development branch. Do not switch branches or force-push as part of this workflow.
+6. Create a descriptive Conventional Commit for the development checkpoint, then push that commit to the existing `origin` GitHub remote on `main`. Do not switch branches or force-push as part of this workflow.
 7. Confirm the push succeeded by checking the command result and remote branch state. Report the commit and push result. If the push fails, report it and leave the local commit intact for resolution.
 
 Read `QUALITY-GATE-SETUP.md` for the one-time Windows setup, review scoring and diagnostics.

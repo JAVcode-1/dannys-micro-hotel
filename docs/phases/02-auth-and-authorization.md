@@ -1,6 +1,6 @@
 ---
 tags: [phase-02, implementation, supabase, auth]
-status: not-started
+status: in-progress
 ---
 # Phase 02 — Supabase Authentication & Application Authorization
 
@@ -9,6 +9,10 @@ status: not-started
 **Dependencies:** [[01-foundation-and-tooling]], [[03-user-roles-and-permissions]], [[08-security-and-risks]], [[22-supabase-setup]].
 
 ## A01 — Individual Staff/Admin identities
+
+**Development checkpoint (2026-11-18):** Code and an unapplied migration are prepared. The `/staff` UI uses Supabase Auth password sessions, sign-out and recovery; Express `/staff/me` checks the managed token and active database membership on every call, then writes an actor audit row. The only staff API currently present is `/staff/me`. No hosted Auth settings or database data were modified. Invitation and account activation require owner-reviewed Supabase dashboard setup after migration approval. Hosted two-employee, disabled-account, email sender, recovery, and rate-limit acceptance are pending. Do not mark A01 Done or the phase exit gate passed.
+
+**D-043 checkpoint validation:** Build, typecheck, lint and 32 application tests passed. Unit tests cover unauthorized access, inactive membership, actor audit and failure handling. The isolated SQL integration test could not run without `TEST_DATABASE_URL`; the migration remains unapplied. The full quality gate is deferred to milestone/predeployment verification, and the known OSV finding and hosted acceptance gaps remain open.
 
 - [ ] Configure **Supabase Auth** login, logout, session handling, staff invitation/account recovery and strong rate limits.
 - [ ] Create `staff_accounts` linked to `auth.users.id`; one common Staff/Admin capability tier, but **unique login for each employee**.

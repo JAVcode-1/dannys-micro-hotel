@@ -13,7 +13,7 @@ status: in-progress
 | Pre-coding workstation/repository checks | Not verified | [[21-before-coding-checklist]] |
 | Technical architecture drafted | **Done (draft only)** | [[06-architecture]], [[07-database-schema]] |
 | Phase 01 Foundation | In progress — F01 complete; F02 under verification; F03 checkpoint under verification | [[phases/01-foundation-and-tooling]]; F02 gate pending; F03 isolated DB and CI runs pending |
-| Phase 02 Auth | Not started | [[phases/02-auth-and-authorization]] |
+| Phase 02 Auth | In progress — A01 development checkpoint, not accepted | [[phases/02-auth-and-authorization]]; migration unapplied; hosted Auth and rate limits unverified |
 | Phase 03 Catalog and rooms | Not started | [[phases/03-catalog-inventory-settings]] |
 | Phase 04 Safe availability and holds | Not started | [[phases/04-availability-and-holds]] |
 | Phase 05 Online booking and GCash | Not started | [[phases/05-online-booking-and-gcash]] |
@@ -24,12 +24,13 @@ status: in-progress
 
 ## Current focus
 
-**Next step:** F02 remains a development checkpoint with its hosted quality gate pending at Supabase type generation. F03 commit `55a3a4b` is pushed, but its GitHub Actions and isolated PostgreSQL results have not been obtained. The local security scan still reports GHSA-fc5q-39xc-vjpf in development-only `picomatch` 4.0.7, with no verified patched npm release. Keep both tasks open and resolve these checks before marking Phase 01 Done; A01 is the next development task only after the Phase 01 exit gate.
+**Next step:** A01 is an authorized development checkpoint, not a completed phase task. The four checkpoint commands pass; the SQL migration and hosted Auth acceptance remain pending. F02/F03 verification debt and the OSV `picomatch` finding remain open under D-043. Do not begin A02 until instructed.
 
 ## Session log
 
 | Date | Phase/task | Result | Tests/evidence | Next action |
 |---|---|---|---|---|
+| 2026-11-18 | Phase 02 / A01 development checkpoint | Individual staff sign-in UI, Express staff membership check, local rate limit and actor audit path, and unapplied migration prepared | `npm run build`, `typecheck`, `lint`, and `test` passed (21 backend, 11 frontend). Staff API tests cover missing/invalid tokens, inactive membership, distinct actors, audit failures and rate limiting. Gitleaks and four local Semgrep rules found none; OSV reports existing GHSA-fc5q-39xc-vjpf in development-only `picomatch` 4.0.7. Earlier independent review failed at 3/5 correctness, 3/5 security, 3/5 quality. Isolated migration test cannot run without `TEST_DATABASE_URL`; hosted invitation, recovery, revocation and two-person acceptance remain unverified. Full milestone gate not passed. | Keep migration unapplied; resolve deployment rate limits, isolated DB and OSV before real use; wait for next task instruction |
 | 2026-11-11 | Documentation handoff | Created Obsidian/Graphify/ICM-compatible planning source | Baseline document tree | Design review |
 | 2026-11-12 | UI approval and doc update | Approved Royal Horizon; updated design spec and pre-coding readiness checklist | Version 1.2 documentation package | Verify PC-01–PC-04, then Phase 01 / F01 |
 | 2026-11-12 | Platform plan revision (docs only) | Owner selected Supabase-managed PostgreSQL; updated architecture, setup, security, phase guides; Royal Horizon unchanged | Version 1.3 docs; no Supabase project or runnable code claimed | Finish PC tasks, F01 first; Supabase dev setup during F02 |

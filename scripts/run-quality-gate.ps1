@@ -1,17 +1,24 @@
 # Explicit fail-closed gate for project checks, scanning, and 3 reviewers.
 [CmdletBinding()]
-param([switch]$F02Hosted)
+param([switch]$F02Hosted, [switch]$A01)
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $output = Join-Path $root '.quality'
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 $validation = Join-Path $output 'validation.log'
 . (Join-Path $PSScriptRoot 'f02-cli-output.ps1')
+. (Join-Path $PSScriptRoot 'a01-gate-scope.ps1')
 Push-Location $root
 try {
     $f02Change = @(& git status --porcelain --untracked-files=all -- 'supabase/migrations/' 'supabase/config.toml' 'backend/src/database.ts' 'backend/src/app.ts' 'packages/shared/src/database.types.ts' 'scripts/verify-f02-*.mjs')
     if ($LASTEXITCODE -ne 0) { throw 'Unable to check F02 migration change status.' }
-    if ($f02Change.Count -gt 0 -and -not $F02Hosted) { throw 'F02 migration changes require -F02Hosted read-only verification.' }
+    if ($A01 -and $F02Hosted) { throw 'Choose either A01 or F02Hosted verification.' }
+    if ($A01) {
+        $a01Changes = @(& git status --porcelain --untracked-files=all)
+        if ($LASTEXITCODE -ne 0) { throw 'Unable to check A01 change status.' }
+        $a01Paths = @($a01Changes | ForEach-Object { $_.Substring(3).Replace('\','/') })
+        Assert-A01GateScope -ChangedPaths $a01Paths -F02Hosted:$F02Hosted
+    } elseif ($f02Change.Count -gt 0 -and -not $F02Hosted) { throw 'F02 migration changes require -F02Hosted read-only verification.' }
     "Project validation started $(Get-Date -Format o)" | Out-File -FilePath $validation -Encoding utf8
     foreach ($check in @('build','typecheck','lint','format:check','test')) {
         "--- npm run $check ---" | Out-File -FilePath $validation -Append -Encoding utf8
@@ -23,6 +30,14 @@ try {
     if (-not $?) { throw 'Greploop source-filter regression failed.' }
     & (Join-Path $PSScriptRoot 'tests/test-f02-cli-output.ps1') | Out-File -FilePath $validation -Append -Encoding utf8
     if (-not $?) { throw 'F02 CLI output regression failed.' }
+    & (Join-Path $PSScriptRoot 'tests/test-a01-gate-scope.ps1') | Out-File -FilePath $validation -Append -Encoding utf8
+    if (-not $?) { throw 'A01 gate scope regression failed.' }
+    if ($A01) {
+        if (-not $env:TEST_DATABASE_URL) { throw 'A01 isolated migration verification requires TEST_DATABASE_URL.' }
+        '--- npm run test:db (isolated A01 migration) ---' | Out-File -FilePath $validation -Append -Encoding utf8
+        & npm run test:db 2>&1 | ForEach-Object { $_.ToString() } | Out-File -FilePath $validation -Append -Encoding utf8
+        if ($LASTEXITCODE -ne 0) { throw "A01 isolated migration verification failed (exit $LASTEXITCODE)." }
+    }
     if ($F02Hosted) {
         if (-not (Test-Path 'backend/.env')) { throw 'F02 hosted verification requires the local ignored backend/.env.' }
         $migrationFiles = @(Get-ChildItem 'supabase/migrations' -Filter '*.sql' -File)
