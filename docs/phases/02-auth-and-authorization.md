@@ -14,6 +14,8 @@ status: in-progress
 
 **D-043 checkpoint validation:** Build, typecheck, lint and 32 application tests passed. Unit tests cover unauthorized access, inactive membership, actor audit and failure handling. The isolated SQL integration test could not run without `TEST_DATABASE_URL`; the migration remains unapplied. The full quality gate is deferred to milestone/predeployment verification, and the known OSV finding and hosted acceptance gaps remain open.
 
+**Before hosted A01 deployment:** Apply the pending migration only after owner approval and test it on an isolated PostgreSQL target first. Verify `anon`/`authenticated` cannot read or write staff tables or audit rows, and confirm the Express database role has only the required access. Configure invite-only staff creation, recovery URL allowlist, email delivery and Auth throttling. Put a shared ingress/provider rate limit in front of `/staff/me` (the current in-memory limit is per process), then test real tokens for two distinct employees, a guest, a disabled employee, and audit persistence/failure. Keep staff accounts inactive until these checks pass.
+
 - [ ] Configure **Supabase Auth** login, logout, session handling, staff invitation/account recovery and strong rate limits.
 - [ ] Create `staff_accounts` linked to `auth.users.id`; one common Staff/Admin capability tier, but **unique login for each employee**.
 - [ ] Express validates Supabase Auth token identity, verifies active staff membership on each privileged request, and writes actor ID to audit.

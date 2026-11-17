@@ -28,6 +28,8 @@ status: in-progress
 
 ## Session log
 
+**2026-11-18 setup checkpoint:** Root combined dev command starts Vite at `http://localhost:5173/` and Express at `http://localhost:3001/`; the frontend page and `/health` returned HTTP 200. Build, typecheck, lint and application tests passed (21 backend, 11 frontend). Ponytail Full was installed through the official Codex plugin commands. A01 migration remains unapplied; isolated SQL/RLS, hosted Auth, shared rate limiting and real employee acceptance remain pending. No checklist status changed.
+
 | Date | Phase/task | Result | Tests/evidence | Next action |
 |---|---|---|---|---|
 | 2026-11-18 | Phase 02 / A01 development checkpoint | Individual staff sign-in UI, Express staff membership check, local rate limit and actor audit path, and unapplied migration prepared | `npm run build`, `typecheck`, `lint`, and `test` passed (21 backend, 11 frontend). Staff API tests cover missing/invalid tokens, inactive membership, distinct actors, audit failures and rate limiting. Gitleaks and four local Semgrep rules found none; OSV reports existing GHSA-fc5q-39xc-vjpf in development-only `picomatch` 4.0.7. Earlier independent review failed at 3/5 correctness, 3/5 security, 3/5 quality. Isolated migration test cannot run without `TEST_DATABASE_URL`; hosted invitation, recovery, revocation and two-person acceptance remain unverified. Full milestone gate not passed. | Keep migration unapplied; resolve deployment rate limits, isolated DB and OSV before real use; wait for next task instruction |
