@@ -16,11 +16,51 @@ try {
     }
     if ($failed) { throw 'Missing required scanner(s). Install tools and retry.' }
     Write-Host '--- Gitleaks (repository working files, redacted) ---' -ForegroundColor Cyan
-    & gitleaks dir --no-banner --redact --report-format json --report-path (Join-Path $output 'gitleaks.json') .
-    $exit = $LASTEXITCODE
+    # Scan only current tracked edits and untracked files. Git excludes ignored
+    # private credentials; this also rejects credential paths if already tracked.
+    $scanRoot = Join-Path $output ("gitleaks-input-" + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $scanRoot -Force | Out-Null
+    try {
+        $workingFiles = @(& git diff --name-only --diff-filter=ACMRT)
+        if ($LASTEXITCODE -ne 0) { throw 'Unable to enumerate working tree changes for Gitleaks.' }
+        $stagedFiles = @(& git diff --cached --name-only --diff-filter=ACMRT)
+        if ($LASTEXITCODE -ne 0) { throw 'Unable to enumerate staged changes for Gitleaks.' }
+        $untrackedFiles = @(& git ls-files --others --exclude-standard)
+        if ($LASTEXITCODE -ne 0) { throw 'Unable to enumerate untracked files for Gitleaks.' }
+        $scanFiles = @($workingFiles + $stagedFiles + $untrackedFiles) | Sort-Object -Unique
+        if ($scanFiles.Count -eq 0) { throw 'No current changed files for Gitleaks.' }
+        $privateFiles = @($scanFiles | Where-Object { $_ -match '(^|/)\.env($|\.(?!example$))' -or $_ -match '\.(pem|key|crt|p12|pfx)$' })
+        if ($privateFiles.Count -gt 0) { throw 'Private credential files are in the current Git change set. Remove them before scanning or committing.' }
+        $scanFiles = @($scanFiles | Where-Object { $_ -notmatch '(^|/)(node_modules|dist|build|\.temp|\.quality|reports)/' })
+        if ($scanFiles.Count -eq 0) { throw 'No eligible changed files for Gitleaks.' }
+        Write-Host "Gitleaks scanning $($scanFiles.Count) current changed files." -ForegroundColor Cyan
+        foreach ($file in $scanFiles) {
+            $source = Join-Path $root $file
+            if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { continue }
+            $destination = Join-Path $scanRoot $file
+            New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
+            Copy-Item -LiteralPath $source -Destination $destination
+        }
+        foreach ($file in $stagedFiles) {
+            $destination = Join-Path $scanRoot (Join-Path '__staged__' $file)
+            New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
+            $stagedContent = @(& git show ":$file")
+            if ($LASTEXITCODE -ne 0) { throw "Unable to read staged content for Gitleaks: $file" }
+            [System.IO.File]::WriteAllText($destination, ($stagedContent -join "`n"), [System.Text.UTF8Encoding]::new($false))
+        }
+        & gitleaks dir --no-banner --redact --report-format json --report-path (Join-Path $output 'gitleaks.json') $scanRoot
+        $exit = $LASTEXITCODE
+    } finally {
+        $resolvedOutput = (Resolve-Path -LiteralPath $output).Path.TrimEnd('\') + '\'
+        $resolvedScan = (Resolve-Path -LiteralPath $scanRoot).Path
+        if (-not $resolvedScan.StartsWith($resolvedOutput, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw 'Refusing to remove a scan directory outside the report folder.'
+        }
+        Remove-Item -LiteralPath $resolvedScan -Recurse -Force
+    }
     if ($exit -ne 0) { Write-Host "Gitleaks failed or found issues: exit $exit" -ForegroundColor Red; $failed = $true }
 
-    $roots = @('frontend','backend','packages','supabase') | Where-Object { Test-Path $_ }
+    $roots = @('frontend','backend','packages','supabase','scripts') | Where-Object { Test-Path $_ }
     $files = @(Get-ChildItem -Path $roots -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch '[\\/](node_modules|dist|build|\.temp)[\\/]' })
     $codeFiles = @($files | Where-Object { $_.Extension -in @('.ts','.tsx','.js','.jsx','.mjs','.cjs') })
     $codeFiles += @(Get-ChildItem -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -in @('.js','.jsx','.mjs','.cjs','.ts','.tsx') })

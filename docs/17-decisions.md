@@ -88,3 +88,15 @@ See [[18-backlog]].
 ## D-039 — F01 workspace tooling (2026-11-17)
 
 **Implementation choice:** Use npm 10.9.8 workspaces with Node.js 22 or newer for separate `frontend/`, `backend/` and `packages/shared/` packages. F01 uses Vite, React, Tailwind CSS, Express, strict TypeScript, ESLint and Prettier. This records developer tooling, not a hotel business-policy change. Database migrations, connectivity, Auth and Storage remain for later tasks; the existing Supabase project is preserved. F01 quality-gate evidence is recorded in [[14-milestones]].
+
+## D-040 — F02 hosted development acceptance and deferred reset tests (2026-11-17)
+
+**Owner-approved change:** Complete F02 against the existing `dannys-micro-hotel` hosted Supabase development project (`pgbierfxeviouyjsmjnh`) without Docker or another project. The approved catalog migration was already applied. Current F02 acceptance uses migration history, read-only catalog/constraint checks, generated types, TLS-verified Express connection, HTTP health/readiness, application tests, security scanners and independent reviews. The project must not be reset or seeded for this decision.
+
+**Target label clarification:** The owner designated this existing project for development. Supabase CLI 3.2.0 reports its base branch as `environment: production`; this is the platform branch label, not evidence that StayTrack is deployed to hotel users. The gate requires the approved project reference and name plus that observed base-branch label. [Supabase's branch documentation](https://supabase.com/docs/guides/deployment/branching/dashboard) says the dashboard displays `main / PRODUCTION` for every project's base branch. F02 still forbids hosted reset, seed execution and routine non-dry-run schema changes.
+
+**Approved local migration artifact:** SHA-256 `1B0E4BB6DE9B9C11C2068BDE7C4F827BCC3DEE8D73CBE748A610911FD6C194A3` for `20261117000100_foundation_catalog.sql`. The F02 gate checks this exact file hash before hosted verification. This pins the reviewed local source; Supabase migration history records a version, not a remote SQL checksum. Any later catalog change requires a reviewed forward migration.
+
+**Explicitly deferred, not passed:** A second fresh isolated database migration, reset rehearsal and fictitious seed execution/count checks. Risk: an unnoticed fresh-install or seed defect could obstruct recovery or later physical inventory setup. Require isolated non-hosted testing before relying on a rebuild or activating physical inventory; this decision does not waive security or implementation findings. F03 and the Phase 01 exit gate remain separate.
+
+**2026-11-18 checkpoint authorization:** The owner approved committing and pushing current F02 work as a development checkpoint while final verification remains pending. This does not change D-040 acceptance or the mandatory scan and independent review thresholds. The latest hosted gate stopped at Supabase CLI type generation; F02 is not marked Done.

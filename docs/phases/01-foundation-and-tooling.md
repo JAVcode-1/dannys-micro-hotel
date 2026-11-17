@@ -22,12 +22,14 @@ status: in-progress
 ## F02 — Supabase project, SQL migrations and DB connectivity
 
 - [ ] Create/obtain **development-only** Supabase project and decide local CLI/Docker or isolated hosted-dev workflow, as documented in [[22-supabase-setup]].
-- [ ] Initialize `supabase/` using Supabase CLI; create **versioned SQL migrations** and fictitious seed data.
+- [ ] Initialize `supabase/` using Supabase CLI; create the approved **versioned SQL catalog migration**. Keep fictitious seed data local-only and unexecuted on the hosted project.
 - [ ] Verify Express PostgreSQL DB connection using **direct or session pooler** as appropriate for host network; do not guess connection URI.
 - [ ] Add readiness checks, connection timeouts, safe pooling, migration target verification and generated TS database types.
-- [ ] Document one clear migration workflow and how to safely reset an isolated *development-only* DB.
+- [ ] Document the hosted development migration workflow, target checks, and recovery approach without resetting the hosted project.
 
-**Acceptance:** A fresh dev DB applies migrations reproducibly, Express connects safely without leaking database credentials, schema types generate, and no production project is touched.
+**F02 acceptance (D-040, owner-approved 2026-11-17):** The existing hosted **development** project is confirmed by name and reference; the CLI preview lists only the approved catalog migration and no seed; migration history records that version; read-only hosted checks verify the three tables, constraints, zero physical rooms and seven approved rates; generated types, TLS-verified Express connectivity, `/health` and `/ready` HTTP 200, application tests, scans and independent reviews pass. Do not reapply or reset the hosted migration.
+
+**Deferred, not passed:** Applying the migration to a second fresh isolated database, testing a reset, and executing/checking fictitious seed rows. These tests would catch portability, fresh-install and seed errors that the hosted catalog check cannot. Complete them before relying on a reproducible rebuild or introducing physical inventory; do not use the hosted project as the test database. F02 implementation may be complete with this explicit test debt, while F03 and the Phase 01 exit gate remain open.
 
 ## F03 — Testing and baseline CI
 

@@ -1,7 +1,7 @@
 # Three independent Codex CLI reviewer sessions, one per original greploop lens.
 # Read-only sandbox; uses user's Codex login and may consume additional tokens.
 [CmdletBinding()]
-param()
+param([switch]$F02Hosted)
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Push-Location $root
@@ -16,13 +16,14 @@ try {
     $output = Join-Path $root '.quality/reviews'
     New-Item -ItemType Directory -Path $output -Force | Out-Null
     $schema = Join-Path $PSScriptRoot 'review-schema.json'
+    $f02Context = if ($F02Hosted) { 'Read D-040 and current F02 acceptance in docs/phases/01-foundation-and-tooling.md. The owner deferred fresh isolated migration/reset and fictitious seed tests; report these as untested risks, not passed checks. Hosted read-only catalog/connectivity checks remain required. Identify actual implementation and security defects without treating the approved deferral alone as a defect.' } else { '' }
     $results = @()
     foreach ($lens in @('correctness','security','quality')) {
         $target = Join-Path $output "$lens.json"
         Remove-Item $target -ErrorAction SilentlyContinue
         $role = "greploop_$lens"
         $prompt = @"
-You are an INDEPENDENT, READ-ONLY Codex $lens reviewer. Read original .agents/skills/greploop/SKILL.md and the project's AGENTS.md. This is review-only: do not edit files, commit, install packages, delegate further, or invoke this gate recursively. Review the CURRENT UNCOMMITTED source/tooling diff from git status, including untracked code. Check each changed file IN FULL except generated lockfiles, and trace related callers/importers. Expected files: $($expected -join ', '). Focus on $lens lens. Inspect .quality/validation.log and .scanloop/reports for checks completed before this review, verifying timestamps and content. This three-reviewer panel is currently in progress, so a completed panel result cannot yet exist; evaluate the code and prior checks in your lens without treating that circular absence as a code finding. A read-only review does not need to rerun checks if fresh gate evidence is present. Score against the greploop rubric based on findings and verified evidence. Return STRICT JSON conforming to the supplied schema with true findings; score 1-5. Include every issue severity blocking|major|minor, file:line, explanation, concrete fix. If unable to access a file, list that limitation and lower score. No fabricated evidence.
+You are an INDEPENDENT, READ-ONLY Codex $lens reviewer. Read original .agents/skills/greploop/SKILL.md and the project's AGENTS.md. This is review-only: do not edit files, commit, install packages, delegate further, or invoke this gate recursively. Review the CURRENT UNCOMMITTED source/tooling diff from git status, including untracked code. Check each changed file IN FULL except generated lockfiles, and trace related callers/importers. Expected files: $($expected -join ', '). Focus on $lens lens. $f02Context Inspect .quality/validation.log and .scanloop/reports for checks completed before this review, verifying timestamps and content. This three-reviewer panel is currently in progress, so a completed panel result cannot yet exist; evaluate the code and prior checks in your lens without treating that circular absence as a code finding. A read-only review does not need to rerun checks if fresh gate evidence is present. Score against the greploop rubric based on findings and verified evidence. Return STRICT JSON conforming to the supplied schema with true findings; score 1-5. Include every issue severity blocking|major|minor, file:line, explanation, concrete fix. If unable to access a file, list that limitation and lower score. No fabricated evidence.
 "@
         Write-Host "Running independent Codex reviewer: $lens" -ForegroundColor Cyan
         & codex exec --sandbox read-only -C $root --output-schema $schema -o $target $prompt

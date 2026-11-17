@@ -1,13 +1,13 @@
 ---
 tags: [supabase, setup, phase-00, security, architecture]
-status: approved-platform-unconfigured
+status: hosted-development-catalog-configured
 version: 1.3
-updated: 2026-11-12
+updated: 2026-11-17
 ---
 # 22 — Supabase Setup and Integration Plan
 
 > [!important] Status
-> **Supabase platform is selected by the project requester** as of 2026-11-12. This page is a **setup plan, not evidence of a created Supabase account, project, migrated database, enabled Auth provider, uploaded bucket, or deployed application**. Implement it phase by phase; do not mark tasks done without observed evidence.
+> **Supabase platform is selected by the project requester** as of 2026-11-12. The hosted development project and approved F02 catalog migration were verified on 2026-11-17. Auth, Storage, a deployed application, fresh isolated migration/reset testing and seed execution are **not** evidenced here. Implement them in their documented phases; do not mark tasks done without observed evidence.
 
 ## A. What Supabase does in our architecture
 
@@ -22,10 +22,10 @@ updated: 2026-11-12
 ## B. Pre-coding checklist: first setup
 
 - [ ] Obtain access to a Supabase organization. **Do not share a password, token, secret key, or database URL in chat.**
-- [ ] Create a dedicated **development** Supabase project (not production). Record the project nickname, region, responsible owner and hosting budget **without recording credentials**.
+- [ ] For F02, use the owner-approved existing `dannys-micro-hotel` development project (`pgbierfxeviouyjsmjnh`); record its region, responsible owner and hosting budget **without recording credentials**. Do not create another project for F02.
 - [ ] Open **Project Dashboard → Connect**; choose a DB connection method supported by the planned Express host. For a persistent IPv6-capable backend, direct is appropriate; otherwise use **session pooler** on IPv4-only hosts.
 - [ ] Identify **Project URL** and **publishable API key** for the React Auth client (safe for public clients only with RLS). Store `SUPABASE_SECRET_KEY` and `DATABASE_URL` in backend secrets only.
-- [ ] Decide local workflow: (A) Supabase CLI + compatible Docker runtime for full local Auth/Storage/Postgres, or (B) a separate hosted dev project when local stack is impractical. Local DB install **is not mandatory** with hosted Supabase.
+- [ ] Use the approved hosted development workflow for F02 (D-040). Local DB installation is **not mandatory** for this task.
 - [ ] Agree on the migration workflow: SQL files under `supabase/migrations/`; no unmanaged manual production schema changes.
 
 **Exit evidence:** Screenshot or private note that the development project exists, CLI/config strategy chosen, and safe connectivity demonstrated **without exposing keys**.
@@ -34,12 +34,11 @@ updated: 2026-11-12
 
 ```dotenv
 # frontend/.env.example — these are placeholders, not real secrets
-VITE_API_URL=http://localhost:4000/api/v1
 VITE_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_example_only
 
 # backend/.env.example — never expose these to the browser
-PORT=4000
+PORT=3001
 SUPABASE_URL=https://YOUR-PROJECT.supabase.co
 SUPABASE_PUBLISHABLE_KEY=sb_publishable_example_only
 SUPABASE_SECRET_KEY=SERVER_ONLY_SET_IN_SECRET_MANAGER
@@ -54,11 +53,15 @@ DATABASE_URL=SERVER_ONLY_POSTGRES_CONNECTION_STRING
 
 - [ ] Create `supabase/` CLI config with `supabase init` **during coding F02**, not in this docs package.
 - [ ] Create first SQL migration in `supabase/migrations`; store only fictitious seed room codes until actual room identifiers are confirmed.
-- [ ] Run migrations against the **local/dev target only**; verify fresh reset and generated TypeScript types.
+- [ ] Run migrations against the **local/dev target only**; verify generated TypeScript types. Under D-040, the fresh isolated reset and seed test is explicitly deferred, not passed.
 - [ ] Preserve migration history and prohibit direct production schema experiments.
 - [ ] Use a dedicated PostgreSQL integration test target to test simultaneous holds and cross-channel booking constraints.
 
 **Note:** Current Supabase CLI docs describe target selection with `--remote` for hosted projects. Check your installed CLI version and confirm target before applying migrations; never execute destructive resets on production.
+
+**F02 hosted development workflow (D-040):** Use the already linked `dannys-micro-hotel` development project (`pgbierfxeviouyjsmjnh`). The approved `20261117000100_foundation_catalog.sql` was previewed as the only pending migration and applied once. Check migration history with the workspace CLI using `node_modules/.bin/supabase migration list --remote`; run `node --env-file=backend/.env scripts/verify-f02-db.mjs` and `node --env-file=backend/.env scripts/verify-f02-http.mjs` for read-only catalog and API verification. The quality gate's `-F02Hosted` option also runs `db push --remote --dry-run` to confirm no migration is pending. Never run `db reset`, `seed.sql`, or a non-dry-run `db push` for routine F02 verification. Recovery from a failed hosted migration requires an owner-reviewed forward migration or backup restore plan, not an ad hoc reset. Fresh-install/reset and fictitious seed tests remain deferred with the risk recorded in [[phases/01-foundation-and-tooling]].
+
+**Generated type verification:** Run `npm run verify:f02:types`. It uses the installed Supabase CLI 3.2.0 to read `public` and `staytrack` from the approved linked project, formats the generated TypeScript with Prettier, and compares it with `packages/shared/src/database.types.ts`. It exits nonzero on schema/type drift and is part of the `-F02Hosted` quality gate. The check reads the hosted database; it does not change its schema or seed data.
 
 ## E. Phase 02: authentication
 

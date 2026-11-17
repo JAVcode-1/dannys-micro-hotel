@@ -4,7 +4,7 @@ status: docs-first-handoff
 ---
 # Session Context — StayTrack / Danny's Micro Hotel
 
-**Project status:** Phase 01 F01 foundation complete on 2026-11-17; F02/F03 and all later phases remain unstarted. This is a local development foundation, not a deployed or production-connected system.
+**Project status:** Phase 01 F01 complete; F02 hosted development migration and connectivity implemented, with the mandatory quality gate still pending; F03 and later phases have not started. This is not a deployed application.
 
 ## Read first
 
@@ -45,11 +45,11 @@ Guests and anonymous visitors may **read** published verified ratings; only the 
 
 ## Next action
 
-F01 evidence is in [[14-milestones]] and [[phases/01-foundation-and-tooling]]. The owner confirmed the quality gate passed; current independent review scores are 5/5 correctness, 5/5 security and 4/5 quality, with no blocking/major findings. No commit or push has been made. F02 is the next documented task, but has not begun.
+F01 evidence is in [[14-milestones]] and [[phases/01-foundation-and-tooling]]. F02 implementation is at an owner-authorized development checkpoint; D-040 defers fresh isolated migration/reset and fictitious seed tests. The catalog migration was applied previously. The latest hosted gate confirmed migration history and a no-pending-migration dry run, then stopped when Supabase CLI type generation exited 1; the scan and independent review stages did not run in that attempt. On 2026-11-18, local build, typecheck, lint, format check, and 16 application tests passed. F02 quality-gate verification remains pending; F03 has not started.
 
 ## Supabase implementation guardrails (2026-11-12)
 
-- **D-035:** Supabase PostgreSQL selected; an existing hosted project is linked locally, but F01 did not connect the application or apply migrations. Never claim Auth, Storage or database connectivity are configured based on docs alone.
+- **D-035/D-040:** Supabase PostgreSQL selected. F02 uses the linked hosted development project for the catalog migration and read-only checks. Auth and Storage remain unconfigured; fresh isolated rebuild and seed behavior are untested.
 - Prefer Supabase Auth managed login/OTP and private Storage proof bucket; confirm detailed approach in Phase 02 / Phase 05. Express API authorizes all domain writes.
 - Do not expose Supabase secret key or DB connection string in React. Use publishable key with tested RLS, backend authorization, SQL migrations and true PostgreSQL transaction locks.
 - Supabase CLI + Docker local stack or isolated hosted development project. Backend Express and React hosting are separate, still unchosen. Read [[22-supabase-setup]].

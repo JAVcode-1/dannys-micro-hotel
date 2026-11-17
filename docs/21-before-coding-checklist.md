@@ -8,7 +8,7 @@ updated: 2026-11-12
 # 21 — Before Coding: Project Readiness Checklist
 
 > [!success] Development decision
-> Planning is **sufficient to start Phase 01**. This is a **docs-only** release; **no coding tasks have been completed** by this package. Don't delay workspace setup for owner details needed in later phases. Use the blockers table below to decide when an answer is genuinely required.
+> Planning is **sufficient to start Phase 01**. F01 is complete and F02 is under quality-gate review; F03 has not started. Don't delay workspace setup for owner details needed in later phases. Use the blockers table below to decide when an answer is genuinely required.
 
 ## A. Minimum checklist BEFORE Phase 01 / F01
 
@@ -93,15 +93,15 @@ The detailed list is in [[18-backlog]]. **Never silently assume** unresolved inf
 
 ## E. Pre-coding meeting decision and live progress
 
-| Item | Status as of 2026-11-12 |
+| Item | Status as of 2026-11-17 |
 |---|---|
 | Hotel operation rules baseline | Recorded in [[02-requirements]] |
 | Architecture and schema concepts | Drafted; still to be validated during implementation |
 | Stack | **Approved:** React/TypeScript/Tailwind; Node/Express/TypeScript; **Supabase PostgreSQL** (D-035) |
 | Digital UI theme | **Approved by project requester:** Danny's Royal Horizon |
 | Dev tools on user's own computer | **Unverified**; follow PC-02 |
-| Project Git repository and local app setup | **Not started / not evidenced** |
-| Phase 01 coding | **Not started in this documentation package** |
+| Project Git repository and local app setup | Git repository and F01 app setup evidenced; remaining workstation checklist items are still open |
+| Phase 01 coding | F01 complete; F02 under quality-gate review; F03 not started |
 
 ### When a checklist item is completed
 
@@ -109,9 +109,9 @@ Change `[ ]` to `[x]` only after observed evidence, add `date`, `owner`, `eviden
 
 ## F02 platform-specific prerequisites (after F01, before Phase 02)
 
-- [ ] Follow [[22-supabase-setup]] and create an **isolated development** Supabase project or local stack.
+- [ ] Follow [[22-supabase-setup]] and use the existing hosted development project approved for F02 by D-040.
 - [ ] Choose direct or session-pooled Postgres connection for the actual Express host/network; don't hardcode guessed server names.
-- [ ] Record migration target, SQL migration files and a safe rollback strategy; show test DB reset evidence.
+- [ ] Record migration target, SQL migration file and forward-recovery strategy. Fresh isolated reset evidence is explicitly deferred by D-040, not passed.
 - [ ] Configure placeholder URLs/keys in `.env.example` **without real credentials**.
 - [ ] Verify that frontend receives no `SUPABASE_SECRET_KEY` or `DATABASE_URL`.
 - [ ] Test a backend-only database connection and a denied anonymous business write.
