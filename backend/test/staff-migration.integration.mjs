@@ -49,13 +49,43 @@ test("isolated PostgreSQL applies A01 with private staff access and retained aud
     );
     await client.query(foundation);
     await client.query(migration);
+    const security = await client.query(`
+      SELECT c.relname, c.relrowsecurity,
+        has_schema_privilege('anon', 'staytrack', 'USAGE') AS anon_schema,
+        has_schema_privilege('authenticated', 'staytrack', 'USAGE') AS authenticated_schema,
+        has_table_privilege('anon', c.oid, 'SELECT,INSERT,UPDATE,DELETE') AS anon_table,
+        has_table_privilege('authenticated', c.oid, 'SELECT,INSERT,UPDATE,DELETE') AS authenticated_table
+      FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'staytrack' AND c.relname IN ('staff_accounts', 'staff_audit')
+      ORDER BY c.relname`);
+    assert.deepEqual(
+      security.rows.map((row) => row.relname),
+      ["staff_accounts", "staff_audit"],
+    );
+    for (const row of security.rows) {
+      assert.equal(row.relrowsecurity, true);
+      assert.equal(row.anon_schema, false);
+      assert.equal(row.authenticated_schema, false);
+      assert.equal(row.anon_table, false);
+      assert.equal(row.authenticated_table, false);
+    }
+    const sequence = await client.query(`SELECT
+      has_sequence_privilege('anon', 'staytrack.staff_audit_id_seq', 'USAGE,SELECT,UPDATE') AS anon,
+      has_sequence_privilege('authenticated', 'staytrack.staff_audit_id_seq', 'USAGE,SELECT,UPDATE') AS authenticated`);
+    assert.equal(sequence.rows[0].anon, false);
+    assert.equal(sequence.rows[0].authenticated, false);
     await client.query("INSERT INTO auth.users (id) VALUES ($1), ($2)", [
       first,
       second,
     ]);
+    const inactiveByDefault = await client.query(
+      "INSERT INTO staytrack.staff_accounts (auth_user_id) VALUES ($1) RETURNING active",
+      [second],
+    );
+    assert.equal(inactiveByDefault.rows[0].active, false);
     await client.query(
-      "INSERT INTO staytrack.staff_accounts (auth_user_id, active) VALUES ($1, true), ($2, false)",
-      [first, second],
+      "INSERT INTO staytrack.staff_accounts (auth_user_id, active) VALUES ($1, true)",
+      [first],
     );
     const active = await client.query(
       "SELECT auth_user_id FROM staytrack.staff_accounts WHERE auth_user_id = $1 AND active = true",
@@ -78,6 +108,18 @@ test("isolated PostgreSQL applies A01 with private staff access and retained aud
       (error) => error.code === "42501",
     );
     await client.query("ROLLBACK TO SAVEPOINT denied_staff_read");
+    await client.query("SAVEPOINT rls_check");
+    await client.query("GRANT USAGE ON SCHEMA staytrack TO authenticated");
+    await client.query(
+      "GRANT ALL ON staytrack.staff_accounts, staytrack.staff_audit TO authenticated",
+    );
+    await client.query("SET LOCAL ROLE authenticated");
+    for (const table of ["staff_accounts", "staff_audit"]) {
+      const visible = await client.query(`SELECT * FROM staytrack.${table}`);
+      assert.equal(visible.rowCount, 0);
+    }
+    await client.query("RESET ROLE");
+    await client.query("ROLLBACK TO SAVEPOINT rls_check");
     await client.query("DELETE FROM auth.users WHERE id = $1", [first]);
     const retained = await client.query(
       "SELECT actor_auth_user_id FROM staytrack.staff_audit WHERE actor_auth_user_id = $1",
