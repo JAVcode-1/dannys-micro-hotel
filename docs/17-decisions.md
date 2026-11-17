@@ -104,3 +104,5 @@ See [[18-backlog]].
 ## D-041 — F03 isolated test database boundary (2026-11-18)
 
 **Implementation choice:** GitHub Actions uses its own PostgreSQL 17 service and a loopback `staytrack_test` URL. The F03 constraint test rejects any other host or database name before opening a connection, applies the F02 catalog migration only inside a transaction and rolls it back. CI provides no hosted Supabase credentials. Local isolated database execution and the first CI run remain unverified; this decision does not waive the F02 gate or future authorization tests.
+
+**2026-11-18 verification note:** `picomatch 4.0.7` is installed through Vite/fdir/tinyglobby in frontend development tooling; it is absent from `npm ls --omit=dev`. The high-severity GHSA-fc5q-39xc-vjpf remains a genuine, unsuppressed scan finding, and no verified patched npm version was available. No incompatible override is approved. GitHub Actions and its isolated PostgreSQL test remain unverified; F03 and Phase 01 are not Done.
