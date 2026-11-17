@@ -16,6 +16,8 @@ status: in-progress
 
 **Before hosted A01 deployment:** Apply the pending migration only after owner approval and test it on an isolated PostgreSQL target first. Verify `anon`/`authenticated` cannot read or write staff tables or audit rows, and confirm the Express database role has only the required access. Configure invite-only staff creation, recovery URL allowlist, email delivery and Auth throttling. Put a shared ingress/provider rate limit in front of `/staff/me` (the current in-memory limit is per process), then test real tokens for two distinct employees, a guest, a disabled employee, and audit persistence/failure. Keep staff accounts inactive until these checks pass.
 
+**A01 migration review (2026-11-18):** The existing CI PostgreSQL test now checks default inactive membership, both client roles' schema/table/sequence privileges, enabled RLS, RLS behavior after temporary grants, disabled membership, and audit retention. Commit `749ca2b` was pushed to trigger the isolated CI service, but its run result was not accessible in this session. Local build, typecheck, lint, format and 32 application tests passed; the isolated SQL test remains **unverified**, and the migration is **not yet ready for approval**. No hosted migration or staff account was changed.
+
 - [ ] Configure **Supabase Auth** login, logout, session handling, staff invitation/account recovery and strong rate limits.
 - [ ] Create `staff_accounts` linked to `auth.users.id`; one common Staff/Admin capability tier, but **unique login for each employee**.
 - [ ] Express validates Supabase Auth token identity, verifies active staff membership on each privileged request, and writes actor ID to audit.

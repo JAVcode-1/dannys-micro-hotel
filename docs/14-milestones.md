@@ -26,6 +26,8 @@ status: in-progress
 
 **Next step:** A01 is an authorized development checkpoint, not a completed phase task. The four checkpoint commands pass; the SQL migration and hosted Auth acceptance remain pending. F02/F03 verification debt and the OSV `picomatch` finding remain open under D-043. Do not begin A02 until instructed.
 
+**A01 review follow-up (2026-11-18):** Isolated PostgreSQL security assertions were extended in `backend/test/staff-migration.integration.mjs` and pushed as `749ca2b`. Build, typecheck, lint, format and 32 application tests passed locally. GitHub Actions' `test:db` result has not been observed, so migration approval readiness remains pending. No A01 checkbox changed.
+
 ## Session log
 
 **2026-11-18 setup checkpoint:** Root combined dev command starts Vite at `http://localhost:5173/` and Express at `http://localhost:3001/`; the frontend page and `/health` returned HTTP 200. Build, typecheck, lint and application tests passed (21 backend, 11 frontend). Ponytail Full was installed through the official Codex plugin commands. A01 migration remains unapplied; isolated SQL/RLS, hosted Auth, shared rate limiting and real employee acceptance remain pending. No checklist status changed.
