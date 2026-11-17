@@ -4,7 +4,7 @@ status: docs-first-handoff
 ---
 # Session Context — StayTrack / Danny's Micro Hotel
 
-**Project status:** Requirements discussion complete enough to start engineering **phase-by-phase**. Planning docs created; no active production system or runtime-tested implementation in this ZIP.
+**Project status:** Phase 01 F01 foundation complete on 2026-11-17; F02/F03 and all later phases remain unstarted. This is a local development foundation, not a deployed or production-connected system.
 
 ## Read first
 
@@ -45,11 +45,11 @@ Guests and anonymous visitors may **read** published verified ratings; only the 
 
 ## Next action
 
-Review **[[21-before-coding-checklist]]** and **[[22-supabase-setup]]** (PC-01 to PC-04) and then start **[[phases/01-foundation-and-tooling]]**, task `F01`; do not jump to payment verification or build all pages at once. After a testable task is done, update [[14-milestones]] and store a concise ICM progress fact if tool exists.
+F01 evidence is in [[14-milestones]] and [[phases/01-foundation-and-tooling]]. The owner confirmed the quality gate passed; current independent review scores are 5/5 correctness, 5/5 security and 4/5 quality, with no blocking/major findings. No commit or push has been made. F02 is the next documented task, but has not begun.
 
 ## Supabase implementation guardrails (2026-11-12)
 
-- **D-035:** Supabase PostgreSQL selected; not yet provisioned or connected. Never claim Auth, Storage or migrations are configured based on docs alone.
+- **D-035:** Supabase PostgreSQL selected; an existing hosted project is linked locally, but F01 did not connect the application or apply migrations. Never claim Auth, Storage or database connectivity are configured based on docs alone.
 - Prefer Supabase Auth managed login/OTP and private Storage proof bucket; confirm detailed approach in Phase 02 / Phase 05. Express API authorizes all domain writes.
 - Do not expose Supabase secret key or DB connection string in React. Use publishable key with tested RLS, backend authorization, SQL migrations and true PostgreSQL transaction locks.
 - Supabase CLI + Docker local stack or isolated hosted development project. Backend Express and React hosting are separate, still unchosen. Read [[22-supabase-setup]].

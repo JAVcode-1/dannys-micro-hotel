@@ -21,16 +21,45 @@ try {
     if ($exit -ne 0) { Write-Host "Gitleaks failed or found issues: exit $exit" -ForegroundColor Red; $failed = $true }
 
     $roots = @('frontend','backend','packages','supabase') | Where-Object { Test-Path $_ }
-    $hasCode = @(Get-ChildItem -Path $roots -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -in @('.ts','.tsx','.js','.jsx') }).Count -gt 0
-    if ($hasCode) {
+    $files = @(Get-ChildItem -Path $roots -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch '[\\/](node_modules|dist|build|\.temp)[\\/]' })
+    $codeFiles = @($files | Where-Object { $_.Extension -in @('.ts','.tsx','.js','.jsx','.mjs','.cjs') })
+    $codeFiles += @(Get-ChildItem -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -in @('.js','.jsx','.mjs','.cjs','.ts','.tsx') })
+    if ($codeFiles.Count -gt 0) {
         Write-Host '--- Semgrep (local rules; metrics OFF) ---' -ForegroundColor Cyan
-        & semgrep scan --metrics=off --config .scanloop/rules/local-security.yml --error --json --output (Join-Path $output 'semgrep.json') @roots
-        $exit = $LASTEXITCODE
+        $ErrorActionPreference = 'Continue'
+        try {
+            $scanOutput = @(& semgrep scan --metrics=off --config .scanloop/rules/local-security.yml --no-git-ignore --error --json --output (Join-Path $output 'semgrep.json') @($codeFiles.FullName) 2>&1 | ForEach-Object { $_.ToString() })
+            $exit = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = 'Stop'
+        }
+        $scanOutput | Tee-Object -FilePath (Join-Path $output 'semgrep-console.log')
         if ($exit -ne 0) { Write-Host "Semgrep failed or found issues: exit $exit" -ForegroundColor Red; $failed = $true }
+        $summary = $scanOutput -join "`n"
+        $report = Get-Content -Raw (Join-Path $output 'semgrep.json') | ConvertFrom-Json
+        $scanned = @($report.paths.scanned)
+        $missing = @($codeFiles.FullName | Where-Object { $_ -notin $scanned })
+        if ($summary -notmatch 'Rules run:\s*[1-9]\d*' -or $summary -notmatch 'Targets scanned:\s*[1-9]\d*' -or $missing.Count -gt 0 -or @($report.errors).Count -gt 0) {
+            Write-Host "Semgrep coverage could not be verified. Missing targets: $($missing -join ', ')" -ForegroundColor Red
+            $failed = $true
+        }
     } else {
         Write-Host 'NOT APPLICABLE: Semgrep (no TypeScript or JavaScript files yet)' -ForegroundColor Yellow
     }
-    $lockfiles = @(Get-ChildItem -Path $roots -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^(package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml)$' -and $_.FullName -notmatch '[\\/](node_modules|dist|build)[\\/]' })
+    Write-Host '--- PowerShell tooling check (syntax and dynamic execution; limited coverage) ---' -ForegroundColor Cyan
+    foreach ($file in @(Get-ChildItem -Path scripts -Filter '*.ps1' -File -Recurse)) {
+        $tokens = $null
+        $parseErrors = $null
+        $ast = [System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$parseErrors)
+        $dynamicCommands = @($ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.CommandAst] -and $node.GetCommandName() -in @('Invoke-Expression','iex') }, $true))
+        if (@($parseErrors).Count -gt 0 -or $dynamicCommands.Count -gt 0) {
+            Write-Host "PowerShell check failed: $($file.FullName)" -ForegroundColor Red
+            $failed = $true
+        }
+    }
+    Write-Host 'PowerShell scripts parsed; dynamic execution commands absent. Other PowerShell security issues require code review.' -ForegroundColor Yellow
+    $lockfiles = @($files | Where-Object { $_.Name -match '^(package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml)$' })
+    $lockfiles += @(Get-ChildItem -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^(package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml)$' })
     if ($lockfiles.Count -gt 0) {
         Write-Host '--- OSV-Scanner (lockfiles; network dependency metadata disclosure) ---' -ForegroundColor Cyan
         $args = @('scan','source','--format=json','--output-file', (Join-Path $output 'osv.json'))

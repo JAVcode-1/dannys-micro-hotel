@@ -84,3 +84,7 @@ See [[18-backlog]].
 **Fairness and protection:** Legitimate positive and negative ratings—including **1-star**—remain eligible for publication and the average. Private feedback is staff-only. Staff may reply and temporarily hide/restore clearly violating reviews (e.g., spam/threats/personal data) with an explicit policy reason and audit actor, but cannot modify customer stars/comments or hide feedback merely for criticism. Suspicious content may be flagged for moderation; no blanket positivity-approval gate.
 
 **Scope/timing:** Add as a Phase 08 enhancement behind a feature gate; no impact on initial Phase 01 coding. Detailed implementation prerequisites/remaining decisions in [[24-verified-guest-reviews]] and [[18-backlog]], test cases T31–T38 in [[15-testing-plan]]. **No owner-stated operating results or completed development implied.**
+
+## D-039 — F01 workspace tooling (2026-11-17)
+
+**Implementation choice:** Use npm 10.9.8 workspaces with Node.js 22 or newer for separate `frontend/`, `backend/` and `packages/shared/` packages. F01 uses Vite, React, Tailwind CSS, Express, strict TypeScript, ESLint and Prettier. This records developer tooling, not a hotel business-policy change. Database migrations, connectivity, Auth and Storage remain for later tasks; the existing Supabase project is preserved. F01 quality-gate evidence is recorded in [[14-milestones]].

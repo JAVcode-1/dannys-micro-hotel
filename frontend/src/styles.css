@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+:root {
+  --brand-primary: #2443b6;
+  --brand-primary-hover: #1b3595;
+  --accent-booking: #f97316;
+  --accent-lavender: #eee9fa;
+  --surface-canvas: #fafafd;
+  --surface-card: #ffffff;
+  --text-main: #17213d;
+  --surface-selected: #eaf1ff;
+  --text-muted: #475569;
+  --border-subtle: #dde4f2;
+  --focus-ring: #2443b6;
+}
+
+@theme inline {
+  --color-primary: var(--brand-primary);
+  --color-booking: var(--accent-booking);
+  --color-lavender: var(--accent-lavender);
+  --color-canvas: var(--surface-canvas);
+  --color-main: var(--text-main);
+  --color-selected: var(--surface-selected);
+  --color-muted: var(--text-muted);
+  --color-subtle: var(--border-subtle);
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  margin: 0;
+  font-family: "Segoe UI", sans-serif;
+}
+button,
+a {
+  touch-action: manipulation;
+}
+button {
+  user-select: none;
+  -webkit-user-select: none;
+}

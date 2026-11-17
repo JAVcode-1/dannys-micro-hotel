@@ -1,6 +1,6 @@
 ---
 tags: [phase-01, implementation, supabase]
-status: not-started
+status: in-progress
 ---
 # Phase 01 — Foundation & Tooling (React, Express, Supabase)
 
@@ -10,10 +10,12 @@ status: not-started
 
 ## F01 — Workspace and developer tooling
 
-- [ ] Create `frontend`, `backend`, `packages/shared`; TypeScript strict mode and shared type contracts.
-- [ ] Configure React + Tailwind shell with approved **Danny's Royal Horizon** theme tokens; Express TypeScript API with `/health` endpoint.
-- [ ] Add `.env.example` placeholders for Supabase URL / publishable key in web, server-only `SUPABASE_SECRET_KEY` / `DATABASE_URL` in API, lint/format and `.gitignore`.
-- [ ] Create root workspace commands; choose one package manager and record version. Do **not** put live credentials or real guests into repo.
+- [x] Create `frontend`, `backend`, `packages/shared`; TypeScript strict mode and shared type contracts.
+- [x] Configure React + Tailwind shell with approved **Danny's Royal Horizon** theme tokens; Express TypeScript API with `/health` endpoint.
+- [x] Add `.env.example` placeholders for Supabase URL / publishable key in web, server-only `SUPABASE_SECRET_KEY` / `DATABASE_URL` in API, lint/format and `.gitignore`.
+- [x] Create root workspace commands; choose one package manager and record version. Do **not** put live credentials or real guests into repo.
+
+**F01 evidence (2026-11-17):** npm 10.9.8 workspaces; Node.js 22 or newer. The owner confirmed the executable quality gate passed. Its retained validation log records passing build, typecheck, lint, format check, two backend tests, two frontend tests and the greploop source-filter regression. Current independent review reports score correctness 5/5, security 5/5 and quality 4/5, with no blocking or major findings. Gitleaks and OSV reported no findings; the local Semgrep starter rules scanned 10 JavaScript/TypeScript files with no findings. The frontend tests render the page and serve the production page/CSS through Vite preview. No database migration or Supabase connectivity was attempted.
 
 **Acceptance:** Both web and API start, `/health` works, the frontend renders approved tokens, all TypeScript checks pass. Supabase service need not be provisioned to finish F01.
 
