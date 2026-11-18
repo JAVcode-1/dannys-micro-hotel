@@ -177,6 +177,8 @@ The owner confirms V03 migration `20261118000400_claim_hold_lifecycle.sql` appli
 
 ## O01 implementation boundary — 2026-11-18
 
+**CI evidence follow-up:** [Run 44339371390](https://github.com/JAVcode-1/dannys-micro-hotel/actions/runs/44339371390) passed on `6c479a8`, explicitly reporting O01 PostgreSQL success and six database tests with no failures/skips, plus 64 application tests and all build/static checks. Existing stored GitHub identity selection restored read-only CI access; no new credential or configuration change. The unavailable-CI blocker is superseded. No migration application, live activation, new hotel policy or formal phase completion is authorized by this evidence.
+
 **CI reporting clarification (2026-11-18):** No policy change. The earlier five-test database summary concealed O01 inside the V02 test body; O01 was not excluded by the integration glob. A separately named awaited subtest and explicit TAP reporting now expose its result. The assertions and isolated database safeguards remain; exact schedule and one-time Family bed line checks were added. CI success must be observed separately before migration readiness changes.
 
 **Readiness review follow-up (2026-11-18):** No new policy. Remote SQL confirms the five prior migrations; a password-based Supabase dry run succeeds and lists only O01 pending after one login-role 403. This does not establish SQL application correctness. O01 coverage exists in CI, but its actual private Actions result is inaccessible, so readiness remains **NOT SAFE TO APPLY pending CI evidence**. Eleven focused tests passed; no code/migration change or schema application occurred. Details: [[phases/05-online-booking-and-gcash]].
