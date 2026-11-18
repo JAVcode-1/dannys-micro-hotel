@@ -169,3 +169,7 @@ No new owner policy. Pending migration `20261118000300_inventory_claims.sql` sto
 ## V03 implementation note - 2026-11-18
 
 The owner reports V02 migration `20261118000300_inventory_claims.sql` applied to project `pgbierfxeviouyjsmjnh`, with four local/remote migrations matching; this supersedes the V02 unapplied status above. No new business policy is approved. The V03 candidate migration `20261118000400_claim_hold_lifecycle.sql` remains unapplied pending owner review. Late proof goes to manual reconciliation, never automatic confirmation. Proof-state transitions are internal until Phase 05 adds private Storage, reference validation, staff authorization and actor audit. Maintenance blocks remain in V01/V02 feasibility reads; a future maintenance write workflow must coordinate with claims and staff audit before real use.
+
+## Phase 04 exit-gate status - 2026-11-18
+
+The owner confirms V03 migration `20261118000400_claim_hold_lifecycle.sql` applied to `pgbierfxeviouyjsmjnh`, with all five local/remote versions matching; this supersedes the V03 unapplied status above. No new business decision or authorization to start Phase 05 is made. Phase 04 formal exit remains failed for live integration, real room inventory, expiry scheduling and major-milestone quality-gate evidence. The database password environment variable was cleared per owner report; no secret value is recorded here.
