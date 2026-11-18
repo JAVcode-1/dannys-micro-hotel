@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiBase } from "./staff-auth";
+import OccupancyGuide from "./OccupancyGuide";
 
 type Package = {
   code: string;
@@ -91,6 +92,7 @@ export default function Catalog() {
             );
           })}
         </div>
+        <OccupancyGuide />
       </div>
     </main>
   );

@@ -4,6 +4,7 @@ import type { Session } from "@supabase/supabase-js";
 import { apiBase, staffAuth, staffInviteCallback } from "./staff-auth";
 import StaffCatalog from "./StaffCatalog";
 import StaffRooms from "./StaffRooms";
+import OperationalSettings from "./OperationalSettings";
 
 export default function StaffLogin({
   authClient = staffAuth,
@@ -165,7 +166,9 @@ export default function StaffLogin({
       </p>
     );
   return (
-    <section className={`mx-auto rounded-2xl border border-subtle bg-white p-7 shadow-sm ${identity && window.location.pathname === "/staff/rooms" ? "max-w-5xl" : "max-w-md"}`}>
+    <section
+      className={`mx-auto rounded-2xl border border-subtle bg-white p-7 shadow-sm ${identity && ["/staff/rooms", "/staff/settings"].includes(window.location.pathname) ? "max-w-5xl" : "max-w-md"}`}
+    >
       <h1 className="text-2xl font-bold text-main">Staff sign-in</h1>
       <p className="mt-2 text-sm text-muted">
         Use your individual employee account.
@@ -210,10 +213,18 @@ export default function StaffLogin({
             >
               Rooms
             </a>
+            <a
+              className="rounded-lg bg-selected px-3 py-2 text-primary"
+              href="/staff/settings"
+            >
+              Settings
+            </a>
           </nav>
           {session &&
             (window.location.pathname === "/staff/rooms" ? (
               <StaffRooms token={session.access_token} />
+            ) : window.location.pathname === "/staff/settings" ? (
+              <OperationalSettings token={session.access_token} />
             ) : (
               <StaffCatalog token={session.access_token} />
             ))}

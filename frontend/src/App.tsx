@@ -14,6 +14,7 @@ export default function App() {
     typeof window !== "undefined" &&
     (window.location.pathname === "/staff" ||
       window.location.pathname === "/staff/rooms" ||
+      window.location.pathname === "/staff/settings" ||
       inviteCallback)
   )
     return (

@@ -6,6 +6,8 @@ import type { StaffIdentity } from "./staff-auth.js";
 import { verifyGuest } from "./guest-auth.js";
 import type { GuestIdentity } from "./guest-auth.js";
 import { staffRooms } from "./rooms.js";
+import { getSettings, saveSettings } from "./operational-settings.js";
+import { evaluateOccupants } from "./occupants.js";
 import {
   publicCatalog,
   changePackagePrice,
@@ -50,6 +52,7 @@ export function createApp(
       "/staff/catalog/packages",
       "/staff/catalog/categories",
       "/staff/rooms",
+      "/staff/settings",
     ],
     (request, response, next) => {
       const now = Date.now();
@@ -278,6 +281,41 @@ export function createApp(
     } catch {
       response.status(503).json({ error: "Room catalog unavailable" });
     }
+  });
+  app.get("/staff/settings", catalogStaff, async (_request, response) => {
+    try {
+      response.setHeader("Cache-Control", "no-store");
+      response.json(await getSettings());
+    } catch {
+      response.status(503).json({ error: "Settings unavailable" });
+    }
+  });
+  app.put("/staff/settings", catalogStaff, async (request, response) => {
+    try {
+      if (
+        !(await saveSettings(response.locals.actorId as string, request.body))
+      ) {
+        response.status(400).json({ error: "Invalid settings" });
+        return;
+      }
+      response.status(204).end();
+    } catch {
+      response.status(503).json({ error: "Settings update unavailable" });
+    }
+  });
+  app.post("/occupancy-advisory", (request, response) => {
+    const { categoryCode, adults, children, extraBed } = request.body ?? {};
+    const result = evaluateOccupants(categoryCode, {
+      adults,
+      children,
+      extraBed,
+    });
+    if (!result) {
+      response.status(400).json({ error: "Invalid occupants or extra bed" });
+      return;
+    }
+    response.setHeader("Cache-Control", "no-store");
+    response.json(result);
   });
   return app;
 }

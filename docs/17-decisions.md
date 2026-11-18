@@ -148,3 +148,8 @@ Catalog price revisions retain prior package versions. Future reservation items 
 ## C02 schema reuse note - 2026-11-18
 
 The existing F02 staytrack.rooms schema already separates physical readiness from future reservation state. C02 adds a protected read-only board; real identifiers are pending owner confirmation. No new migration or inventory seeding decision was made.
+
+
+## C03 implementation note - 2026-11-18
+
+Unknown owner settings remain null in the proposed operational settings migration. Express keeps the extra-bed quote at 10000 centavos for one Family bed per continuous stay and treats occupancy as advisory; reservation persistence and legal limits remain pending. No migration was applied or new owner policy approved.
