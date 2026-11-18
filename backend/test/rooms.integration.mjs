@@ -15,6 +15,10 @@ test("isolated database holds ten Double and five Family test rooms", async () =
   const client = await pool.connect();
   try {
     await client.query("begin");
+    await client.query(`DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN CREATE ROLE anon; END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN CREATE ROLE authenticated; END IF;
+    END $$`);
     await client.query("create schema if not exists auth");
     await client.query(
       readFileSync(
