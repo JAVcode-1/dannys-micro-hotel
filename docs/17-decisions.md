@@ -156,4 +156,8 @@ Unknown owner settings remain null in the proposed operational settings migratio
 
 ## Phase 03 exit-gate review - 2026-11-18
 
-No new business or platform decision. The formal Phase 03 gate remains open because 15 real room entities and booked-price snapshot evidence are absent, and the C03 settings migration is still unapplied. The verified C01–C03 work is a development checkpoint, not approval to use live bookings or alter the pending migration.
+No new business or platform decision. The formal Phase 03 gate remains open because 15 real room entities and booked-price snapshot evidence are absent, while the C03 settings migration has since been applied and staff settings persistence verified by the owner. The verified C01–C03 work is a development checkpoint, not approval to use live bookings.
+
+## V01 implementation note - 2026-11-18
+
+No new owner decision. Feasibility uses UTC epoch milliseconds and half-open occupancy-plus-buffer ranges internally. Roomless category claims are provisionally assigned together for evaluation, without showing room numbers to guests. This is a read-only calculation; database locking and durable claims remain V02. The C03 migration was already applied per owner verification; no V01 migration was applied.

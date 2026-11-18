@@ -43,3 +43,5 @@ status: not-started
 - [ ] Update [[14-milestones]].
 
 **Next:** [[05-online-booking-and-gcash]].
+
+**V01 development checkpoint (2026-11-18):** Added an internal UTC-instant feasibility allocator using half-open ranges, per-item cleaning buffers, fixed or category-only provisional allocations, room-specific maintenance blocks, immediate Ready checks, and joint assignments for cart items with distinct schedules. Focused tests cover buffer boundaries, roomless prior claims, maintenance, fixed-room conflicts and mixed schedules. This does not create or confirm bookings, read live reservation/hold/maintenance rows, persist claims, or provide V02 transaction locking. V01 acceptance and Phase 04 exit checkboxes remain open until those database-backed paths and T05/T06/T20/T28/T30 integration evidence exist. No V01 migration was prepared or applied; no real room identifiers were seeded.
