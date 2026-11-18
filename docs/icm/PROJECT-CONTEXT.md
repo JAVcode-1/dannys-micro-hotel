@@ -106,3 +106,5 @@ A01 final acceptance follow-up (2026-11-18): local build, typecheck, lint and 34
 **V02 CI follow-up:** [Run #18](https://github.com/JAVcode-1/dannys-micro-hotel/actions/runs/44279578668) passed all five isolated PostgreSQL tests with zero failures, including one winner among 30 contenders, plus build/typecheck/lint/format/application checks. The candidate migration ran only in disposable CI PostgreSQL. Hosted apply and live booking integration remain pending; V03 not started.
 
 **V02 retry follow-up:** `createClaims` now retries `40001` and `40P01` with a bounded three-attempt transaction loop. Focused red/green test passed after implementation. Hosted migration `20261118000300` remains unapplied and V03 remains untouched.
+
+**V02 final verification:** [CI run #19](https://github.com/JAVcode-1/dannys-micro-hotel/actions/runs/44281199949) succeeded on the retry fix. Local build/typecheck/lint/format/application tests passed; V02 migration and live booking integration remain pending.

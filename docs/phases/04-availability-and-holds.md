@@ -51,3 +51,5 @@ status: not-started
 **V02 CI evidence:** [GitHub Actions run #18](https://github.com/JAVcode-1/dannys-micro-hotel/actions/runs/44279578668) passed build, typecheck, lint, formatting, application tests and all five isolated PostgreSQL tests (0 failed), including 30 contenders for one room. The migration was applied only inside CI's disposable test database. V02 production integration and Phase 04 exit remain open; no hosted Supabase migration was applied.
 
 **V02 retry follow-up:** Claim creation now retries PostgreSQL serialization failures (`40001`) and deadlocks (`40P01`) up to two additional transaction attempts; a focused regression test first failed without retry and then passed. The subsequent full verification and CI outcome are recorded with the final checkpoint.
+
+**V02 final verification:** [GitHub Actions run #19](https://github.com/JAVcode-1/dannys-micro-hotel/actions/runs/44281199949) passed after the retry fix. Local build, typecheck, lint, format check and application tests also passed. The V02 candidate migration remains unapplied to Supabase; V02 is a development checkpoint, not a completed Phase 04 gate.

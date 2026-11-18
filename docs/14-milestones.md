@@ -89,3 +89,5 @@ Change **Not started → In progress → Done** only after acceptance gates. Inc
 **V02 CI follow-up:** [Run #18](https://github.com/JAVcode-1/dannys-micro-hotel/actions/runs/44279578668) passed build, typecheck, lint, formatting, application tests and five isolated PostgreSQL tests, 0 failed. The 30-contender test granted exactly one claim in its disposable database. Hosted migration `20261118000300` remains pending owner approval and unapplied; no live booking route or full Phase 04 acceptance is claimed.
 
 **V02 retry follow-up:** Bounded retries for serialization/deadlock failures were added to claim creation with a focused failing-then-passing regression test. This is a development check, not evidence that the hosted candidate migration was applied or that Phase 04 is complete.
+
+**V02 final verification:** [GitHub Actions run #19](https://github.com/JAVcode-1/dannys-micro-hotel/actions/runs/44281199949) succeeded after the retry fix; local build/typecheck/lint/format/application checks passed. The migration is still unapplied and V01/V02 live-flow acceptance remains pending.
