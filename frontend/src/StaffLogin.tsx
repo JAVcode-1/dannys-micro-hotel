@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { apiBase, staffAuth } from "./staff-auth";
+import { apiBase, staffAuth, staffInviteCallback } from "./staff-auth";
 
 export default function StaffLogin({
   authClient = staffAuth,
@@ -17,6 +17,13 @@ export default function StaffLogin({
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [recovering, setRecovering] = useState(false);
+  const [invited, setInvited] = useState(
+    () =>
+      staffInviteCallback ||
+      new URLSearchParams(window.location.hash.slice(1)).get("type") ===
+        "invite" ||
+      new URLSearchParams(window.location.search).get("type") === "invite",
+  );
 
   useEffect(() => {
     if (!authClient) return;
@@ -33,14 +40,16 @@ export default function StaffLogin({
     void client.auth.getSession().then(
       ({ data }) => {
         if (!eventSeen) setSession(data.session);
+        if (invited) window.history.replaceState(null, "", "/staff");
       },
       () => {
+        if (invited) window.history.replaceState(null, "", "/staff");
         if (!eventSeen)
           setMessage("Unable to restore your session. Please sign in again.");
       },
     );
     return () => data.subscription.unsubscribe();
-  }, [authClient]);
+  }, [authClient, invited]);
 
   useEffect(() => {
     if (!session) {
@@ -121,7 +130,10 @@ export default function StaffLogin({
       const { error } = await authClient.auth.updateUser({ password });
       if (error)
         setMessage("Password update failed. Request a new recovery link.");
-      else {
+      else if (invited) {
+        setInvited(false);
+        setMessage("Password set. Staff access requires activation.");
+      } else {
         setRecovering(false);
         setMessage("Password updated.");
       }
@@ -156,7 +168,7 @@ export default function StaffLogin({
       <p className="mt-2 text-sm text-muted">
         Use your individual employee account.
       </p>
-      {recovering ? (
+      {recovering || (invited && session) ? (
         <form
           onSubmit={(event) => void updatePassword(event)}
           className="mt-6 space-y-4"
@@ -177,7 +189,7 @@ export default function StaffLogin({
             disabled={busy}
             className="w-full rounded-lg bg-primary p-3 font-semibold text-white disabled:opacity-50"
           >
-            Update password
+            {invited ? "Set password" : "Update password"}
           </button>
         </form>
       ) : identity ? (

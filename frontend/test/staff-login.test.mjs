@@ -17,10 +17,12 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const { render, screen, fireEvent, waitFor, cleanup, act } =
   await import("@testing-library/react");
 const { default: StaffLogin } = await import("../src/StaffLogin.tsx");
+const { default: App } = await import("../src/App.tsx");
 const originalFetch = globalThis.fetch;
 afterEach(() => {
   cleanup();
   globalThis.fetch = originalFetch;
+  globalThis.window.history.replaceState(null, "", "/staff");
 });
 
 function client(initialSession = null) {
@@ -279,4 +281,43 @@ test("unrelated null Auth event does not discard a stored session", async () => 
   await waitFor(() =>
     assert.ok(screen.getByText("Signed in as stored@example.test")),
   );
+});
+
+test("invitation callback sets a password without showing inactive staff access", async () => {
+  globalThis.window.history.replaceState(
+    null,
+    "",
+    "/staff#access_token=secret&type=invite",
+  );
+  const auth = client({ access_token: "invite-token" });
+  globalThis.fetch = async () => ({ ok: false, status: 403 });
+  render(createElement(StaffLogin, { authClient: auth }));
+  await waitFor(() => assert.ok(screen.getByLabelText("New password")));
+  assert.equal(screen.queryByText(/Signed in as/), null);
+  fireEvent.change(screen.getByLabelText("New password"), {
+    target: { value: "a-long-unique-password" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Set password" }));
+  await waitFor(() =>
+    assert.deepEqual(auth.calls.at(-1), [
+      "update",
+      { password: "a-long-unique-password" },
+    ]),
+  );
+  await waitFor(() => assert.equal(globalThis.window.location.hash, ""));
+  assert.equal(globalThis.window.location.pathname, "/staff");
+  assert.equal(screen.queryByText(/Signed in as/), null);
+});
+
+test("invitation callback sent to homepage opens staff onboarding", () => {
+  globalThis.window.history.replaceState(
+    null,
+    "",
+    "/#access_token=secret&type=invite",
+  );
+  render(createElement(App));
+  assert.ok(
+    screen.getByText("Staff sign-in is not configured for this preview."),
+  );
+  assert.equal(screen.queryByText(/A clearer way to welcome/), null);
 });

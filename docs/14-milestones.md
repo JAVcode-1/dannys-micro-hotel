@@ -32,6 +32,8 @@ status: in-progress
 
 **A01 post-application verification (2026-11-18):** Owner reports A01 migration applied; read-only DB verifier confirmed both migration versions, private staff tables, RLS, no client policies/grants, denied client-role reads, constraints, and default inactive membership. Backend `/health` and `/ready` returned 200. Hosted tables contain zero staff and audit rows. Build, typecheck, lint, and 32 application tests passed; Auth dashboard settings, live guest/inactive sessions, two staff audit rows, and shared rate limiting remain pending. A01 checkbox stays open.
 
+**A01 invitation callback fix (2026-11-18):** Frontend handles invite callbacks at the homepage or `/staff`, presents password setup, removes callback tokens from the URL after session restoration, and keeps protected staff identity behind active membership verification. Targeted tests passed. Hosted invitation delivery and real-account acceptance remain pending; A01 stays open.
+
 ## Session log
 
 **2026-11-18 setup checkpoint:** Root combined dev command starts Vite at `http://localhost:5173/` and Express at `http://localhost:3001/`; the frontend page and `/health` returned HTTP 200. Build, typecheck, lint and application tests passed (21 backend, 11 frontend). Ponytail Full was installed through the official Codex plugin commands. A01 migration remains unapplied; isolated SQL/RLS, hosted Auth, shared rate limiting and real employee acceptance remain pending. No checklist status changed.

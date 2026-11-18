@@ -1,7 +1,17 @@
 import StaffLogin from "./StaffLogin";
+import { staffInviteCallback } from "./staff-auth";
 
 export default function App() {
-  if (typeof window !== "undefined" && window.location.pathname === "/staff")
+  const inviteCallback =
+    staffInviteCallback ||
+    (typeof window !== "undefined" &&
+      (new URLSearchParams(window.location.hash.slice(1)).get("type") ===
+        "invite" ||
+        new URLSearchParams(window.location.search).get("type") === "invite"));
+  if (
+    typeof window !== "undefined" &&
+    (window.location.pathname === "/staff" || inviteCallback)
+  )
     return (
       <main className="min-h-svh bg-canvas px-6 py-16 text-main">
         <StaffLogin />
