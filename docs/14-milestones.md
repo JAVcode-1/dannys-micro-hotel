@@ -60,3 +60,5 @@ status: in-progress
 Change **Not started → In progress → Done** only after acceptance gates. Include a commit hash, test command/output, or demo reference. Do not mark future tasks as done just because files were scaffolded.
 
 | 2026-11-12 | Project structure + original skill files assembled (docs only) | Preserved all 3 user-provided SKILL.md files byte-for-byte under `.agents/skills/`, linked mandatory workflow from root `AGENTS.md`, aligned source paths `frontend/`, `backend/`, `supabase/` | ZIP and integrity manifest validated; **no application code/scanners/reviewer panels were executed** | Merge baseline safely, verify Codex skill discovery, then begin F01 |
+
+**A01 final acceptance follow-up (2026-11-18):** Build, typecheck, lint and 34 tests passed. Real non-staff denial, live-session revocation, hosted Auth settings and shared rate limiting remain unverified. Owner approved a controlled disable/restore, but no employee live session was available, so membership was not changed. A01 remains open.

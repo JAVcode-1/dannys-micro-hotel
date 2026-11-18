@@ -122,3 +122,5 @@ See [[18-backlog]].
 **2026-11-18 A01 deployment hold:** The owner approved applying only `20261118000100_staff_identities.sql` to ref `pgbierfxeviouyjsmjnh` if it is the sole pending migration. CLI target output labels that ref `production`, whereas the documented A01 target is hosted development; migration history also failed with 403. No migration was applied. This records an unresolved target/access discrepancy, not a new platform decision.
 
 **2026-11-18 A01 post-application note:** Owner subsequently reported successful A01 application. Read-only database verification confirms both expected migration versions and staff schema isolation. This supersedes the earlier application hold as an operational status, without deciding the project's environment classification. Account activation and hosted Auth/rate-limit acceptance are still pending.
+
+A01 verification note (2026-11-18): Existing per-process Express throttling is not a shared deployment rate limit. No new architecture decision was made; hosted rate-limit configuration remains pending.

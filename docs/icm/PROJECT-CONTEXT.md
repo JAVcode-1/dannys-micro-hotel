@@ -77,3 +77,5 @@ The F03 follow-up traced `picomatch 4.0.7` to Vite/fdir/tinyglobby development t
 ## Codex original skills installation (project baseline v1.4)
 
 Repo source paths are `frontend/`, `backend/`, `supabase/` and optional `packages/shared/`. Original `code-structure`, `scanloop`, `greploop` user-uploaded skill files copied verbatim into `.agents/skills/` and guarded by root `AGENTS.md`. Codex should read originals every code task, use actual external security tools when installed, run real tests, review changes and report unsupported Claude-only subagent steps transparently. No automatic Git commits; no code implemented yet by this baseline.
+
+A01 final acceptance follow-up (2026-11-18): local build, typecheck, lint and 34 tests passed. Real non-staff denial, live-session revocation, hosted Auth settings and shared rate limiting remain pending; no hosted membership changed.
