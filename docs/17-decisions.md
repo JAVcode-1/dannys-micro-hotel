@@ -161,3 +161,7 @@ No new business or platform decision. The formal Phase 03 gate remains open beca
 ## V01 implementation note - 2026-11-18
 
 No new owner decision. Feasibility uses UTC epoch milliseconds and half-open occupancy-plus-buffer ranges internally. Roomless category claims are provisionally assigned together for evaluation, without showing room numbers to guests. This is a read-only calculation; database locking and durable claims remain V02. The C03 migration was already applied per owner verification; no V01 migration was applied.
+
+## V02 implementation note - 2026-11-18
+
+No new owner policy. Pending migration `20261118000300_inventory_claims.sql` stores an internal provisional room for every active claim so PostgreSQL can exclude overlapping room ranges. Express will remain the authorization boundary when booking routes are added; current claim operations have no HTTP route. Category locks and same-transaction V01 revalidation protect capacity across concurrent backend calls, while request keys make retries idempotent. The migration is unapplied pending owner approval; V03 proof deadlines and protected-review lifecycle are not included.
