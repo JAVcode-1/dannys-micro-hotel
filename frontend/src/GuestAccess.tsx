@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { apiBase, staffAuth } from "./staff-auth";
+import GuestReservations from "./GuestReservations";
 
 export default function GuestAccess({
   authClient = staffAuth,
@@ -13,6 +14,7 @@ export default function GuestAccess({
   const [step, setStep] = useState<"email" | "code" | "verified">("email");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [token, setToken] = useState("");
 
   async function send(event: FormEvent) {
     event.preventDefault();
@@ -68,9 +70,10 @@ export default function GuestAccess({
         return;
       }
       setCode("");
+      setToken(data.session.access_token);
       setStep("verified");
       setMessage(
-        "Email verified. Reservation access will be available when online booking opens.",
+        "Email verified. Reservation lookup uses your verified identity.",
       );
     } catch {
       setMessage("Verification is unavailable. Please try again.");
@@ -88,8 +91,8 @@ export default function GuestAccess({
         Your stay, kept private.
       </h1>
       <p className="mt-3 text-muted">
-        Verify your email before accessing reservation details. Booking is
-        coming in a later phase.
+        Verify your email before accessing reservation details. Online booking
+        is not open yet.
       </p>
       {!authClient ? (
         <p className="mt-8 text-muted">
@@ -170,6 +173,7 @@ export default function GuestAccess({
           {message}
         </p>
       )}
+      {step === "verified" && token && <GuestReservations token={token} />}
     </section>
   );
 }

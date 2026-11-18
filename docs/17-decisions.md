@@ -173,3 +173,10 @@ The owner reports V02 migration `20261118000300_inventory_claims.sql` applied to
 ## Phase 04 exit-gate status - 2026-11-18
 
 The owner confirms V03 migration `20261118000400_claim_hold_lifecycle.sql` applied to `pgbierfxeviouyjsmjnh`, with all five local/remote versions matching; this supersedes the V03 unapplied status above. No new business decision or authorization to start Phase 05 is made. Phase 04 formal exit remains failed for live integration, real room inventory, expiry scheduling and major-milestone quality-gate evidence. The database password environment variable was cleared per owner report; no secret value is recorded here.
+
+
+## O01 implementation boundary — 2026-11-18
+
+No new hotel policy. Owner authorizes the Phase 05 O01 development checkpoint while Phase 03/04 exit gates remain incomplete. Guests explicitly choose consecutive allowed package blocks; no optimization/tie-break discount is invented (P-003 remains open). One Family bed costs 10000 centavos once per continuous item stay; stock/extension acceptance remains pending. Server quote, existing V01/V02 claims, V03 deadline creation and per-item price snapshots share one transaction internally. O01 snapshots remain immutable and replay does not reprice from the catalog. Existing claims gain no new lifecycle transitions.
+
+The new candidate migration `20261118000500_guest_multi_room_booking.sql` is unapplied and seeds no inventory. Guest lookup requires server-verified Auth UUID plus matching verified email, covering the existing no-account OTP path; hosted OTP/T24 acceptance is deferred. HTTP booking creation is unconditionally disabled pending real inventory, channel/maintenance/expiry integration, Auth readiness and O02/O03 private-proof/manual-GCash verification. Preview quotes are price calculations, not availability or booking promises. Details/evidence: [[phases/05-online-booking-and-gcash]]. No Phase 03/04 completion or O02 authorization follows from this checkpoint.

@@ -5,6 +5,8 @@ import { auditStaffAccess, verifyStaff } from "./staff-auth.js";
 import type { StaffIdentity } from "./staff-auth.js";
 import { verifyGuest } from "./guest-auth.js";
 import type { GuestIdentity } from "./guest-auth.js";
+import { BookingError, quoteBooking } from "./booking-quote.js";
+import { guestReservations } from "./guest-booking.js";
 import { staffRooms } from "./rooms.js";
 import { getSettings, saveSettings } from "./operational-settings.js";
 import { evaluateOccupants } from "./occupants.js";
@@ -28,8 +30,11 @@ export function createApp(
     const allowedOrigin = process.env.STAFF_WEB_ORIGIN;
     if (allowedOrigin && request.header("origin") === allowedOrigin) {
       response.setHeader("Access-Control-Allow-Origin", allowedOrigin);
-      response.setHeader("Access-Control-Allow-Headers", "Authorization");
-      response.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+      response.setHeader(
+        "Access-Control-Allow-Headers",
+        "Authorization, Content-Type",
+      );
+      response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
       response.setHeader("Vary", "Origin");
       if (request.method === "OPTIONS") {
         response.status(204).end();
@@ -47,6 +52,8 @@ export function createApp(
     [
       "/staff/me",
       "/guest/me",
+      "/guest/quote",
+      "/guest/reservations",
       "/staff/catalog",
       "/staff/catalog/package-price",
       "/staff/catalog/packages",
@@ -162,6 +169,48 @@ export function createApp(
       response.json(await publicCatalog());
     } catch {
       response.status(503).json({ error: "Catalog unavailable" });
+    }
+  });
+  app.post("/guest/quote", async (request, response) => {
+    response.setHeader("Cache-Control", "no-store");
+    try {
+      response.json(await quoteBooking(request.body?.items));
+    } catch (error) {
+      response.status(error instanceof BookingError ? error.status : 503).json({
+        error:
+          error instanceof BookingError
+            ? error.message
+            : "Quote unavailable. Please try again later.",
+      });
+    }
+  });
+  app.post("/guest/reservations", (_request, response) => {
+    response.setHeader("Cache-Control", "no-store");
+    response.status(503).json({
+      error:
+        "Online booking is not open. Payment and readiness checks are pending.",
+    });
+  });
+  app.get("/guest/reservations", async (request, response) => {
+    response.setHeader("Cache-Control", "no-store");
+    const match = /^Bearer ([^\s]+)$/.exec(
+      request.header("authorization") ?? "",
+    );
+    if (!match) {
+      response.status(401).json({ error: "Authentication required" });
+      return;
+    }
+    try {
+      const guest = await guestVerifier(match[1]);
+      if (!guest) {
+        response.status(403).json({ error: "Guest access denied" });
+        return;
+      }
+      response.json(await guestReservations(guest));
+    } catch {
+      response.status(503).json({
+        error: "Reservation lookup is unavailable. Online booking is not open.",
+      });
     }
   });
   app.put("/staff/catalog/package-price", async (request, response) => {

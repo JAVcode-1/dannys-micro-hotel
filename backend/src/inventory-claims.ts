@@ -1,3 +1,4 @@
+import type { PoolClient } from "pg";
 import { createHash } from "node:crypto";
 import { databasePool } from "./database.js";
 import {
@@ -25,10 +26,10 @@ const safeId = (value: string | number) => {
   return id;
 };
 
-export async function createClaims(
+export async function createClaimsInTransaction(
   key: string,
   items: ClaimItem[],
-  pool = databasePool(),
+  client: PoolClient,
 ): Promise<ClaimResult> {
   if (
     !/^[A-Za-z0-9_-]{16,128}$/.test(key) ||
@@ -52,139 +53,142 @@ export async function createClaims(
   )
     throw new Error("Invalid claim request");
   const hash = createHash("sha256").update(JSON.stringify(items)).digest("hex");
+  await client.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", [
+    key,
+  ]);
+  const prior = await client.query<{ request_hash: string }>(
+    "select request_hash from staytrack.claim_requests where idempotency_key = $1",
+    [key],
+  );
+  if (prior.rowCount) {
+    if (prior.rows[0].request_hash !== hash)
+      throw new Error("Idempotency key reused with different request");
+    const result = await client.query<{ id: string }>(
+      "select id from staytrack.inventory_claims where idempotency_key = $1 order by item_index",
+      [key],
+    );
+    return {
+      status: "replayed",
+      ids: result.rows.map((row) => safeId(row.id)),
+    };
+  }
+
+  const categories = await client.query<{ id: string; code: string }>(
+    "select id, code from staytrack.room_categories where code = any($1::text[]) and active order by id",
+    [Array.from(new Set(items.map((item) => item.category)))],
+  );
+  if (
+    categories.rowCount !== new Set(items.map((item) => item.category)).size
+  ) {
+    return { status: "unavailable", ids: [] };
+  }
+  for (const category of categories.rows)
+    await client.query("select pg_advisory_xact_lock($1::bigint)", [
+      safeId(category.id),
+    ]);
+
+  const roomRows = await client.query<{
+    id: string;
+    category: string;
+    operational_state: string;
+  }>(
+    `select r.id, c.code as category, r.operational_state
+       from staytrack.rooms r join staytrack.room_categories c on c.id = r.category_id
+       where r.active and c.code = any($1::text[]) order by r.id`,
+    [categories.rows.map((row) => row.code)],
+  );
+  const rooms: Room[] = roomRows.rows.map((row) => ({
+    id: safeId(row.id),
+    category: row.category,
+    ready: row.operational_state === "ready",
+  }));
+  const priorClaims = await client.query<{
+    id: string;
+    category: string;
+    room_id: string;
+    start_at: Date;
+    end_at: Date;
+    buffer_minutes: number;
+  }>(
+    `select i.id, c.code as category, i.room_id, i.start_at, i.end_at, i.buffer_minutes
+       from staytrack.inventory_claims i join staytrack.room_categories c on c.id = i.category_id
+       where i.state not in ('released', 'expired') and c.code = any($1::text[])`,
+    [categories.rows.map((row) => row.code)],
+  );
+  const existing: Occupancy[] = priorClaims.rows.map((row) => ({
+    id: String(row.id),
+    category: row.category,
+    roomId: safeId(row.room_id),
+    start: millis(row.start_at),
+    end: millis(row.end_at),
+    bufferMinutes: row.buffer_minutes,
+  }));
+  const blockRows = await client.query<{
+    room_id: string;
+    start_at: Date;
+    end_at: Date | null;
+  }>(
+    `select b.room_id, b.start_at, b.end_at from staytrack.room_blocks b
+       join staytrack.rooms r on r.id = b.room_id join staytrack.room_categories c on c.id = r.category_id
+       where r.active and c.code = any($1::text[])`,
+    [categories.rows.map((row) => row.code)],
+  );
+  const blocks: RoomBlock[] = blockRows.rows.map((row) => ({
+    roomId: safeId(row.room_id),
+    start: millis(row.start_at),
+    end: row.end_at ? millis(row.end_at) : null,
+  }));
+  const cart: Occupancy[] = items.map((item, index) => ({
+    ...item,
+    id: String(index),
+    roomId: null,
+  }));
+  const assignment = allocateRooms(rooms, existing, blocks, cart);
+  if (!assignment) {
+    return { status: "unavailable", ids: [] };
+  }
+
+  await client.query(
+    "insert into staytrack.claim_requests(idempotency_key, request_hash) values ($1, $2)",
+    [key, hash],
+  );
+  const ids: number[] = [];
+  for (const [index, item] of items.entries()) {
+    const categoryId = categories.rows.find(
+      (row) => row.code === item.category,
+    )!.id;
+    const result = await client.query<{ id: string }>(
+      `insert into staytrack.inventory_claims
+         (idempotency_key, item_index, category_id, room_id, start_at, end_at, buffer_minutes, buffered_end_at, state, proof_deadline_at)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, 'held', now() + interval '30 minutes') returning id`,
+      [
+        key,
+        index,
+        safeId(categoryId),
+        assignment[index],
+        instant(item.start),
+        instant(item.end),
+        item.bufferMinutes,
+        instant(item.end + item.bufferMinutes * 60000),
+      ],
+    );
+    ids.push(safeId(result.rows[0].id));
+  }
+  return { status: "created", ids };
+}
+
+export async function claimTransaction<T>(
+  operation: (client: PoolClient) => Promise<T>,
+  pool = databasePool(),
+): Promise<T> {
   const client = await pool.connect();
   try {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         await client.query("begin");
-        await client.query(
-          "select pg_advisory_xact_lock(hashtextextended($1, 0))",
-          [key],
-        );
-        const prior = await client.query<{ request_hash: string }>(
-          "select request_hash from staytrack.claim_requests where idempotency_key = $1",
-          [key],
-        );
-        if (prior.rowCount) {
-          if (prior.rows[0].request_hash !== hash)
-            throw new Error("Idempotency key reused with different request");
-          const result = await client.query<{ id: string }>(
-            "select id from staytrack.inventory_claims where idempotency_key = $1 order by item_index",
-            [key],
-          );
-          await client.query("commit");
-          return {
-            status: "replayed",
-            ids: result.rows.map((row) => safeId(row.id)),
-          };
-        }
-
-        const categories = await client.query<{ id: string; code: string }>(
-          "select id, code from staytrack.room_categories where code = any($1::text[]) and active order by id",
-          [Array.from(new Set(items.map((item) => item.category)))],
-        );
-        if (
-          categories.rowCount !==
-          new Set(items.map((item) => item.category)).size
-        ) {
-          await client.query("rollback");
-          return { status: "unavailable", ids: [] };
-        }
-        for (const category of categories.rows)
-          await client.query("select pg_advisory_xact_lock($1::bigint)", [
-            safeId(category.id),
-          ]);
-
-        const roomRows = await client.query<{
-          id: string;
-          category: string;
-          operational_state: string;
-        }>(
-          `select r.id, c.code as category, r.operational_state
-       from staytrack.rooms r join staytrack.room_categories c on c.id = r.category_id
-       where r.active and c.code = any($1::text[]) order by r.id`,
-          [categories.rows.map((row) => row.code)],
-        );
-        const rooms: Room[] = roomRows.rows.map((row) => ({
-          id: safeId(row.id),
-          category: row.category,
-          ready: row.operational_state === "ready",
-        }));
-        const priorClaims = await client.query<{
-          id: string;
-          category: string;
-          room_id: string;
-          start_at: Date;
-          end_at: Date;
-          buffer_minutes: number;
-        }>(
-          `select i.id, c.code as category, i.room_id, i.start_at, i.end_at, i.buffer_minutes
-       from staytrack.inventory_claims i join staytrack.room_categories c on c.id = i.category_id
-       where i.state not in ('released', 'expired') and c.code = any($1::text[])`,
-          [categories.rows.map((row) => row.code)],
-        );
-        const existing: Occupancy[] = priorClaims.rows.map((row) => ({
-          id: String(row.id),
-          category: row.category,
-          roomId: safeId(row.room_id),
-          start: millis(row.start_at),
-          end: millis(row.end_at),
-          bufferMinutes: row.buffer_minutes,
-        }));
-        const blockRows = await client.query<{
-          room_id: string;
-          start_at: Date;
-          end_at: Date | null;
-        }>(
-          `select b.room_id, b.start_at, b.end_at from staytrack.room_blocks b
-       join staytrack.rooms r on r.id = b.room_id join staytrack.room_categories c on c.id = r.category_id
-       where r.active and c.code = any($1::text[])`,
-          [categories.rows.map((row) => row.code)],
-        );
-        const blocks: RoomBlock[] = blockRows.rows.map((row) => ({
-          roomId: safeId(row.room_id),
-          start: millis(row.start_at),
-          end: row.end_at ? millis(row.end_at) : null,
-        }));
-        const cart: Occupancy[] = items.map((item, index) => ({
-          ...item,
-          id: String(index),
-          roomId: null,
-        }));
-        const assignment = allocateRooms(rooms, existing, blocks, cart);
-        if (!assignment) {
-          await client.query("rollback");
-          return { status: "unavailable", ids: [] };
-        }
-
-        await client.query(
-          "insert into staytrack.claim_requests(idempotency_key, request_hash) values ($1, $2)",
-          [key, hash],
-        );
-        const ids: number[] = [];
-        for (const [index, item] of items.entries()) {
-          const categoryId = categories.rows.find(
-            (row) => row.code === item.category,
-          )!.id;
-          const result = await client.query<{ id: string }>(
-            `insert into staytrack.inventory_claims
-         (idempotency_key, item_index, category_id, room_id, start_at, end_at, buffer_minutes, buffered_end_at, state, proof_deadline_at)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, 'held', now() + interval '30 minutes') returning id`,
-            [
-              key,
-              index,
-              safeId(categoryId),
-              assignment[index],
-              instant(item.start),
-              instant(item.end),
-              item.bufferMinutes,
-              instant(item.end + item.bufferMinutes * 60000),
-            ],
-          );
-          ids.push(safeId(result.rows[0].id));
-        }
+        const result = await operation(client);
         await client.query("commit");
-        return { status: "created", ids };
+        return result;
       } catch (error) {
         await client.query("rollback");
         const code = (error as { code?: string }).code;
@@ -196,6 +200,17 @@ export async function createClaims(
   } finally {
     client.release();
   }
+}
+
+export async function createClaims(
+  key: string,
+  items: ClaimItem[],
+  pool = databasePool(),
+): Promise<ClaimResult> {
+  return claimTransaction(
+    (client) => createClaimsInTransaction(key, items, client),
+    pool,
+  );
 }
 
 export async function releaseClaims(

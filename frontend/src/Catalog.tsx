@@ -47,9 +47,14 @@ export default function Catalog() {
           Rooms and rates
         </h1>
         <p className="mt-4 max-w-xl text-muted">
-          Choose the stay length that suits you. Booking will open in a later
-          phase.
+          Choose the stay length that suits you. Online booking is not open yet.
         </p>
+        <a
+          href="/book"
+          className="mt-5 inline-flex min-h-11 items-center rounded-xl bg-booking px-5 font-bold text-main"
+        >
+          Plan a multi-room stay
+        </a>
         {error && (
           <p role="status" className="mt-8 text-red-700">
             {error}
