@@ -5,6 +5,7 @@ import { auditStaffAccess, verifyStaff } from "./staff-auth.js";
 import type { StaffIdentity } from "./staff-auth.js";
 import { verifyGuest } from "./guest-auth.js";
 import type { GuestIdentity } from "./guest-auth.js";
+import { staffRooms } from "./rooms.js";
 import {
   publicCatalog,
   changePackagePrice,
@@ -48,6 +49,7 @@ export function createApp(
       "/staff/catalog/package-price",
       "/staff/catalog/packages",
       "/staff/catalog/categories",
+      "/staff/rooms",
     ],
     (request, response, next) => {
       const now = Date.now();
@@ -269,6 +271,14 @@ export function createApp(
       }
     },
   );
+  app.get("/staff/rooms", catalogStaff, async (_request, response) => {
+    try {
+      response.setHeader("Cache-Control", "no-store");
+      response.json(await staffRooms());
+    } catch {
+      response.status(503).json({ error: "Room catalog unavailable" });
+    }
+  });
   return app;
 }
 

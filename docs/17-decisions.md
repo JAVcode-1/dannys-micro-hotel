@@ -143,3 +143,8 @@ Package price changes create a new active version in one transaction and retain 
 ## C01 price snapshot implementation rule - 2026-11-18
 
 Catalog price revisions retain prior package versions. Future reservation items must store their accepted price in centavos at booking time and never recompute an existing charge from the current catalog version. The reservation schema and its snapshot tests belong to the later booking phase; no migration was applied here.
+
+
+## C02 schema reuse note - 2026-11-18
+
+The existing F02 staytrack.rooms schema already separates physical readiness from future reservation state. C02 adds a protected read-only board; real identifiers are pending owner confirmation. No new migration or inventory seeding decision was made.

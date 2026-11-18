@@ -12,7 +12,9 @@ export default function App() {
         new URLSearchParams(window.location.search).get("type") === "invite"));
   if (
     typeof window !== "undefined" &&
-    (window.location.pathname === "/staff" || inviteCallback)
+    (window.location.pathname === "/staff" ||
+      window.location.pathname === "/staff/rooms" ||
+      inviteCallback)
   )
     return (
       <main className="min-h-svh bg-canvas px-6 py-16 text-main">
