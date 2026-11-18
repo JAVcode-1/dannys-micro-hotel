@@ -36,3 +36,32 @@ test("guest identity requires a bearer token and verified server identity", asyn
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+test("guest endpoint fails closed for expired sessions and provider failures", async () => {
+  const app = createApp(
+    async () => {},
+    async () => null,
+    async () => {},
+    async (token) => {
+      if (token === "expired") return null;
+      throw new Error("provider unavailable");
+    },
+  );
+  const server = app.listen(0, "127.0.0.1");
+  try {
+    await new Promise((resolve) => server.once("listening", resolve));
+    const url = `http://127.0.0.1:${server.address().port}/guest/me`;
+    assert.equal(
+      (await fetch(url, { headers: { Authorization: "Bearer expired" } }))
+        .status,
+      403,
+    );
+    assert.equal(
+      (await fetch(url, { headers: { Authorization: "Bearer broken" } }))
+        .status,
+      503,
+    );
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});

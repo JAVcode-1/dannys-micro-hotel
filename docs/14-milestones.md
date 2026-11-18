@@ -64,3 +64,6 @@ Change **Not started → In progress → Done** only after acceptance gates. Inc
 **A01 final acceptance follow-up (2026-11-18):** Build, typecheck, lint and 34 tests passed. Real non-staff denial, live-session revocation, hosted Auth settings and shared rate limiting remain unverified. Owner approved a controlled disable/restore, but no employee live session was available, so membership was not changed. A01 remains open.
 
 **A02 checkpoint (2026-11-18):** Guest OTP UI and protected Express `/guest/me` identity gate implemented. Reservation ownership and hosted OTP checks remain pending because reservation storage is not built. A02 remains open; A01/F02/F03 debt is retained. No A03 work started.
+
+
+**A03 checkpoint (2026-11-18):** Added endpoint tests for expired guest sessions, Auth provider failure, and immediate staff membership revocation. Existing isolated PostgreSQL staff RLS test remains unrun locally without TEST_DATABASE_URL; hosted RLS and real expired-token checks remain pending. No migration, Storage bucket, or new UI was added. A01/A02/F02/F03 acceptance debt remains open.

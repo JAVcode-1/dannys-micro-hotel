@@ -34,6 +34,22 @@ test("staff API rejects missing, malformed, guest and revoked credentials", asyn
   assert.deepEqual(seen, ["guest-token"]);
 });
 
+test("staff session loses access as soon as membership is revoked", async () => {
+  let active = true;
+  const actors = [];
+  const app = createApp(
+    undefined,
+    async () => (active ? { id: "employee-1", email: null } : null),
+    async (id) => {
+      actors.push(id);
+    },
+  );
+  assert.equal((await request(app, "Bearer same-session")).status, 200);
+  active = false;
+  assert.equal((await request(app, "Bearer same-session")).status, 403);
+  assert.deepEqual(actors, ["employee-1"]);
+});
+
 test("distinct staff actors are audited separately", async () => {
   const actors = [];
   const app = createApp(

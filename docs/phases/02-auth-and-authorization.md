@@ -63,3 +63,6 @@ status: in-progress
 **Next:** [[03-catalog-inventory-settings]].
 
 **A02 development checkpoint (2026-11-18):** Guest `/verify` (also `/login` and `/register`) accepts email and six-digit Supabase Auth OTP, then requires successful Express `/guest/me` verification before showing success. Express checks the managed token and confirmed email. Guest and staff identity endpoints share a local per-process request limit. No reservation table or lookup endpoint exists, so ownership/cross-guest acceptance remains open. Hosted OTP template, actual expiry, provider/shared throttling, and live wrong/replay/brute-force checks are unverified. No migration was added or applied. A01/F02/F03 debt remains open.
+
+
+**A03 checkpoint (2026-11-18):** Added endpoint tests for expired guest sessions, Auth provider failure, and immediate staff membership revocation. Existing isolated PostgreSQL staff RLS test remains unrun locally without TEST_DATABASE_URL; hosted RLS and real expired-token checks remain pending. No migration, Storage bucket, or new UI was added. A01/A02/F02/F03 acceptance debt remains open.

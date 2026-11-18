@@ -81,3 +81,6 @@ Repo source paths are `frontend/`, `backend/`, `supabase/` and optional `package
 A01 final acceptance follow-up (2026-11-18): local build, typecheck, lint and 34 tests passed. Real non-staff denial, live-session revocation, hosted Auth settings and shared rate limiting remain pending; no hosted membership changed.
 
 **A02 development checkpoint (2026-11-18):** Guest email OTP UI and Express confirmed-email identity gate added. Reservation access remains unavailable until ownership-aware reservation storage and API exist. Hosted OTP template, actual expiry, shared throttling, and cross-guest denial remain pending. A01/F02/F03 verification debt is unchanged; stop before A03.
+
+
+**A03 checkpoint (2026-11-18):** Added endpoint tests for expired guest sessions, Auth provider failure, and immediate staff membership revocation. Existing isolated PostgreSQL staff RLS test remains unrun locally without TEST_DATABASE_URL; hosted RLS and real expired-token checks remain pending. No migration, Storage bucket, or new UI was added. A01/A02/F02/F03 acceptance debt remains open.

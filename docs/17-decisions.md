@@ -128,3 +128,8 @@ A01 verification note (2026-11-18): Existing per-process Express throttling is n
 ## A02 implementation note - 2026-11-18
 
 Guest verification uses Supabase Auth email OTP and Express confirms the resulting managed identity and confirmed email. A verified Auth user need not have an app guest profile. Reservation access remains unavailable until an ownership-aware API exists; a public reference alone will never grant access. No new business decision or migration was made.
+
+
+## A03 verification note - 2026-11-18
+
+A03 adds authorization regression tests for current identity routes. Existing RLS design remains unchanged. Isolated database and hosted checks remain pending; no new platform decision or migration was made.
