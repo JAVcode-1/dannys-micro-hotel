@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { apiBase, staffAuth, staffInviteCallback } from "./staff-auth";
+import StaffCatalog from "./StaffCatalog";
 
 export default function StaffLogin({
   authClient = staffAuth,
@@ -195,6 +196,7 @@ export default function StaffLogin({
       ) : identity ? (
         <div className="mt-6">
           <p>Signed in as {identity}</p>
+          {session && <StaffCatalog token={session.access_token} />}
           <button
             className="mt-4 rounded-lg bg-primary px-4 py-2 text-white"
             onClick={() => void signOut()}

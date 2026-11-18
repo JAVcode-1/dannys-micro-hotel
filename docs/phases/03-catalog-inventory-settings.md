@@ -41,3 +41,6 @@ status: not-started
 - [ ] Update [[14-milestones]].
 
 **Next:** [[04-availability-and-holds]].
+
+
+**C01 development checkpoint (2026-11-18):** Existing F02 migration already defines categories, versioned packages and seven approved rows. Added public active-package catalog, /rooms rate view, and a staff-only audited price revision with a staff editor. Server rejects Family 3-hour and invalid prices. Build, typecheck, lint and 39 application tests pass (25 backend, 14 frontend). Full staff settings CRUD, isolated price-version transaction test, hosted catalog verification and booked-price snapshot behavior remain pending; C01 and Phase 03 exit checkboxes stay open. No migration was added or applied. A01/A02/A03/F02/F03 acceptance debt remains open.

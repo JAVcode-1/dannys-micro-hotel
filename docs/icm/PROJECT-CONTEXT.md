@@ -84,3 +84,6 @@ A01 final acceptance follow-up (2026-11-18): local build, typecheck, lint and 34
 
 
 **A03 checkpoint (2026-11-18):** Added endpoint tests for expired guest sessions, Auth provider failure, and immediate staff membership revocation. Existing isolated PostgreSQL staff RLS test remains unrun locally without TEST_DATABASE_URL; hosted RLS and real expired-token checks remain pending. No migration, Storage bucket, or new UI was added. A01/A02/F02/F03 acceptance debt remains open.
+
+
+**C01 development checkpoint (2026-11-18):** Existing F02 migration already defines categories, versioned packages and seven approved rows. Added public active-package catalog, /rooms rate view, and a staff-only audited price revision with a staff editor. Server rejects Family 3-hour and invalid prices. Build, typecheck, lint and 39 application tests pass (25 backend, 14 frontend). Full staff settings CRUD, isolated price-version transaction test, hosted catalog verification and booked-price snapshot behavior remain pending; C01 and Phase 03 exit checkboxes stay open. No migration was added or applied. A01/A02/A03/F02/F03 acceptance debt remains open.

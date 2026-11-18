@@ -133,3 +133,8 @@ Guest verification uses Supabase Auth email OTP and Express confirms the resulti
 ## A03 verification note - 2026-11-18
 
 A03 adds authorization regression tests for current identity routes. Existing RLS design remains unchanged. Isolated database and hosted checks remain pending; no new platform decision or migration was made.
+
+
+## C01 implementation note - 2026-11-18
+
+Package price changes create a new active version in one transaction and retain old versions. Existing F02 schema and approved prices are reused. No new owner decision or migration was made.

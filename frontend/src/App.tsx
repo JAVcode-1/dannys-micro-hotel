@@ -1,5 +1,6 @@
 import StaffLogin from "./StaffLogin";
 import GuestAccess from "./GuestAccess";
+import Catalog from "./Catalog";
 import { staffInviteCallback } from "./staff-auth";
 
 export default function App() {
@@ -27,6 +28,8 @@ export default function App() {
         <GuestAccess />
       </main>
     );
+  if (typeof window !== "undefined" && window.location.pathname === "/rooms")
+    return <Catalog />;
   return (
     <main className="min-h-svh bg-canvas px-6 py-8 text-main sm:px-10">
       <div className="mx-auto flex max-w-5xl flex-col gap-16">
@@ -46,7 +49,7 @@ export default function App() {
             </div>
           </div>
           <span className="rounded-full bg-selected px-3 py-1 text-xs font-semibold text-primary">
-            <a href="/verify">Guest access</a>
+            <a href="/rooms">Rooms and rates</a>
           </span>
         </header>
 
