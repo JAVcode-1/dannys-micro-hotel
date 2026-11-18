@@ -1,4 +1,9 @@
 export type HealthResponse = { status: "ok" };
+export type {
+  PaymentDecision,
+  PaymentReviewInput,
+  StaffPaymentReview,
+} from "./payment-review.js";
 export type { PaymentSession } from "./payment.js";
 export type {
   BookingItemInput,

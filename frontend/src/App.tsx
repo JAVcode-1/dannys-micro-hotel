@@ -3,6 +3,7 @@ import GuestAccess from "./GuestAccess";
 import Catalog from "./Catalog";
 import BookingPlanner from "./BookingPlanner";
 import { PaymentPreview } from "./GuestPayment";
+import { PaymentReviewPreview } from "./StaffPaymentReviews";
 import { staffInviteCallback } from "./staff-auth";
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
     (window.location.pathname === "/staff" ||
       window.location.pathname === "/staff/rooms" ||
       window.location.pathname === "/staff/settings" ||
+      window.location.pathname === "/staff/payments" ||
       inviteCallback)
   )
     return (
@@ -42,6 +44,11 @@ export default function App() {
     window.location.pathname === "/payment-preview"
   )
     return <PaymentPreview />;
+  if (
+    typeof window !== "undefined" &&
+    window.location.pathname === "/staff/payment-review-preview"
+  )
+    return <PaymentReviewPreview />;
   return (
     <main className="min-h-svh bg-canvas px-6 py-8 text-main sm:px-10">
       <div className="mx-auto flex max-w-5xl flex-col gap-16">

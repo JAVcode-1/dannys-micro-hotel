@@ -61,6 +61,7 @@ export function createApp(
       "/guest/reservations",
       "/guest/payments",
       "/staff/payment-qr",
+      "/staff/payment-reviews",
       "/staff/catalog",
       "/staff/catalog/package-price",
       "/staff/catalog/packages",

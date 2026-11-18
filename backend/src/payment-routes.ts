@@ -9,11 +9,17 @@ import {
   submitPaymentProof,
 } from "./payment-proofs.js";
 import type { PaymentMediaStore } from "./payment-media.js";
+import {
+  decidePaymentReview,
+  staffPaymentReviews,
+  staffProofUrl,
+} from "./payment-review.js";
 
 export type PaymentRouteOptions = {
   pool?: ReturnType<typeof databasePool>;
   store?: PaymentMediaStore;
   guestEnabled?: boolean;
+  confirmationEnabled?: boolean;
 };
 export function registerPaymentRoutes(
   app: express.Express,
@@ -29,6 +35,70 @@ export function registerPaymentRoutes(
           : "Payment service unavailable.",
     });
   }
+  app.get("/staff/payment-reviews", staff, async (request, response) => {
+    response.setHeader("Cache-Control", "no-store");
+    try {
+      const page =
+        request.query.page === undefined ? 0 : Number(request.query.page);
+      const reviews = await staffPaymentReviews(options.pool, page);
+      response.json({
+        reviews: reviews.slice(0, 100),
+        hasMore: reviews.length > 100,
+        confirmationEnabled: options.confirmationEnabled === true,
+      });
+    } catch (error) {
+      failure(response, error);
+    }
+  });
+  app.get(
+    "/staff/payment-reviews/:id/proof",
+    staff,
+    async (request, response) => {
+      response.setHeader("Cache-Control", "no-store");
+      try {
+        response.json(
+          await staffProofUrl(
+            response.locals.actorId as string,
+            String(request.params.id),
+            options.pool,
+            options.store,
+          ),
+        );
+      } catch (error) {
+        failure(response, error);
+      }
+    },
+  );
+  app.post(
+    "/staff/payment-reviews/:id/decision",
+    staff,
+    async (request, response) => {
+      response.setHeader("Cache-Control", "no-store");
+      // No environment toggle: only isolated test construction opens confirmation.
+      if (
+        request.body?.decision === "confirmed" &&
+        !options.confirmationEnabled
+      ) {
+        response.status(503).json({
+          error:
+            "Live payment confirmation is closed pending hosted acceptance and security checks.",
+        });
+        return;
+      }
+      try {
+        response.json(
+          await decidePaymentReview(
+            response.locals.actorId as string,
+            String(request.params.id),
+            request.body,
+            options.pool,
+          ),
+        );
+      } catch (error) {
+        failure(response, error);
+      }
+    },
+  );
   async function guest(
     request: express.Request,
     response: express.Response,

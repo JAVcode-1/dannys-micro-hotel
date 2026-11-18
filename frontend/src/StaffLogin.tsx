@@ -5,6 +5,7 @@ import { apiBase, staffAuth, staffInviteCallback } from "./staff-auth";
 import StaffCatalog from "./StaffCatalog";
 import StaffRooms from "./StaffRooms";
 import OperationalSettings from "./OperationalSettings";
+import StaffPaymentReviews from "./StaffPaymentReviews";
 
 export default function StaffLogin({
   authClient = staffAuth,
@@ -167,7 +168,7 @@ export default function StaffLogin({
     );
   return (
     <section
-      className={`mx-auto rounded-2xl border border-subtle bg-white p-7 shadow-sm ${identity && ["/staff/rooms", "/staff/settings"].includes(window.location.pathname) ? "max-w-5xl" : "max-w-md"}`}
+      className={`mx-auto rounded-2xl border border-subtle bg-white p-7 shadow-sm ${identity && ["/staff/rooms", "/staff/settings", "/staff/payments"].includes(window.location.pathname) ? "max-w-5xl" : "max-w-md"}`}
     >
       <h1 className="text-2xl font-bold text-main">Staff sign-in</h1>
       <p className="mt-2 text-sm text-muted">
@@ -203,6 +204,12 @@ export default function StaffLogin({
           <nav className="mt-5 flex flex-wrap gap-2 text-sm font-semibold">
             <a
               className="rounded-lg bg-selected px-3 py-2 text-primary"
+              href="/staff/payments"
+            >
+              Payments
+            </a>
+            <a
+              className="rounded-lg bg-selected px-3 py-2 text-primary"
               href="/staff"
             >
               Catalog
@@ -225,6 +232,8 @@ export default function StaffLogin({
               <StaffRooms token={session.access_token} />
             ) : window.location.pathname === "/staff/settings" ? (
               <OperationalSettings token={session.access_token} />
+            ) : window.location.pathname === "/staff/payments" ? (
+              <StaffPaymentReviews token={session.access_token} />
             ) : (
               <StaffCatalog token={session.access_token} />
             ))}

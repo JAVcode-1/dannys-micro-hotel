@@ -37,5 +37,5 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm test
-      - name: PostgreSQL integration — V02/V03, O01 booking and O02 private payment proof
+      - name: PostgreSQL integration — V02/V03 and O01–O03 booking/payment review
         run: npm run test:db

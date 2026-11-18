@@ -109,7 +109,7 @@ export function paymentMediaStore(): PaymentMediaStore {
         await privateBucket(bucket)
       ).createSignedUrl(key, 120);
       if (error || !data)
-        throw new BookingError("QR image is unavailable.", 503);
+        throw new BookingError("Private payment image is unavailable.", 503);
       return data.signedUrl;
     },
   };
