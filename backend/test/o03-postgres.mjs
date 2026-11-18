@@ -403,6 +403,8 @@ export async function o03Postgres(t, pool) {
         "update staytrack.operational_settings set cancellation_display_text=$1",
         [terms],
       );
+      // Create fixtures before deliberately making the shared inventory infeasible.
+      const unavailable = await make("O03-RELEASED");
       const blocked = await make("O03-MAINTENANCE");
       await pool.query(
         `insert into staytrack.room_blocks(room_id,start_at,end_at,reason)
@@ -415,7 +417,6 @@ export async function o03Postgres(t, pool) {
           (row) => row.state === "proof_pending_review",
         ),
       );
-      const unavailable = await make("O03-RELEASED");
       await pool.query(
         "update staytrack.inventory_claims set state='released' where id in (select claim_id from staytrack.room_bookings where reservation_id=$1)",
         [unavailable.reservationId],
