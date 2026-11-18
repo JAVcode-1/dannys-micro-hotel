@@ -1,6 +1,6 @@
 ---
 tags: [phase-05, implementation, payments]
-status: o03-development-checkpoint
+status: exit-gate-open-o03-migration-applied
 ---
 # Phase 05 — Online Booking & Manual GCash Verification
 
@@ -8,7 +8,17 @@ status: o03-development-checkpoint
 
 **Dependencies:** [[02-auth-and-authorization]], [[04-availability-and-holds]], [[04-feature-specification]].
 
-**Current migration status (2026-11-19):** All seven migrations through O02 applied and independently matched by read-only SQL; see hosted verification below. Historical checkpoint notes are retained. Phase 03/04 gates remain incomplete; live booking/payments remain disabled.
+**Current migration status (2026-11-19):** Owner confirms `20261119000700_staff_payment_review.sql` successfully applied to `pgbierfxeviouyjsmjnh`, with all eight local/remote migrations matching. This supersedes historical O03-unapplied/migration-readiness statements below. This session records the owner report; it does not claim a new hosted query or successful CLI dry run. Phase 03/04 gates remain incomplete; live bookings, guest payments and staff payment confirmation remain disabled.
+
+## After O03 — documented task sequence exhausted
+
+The official Phase 05 sequence ends at **O03**. There is no O04 in this specification or [[13-development-roadmap]]. No new functionality, migration or dependency is added by this status checkpoint. The roadmap identifies Phase 06 next, but it is **not started or authorized by this checkpoint**. Stop implementation here and resolve the Phase 05 exit gate when instructed.
+
+The exit gate below remains open. Automated evidence covers independent room items, staff authorization/manual-verification requirements, protected proof/aging, duplicate decisions and transaction rollback; it does not demonstrate hosted end-to-end acceptance. Outstanding evidence includes authorized synthetic Storage upload/read/list/write-denial and signed-link expiry/rejection checks, actual staff/guest sessions and manual receiving-ledger/reconciliation procedures, approved payee/cancellation terms, notification delivery/retry worker/scheduler, retention/shared throttling/media validation, real 15-room inventory and cross-channel/maintenance/expiry integration, real-device/accessibility review, prior milestone gaps and the full milestone security gate. No real payment, automatic refund, hosted upload, seed, reset or live enablement is performed.
+
+Milestone, decision and context notes are updated without checking the phase exit boxes. Existing successful [O03 CI run 44358583870](https://github.com/JAVcode-1/dannys-micro-hotel/actions/runs/44358583870) supplies eight isolated PostgreSQL tests; fresh build/static/application checks and the existing synthetic preview are recorded for this documentation-only checkpoint. No new migration is required.
+
+Fresh checkpoint verification: `npm run build`, `npm run typecheck`, `npm run lint`, `npm run format:check` and `npm test` passed, including all **82 application tests (59 backend + 23 frontend), zero failures/skips**. Existing synthetic preview `http://127.0.0.1:5173/staff/payment-review-preview` returned HTTP 200; no new UI or manual browser/device acceptance is claimed. The known nonblocking >500 kB bundle warning remains. Isolated PostgreSQL execution is reused from the passing CI above, not rerun locally or against hosted Supabase. Only this phase note, milestones, decisions and project context changed; unrelated workspace files remain excluded.
 
 ## Hosted O02 verification — 2026-11-19
 

@@ -4,6 +4,10 @@ status: approved-baseline
 ---
 # 17 — Approved Decisions Register
 
+## O03 applied; Phase 05 task boundary — 2026-11-19
+
+Owner confirms O03 migration `20261119000700_staff_payment_review.sql` applied to `pgbierfxeviouyjsmjnh` and all eight versions match locally/remotely. This supersedes earlier unapplied/readiness notes, without claiming a new CLI dry run or granting live-payment approval. The canonical Phase 05 specification ends at O03; there is no next Phase 05 feature/O04 to invent. Stop development at the Phase 05 exit gate; Phase 06 needs a separate instruction and unresolved dependencies remain documented. No new business policy, code, migration, dependency, hosted upload or inventory seed. Hosted Storage acceptance, notification delivery, actual 15-room inventory, earlier phase/milestone gaps and full security gates remain pending; live booking/payment confirmation stays disabled.
+
 ## O03 approved implementation boundary — 2026-11-19
 
 Verification follow-up: [CI run 44358583870](https://github.com/JAVcode-1/dannys-micro-hotel/actions/runs/44358583870), commit `ef0e22f`, passed build/static checks, 82 application tests and 8 isolated PostgreSQL tests with no failures/skips, including the named O03 transaction/security subtest. Earlier fixture failures are resolved by honoring O01's revised catalog price and constructing fixtures before the deliberate maintenance conflict. No production logic or approved policy was changed. This is not hosted migration approval or permission to open live confirmation.
