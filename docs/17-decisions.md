@@ -138,3 +138,8 @@ A03 adds authorization regression tests for current identity routes. Existing RL
 ## C01 implementation note - 2026-11-18
 
 Package price changes create a new active version in one transaction and retain old versions. Existing F02 schema and approved prices are reused. No new owner decision or migration was made.
+
+
+## C01 price snapshot implementation rule - 2026-11-18
+
+Catalog price revisions retain prior package versions. Future reservation items must store their accepted price in centavos at booking time and never recompute an existing charge from the current catalog version. The reservation schema and its snapshot tests belong to the later booking phase; no migration was applied here.

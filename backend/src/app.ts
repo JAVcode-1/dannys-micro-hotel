@@ -5,7 +5,13 @@ import { auditStaffAccess, verifyStaff } from "./staff-auth.js";
 import type { StaffIdentity } from "./staff-auth.js";
 import { verifyGuest } from "./guest-auth.js";
 import type { GuestIdentity } from "./guest-auth.js";
-import { publicCatalog, changePackagePrice } from "./catalog.js";
+import {
+  publicCatalog,
+  changePackagePrice,
+  staffCatalog,
+  setPackageActive,
+  updateCategory,
+} from "./catalog.js";
 
 export function createApp(
   databaseProbe: () => Promise<void> = probeDatabase,
@@ -35,7 +41,14 @@ export function createApp(
   const attempts = new Map<string, { count: number; resetAt: number }>();
 
   app.use(
-    ["/staff/me", "/guest/me", "/staff/catalog/package-price"],
+    [
+      "/staff/me",
+      "/guest/me",
+      "/staff/catalog",
+      "/staff/catalog/package-price",
+      "/staff/catalog/packages",
+      "/staff/catalog/categories",
+    ],
     (request, response, next) => {
       const now = Date.now();
       const address = request.ip ?? "unknown";
@@ -178,6 +191,84 @@ export function createApp(
       response.status(503).json({ error: "Catalog update unavailable" });
     }
   });
+  async function catalogStaff(
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) {
+    const match = /^Bearer ([^\s]+)$/.exec(
+      request.header("authorization") ?? "",
+    );
+    if (!match) {
+      response.status(401).json({ error: "Authentication required" });
+      return;
+    }
+    try {
+      const staff = await staffVerifier(match[1]);
+      if (!staff) {
+        response.status(403).json({ error: "Staff access denied" });
+        return;
+      }
+      response.locals.actorId = staff.id;
+      next();
+    } catch {
+      response.status(503).json({ error: "Staff access unavailable" });
+    }
+  }
+  app.get("/staff/catalog", catalogStaff, async (_request, response) => {
+    try {
+      response.setHeader("Cache-Control", "no-store");
+      response.json(await staffCatalog());
+    } catch {
+      response.status(503).json({ error: "Catalog unavailable" });
+    }
+  });
+  app.patch(
+    "/staff/catalog/packages",
+    catalogStaff,
+    async (request, response) => {
+      try {
+        const { categoryCode, durationMinutes, active } = request.body ?? {};
+        if (
+          !(await setPackageActive(
+            response.locals.actorId as string,
+            categoryCode,
+            durationMinutes,
+            active,
+          ))
+        ) {
+          response.status(400).json({ error: "Unsupported package state" });
+          return;
+        }
+        response.status(204).end();
+      } catch {
+        response.status(503).json({ error: "Catalog update unavailable" });
+      }
+    },
+  );
+  app.patch(
+    "/staff/catalog/categories",
+    catalogStaff,
+    async (request, response) => {
+      try {
+        const { categoryCode, name, active } = request.body ?? {};
+        if (
+          !(await updateCategory(
+            response.locals.actorId as string,
+            categoryCode,
+            name,
+            active,
+          ))
+        ) {
+          response.status(400).json({ error: "Unsupported category state" });
+          return;
+        }
+        response.status(204).end();
+      } catch {
+        response.status(503).json({ error: "Catalog update unavailable" });
+      }
+    },
+  );
   return app;
 }
 

@@ -7,6 +7,9 @@ type Package = {
   name: string;
   duration_minutes: number;
   price_centavos: number;
+  version?: number;
+  active?: boolean;
+  category_active?: boolean;
 };
 
 export default function StaffCatalog({ token }: { token: string }) {
@@ -15,12 +18,44 @@ export default function StaffCatalog({ token }: { token: string }) {
   const [price, setPrice] = React.useState("");
   const [message, setMessage] = React.useState("");
   const [busy, setBusy] = React.useState(false);
+  const [history, setHistory] = React.useState<Package[]>([]);
   async function load(signal?: AbortSignal) {
-    const response = await fetch(`${apiBase}/catalog`, { signal });
+    const response = await fetch(`${apiBase}/staff/catalog`, {
+      signal,
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (!response.ok) throw new Error();
     const rows: unknown = await response.json();
     if (!Array.isArray(rows)) throw new Error();
-    setPackages(rows as Package[]);
+    setHistory(rows as Package[]);
+    setPackages(
+      (rows as Package[]).filter((row) => row.active && row.category_active),
+    );
+  }
+  async function toggle(item: Package) {
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch(`${apiBase}/staff/catalog/packages`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          categoryCode: item.code,
+          durationMinutes: item.duration_minutes,
+          active: !item.active,
+        }),
+      });
+      if (!response.ok) throw new Error();
+      await load();
+      setMessage("Package availability updated and audited.");
+    } catch {
+      setMessage("Package update failed.");
+    } finally {
+      setBusy(false);
+    }
   }
   React.useEffect(() => {
     const controller = new AbortController();
@@ -113,6 +148,39 @@ export default function StaffCatalog({ token }: { token: string }) {
           {busy ? "Saving…" : "Save price"}
         </button>
       </form>
+      <h3 className="mt-8 font-bold">Catalog versions</h3>
+      <ul className="mt-3 divide-y divide-subtle text-sm">
+        {history.map((item) => (
+          <li
+            key={`${item.code}:${item.duration_minutes}:${item.version}`}
+            className="flex flex-wrap items-center justify-between gap-3 py-3"
+          >
+            <span>
+              {item.name} · {item.duration_minutes / 60} hours · v{item.version}{" "}
+              · ₱{(item.price_centavos / 100).toLocaleString("en-PH")} ·{" "}
+              {item.active ? "Active" : "Inactive"}
+            </span>
+            {item.version ===
+              Math.max(
+                ...history
+                  .filter(
+                    (row) =>
+                      row.code === item.code &&
+                      row.duration_minutes === item.duration_minutes,
+                  )
+                  .map((row) => row.version ?? 0),
+              ) && (
+              <button
+                disabled={busy}
+                onClick={() => void toggle(item)}
+                className="min-h-11 rounded-lg border border-primary px-3 text-primary disabled:opacity-50"
+              >
+                {item.active ? "Deactivate" : "Activate"}
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
       {message && (
         <p aria-live="polite" className="mt-3 text-sm text-muted">
           {message}
