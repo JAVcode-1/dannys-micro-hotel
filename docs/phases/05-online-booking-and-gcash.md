@@ -1,6 +1,6 @@
 ---
 tags: [phase-05, implementation, payments]
-status: o02-development-checkpoint
+status: o02-hosted-storage-configuration-verified
 ---
 # Phase 05 — Online Booking & Manual GCash Verification
 
@@ -8,7 +8,19 @@ status: o02-development-checkpoint
 
 **Dependencies:** [[02-auth-and-authorization]], [[04-availability-and-holds]], [[04-feature-specification]].
 
-**Current migration status (2026-11-19):** Owner confirms O01 `20261118000500_guest_multi_room_booking.sql` applied to `pgbierfxeviouyjsmjnh`; read-only SQL independently returned all six expected versions through O01. This supersedes historical O01-unapplied notes below. O02's seventh migration is a new, unapplied candidate. Phase 03/04 formal gates remain incomplete; live booking/payment confirmation stay disabled.
+**Current migration status (2026-11-19):** All seven migrations through O02 applied and independently matched by read-only SQL; see hosted verification below. Historical checkpoint notes are retained. Phase 03/04 gates remain incomplete; live booking/payments remain disabled.
+
+## Hosted O02 verification — 2026-11-19
+
+This note supersedes historical unapplied/pending-CI statements. Owner confirms `20261118000600_payment_proof_submission.sql` applied. Fresh read-only SQL independently returned all seven local migration versions through `20261118000600` for linked development project `pgbierfxeviouyjsmjnh`. `SUPABASE_DB_PASSWORD` was absent in the verification process. No migration/reset/seed or hosted Storage change occurred.
+
+SQL metadata and backend-key Storage API `getBucket` independently verified both `payment-proofs` and `payment-qr`: **public=false**, maximum **5242880 bytes (5 MiB)**, allowed MIME types **image/png and image/jpeg**. RLS is enabled on `storage.objects`, `storage.buckets`, and the three O02 application tables. The sole hosted Storage policy, `staytrack_private_payment_media`, is RESTRICTIVE for ALL commands to `anon`/`authenticated`; both USING and WITH CHECK exclude these two buckets. Neither client role bypasses RLS; `service_role` does. No client allow policy was found. This is configuration evidence, not an actual-object HTTP denial test.
+
+Backend secret configuration is present; both bucket metadata API requests succeeded. Source review confirms backend-only `SUPABASE_SECRET_KEY`, nonpersistent SDK sessions, bucket allowlisting, public-bucket refusal, uploads without upsert, and 120-second signed QR URLs. Staff routes use the staff guard; guest handlers verify identity/email ownership and normal guest payment registration stays closed. Frontend source/environment checks found no database/secret variable names. This does not audit deployed-host secrets. The local `supabase/config.toml` 50 MiB global limit does not replace the verified hosted 5 MiB bucket restrictions.
+
+**Ready for owner-approved synthetic Storage tests; not hosted end-to-end accepted or live-payment ready.** Pending synthetic-object checks: backend PNG/JPEG uploads in both buckets; actual-object anonymous/public and authenticated cross-guest read/list/write denials; authorized signed QR access and expiry; real-provider oversized/disallowed MIME rejection; application signature/missing-reference rejection; provider failure, replay/concurrency and orphan/superseded-QR cleanup/reconciliation. Use approved synthetic identities and an isolated harness without enabling production guest routes or seeding rooms. No real payment data or hosted write is authorized by this verification. Staff proof viewing belongs to O03 and is not implemented. Retention/cleanup, email delivery/scheduler, shared throttling, live QR approval and real-device checks remain pending.
+
+Reused successful [O02 CI run 44344674739](https://github.com/JAVcode-1/dannys-micro-hotel/actions/runs/44344674739): build/typecheck/lint/format, 72 application and seven isolated PostgreSQL tests, zero failures/skips. No application checks rerun for this documentation-only verification; substitute Storage catalog CI cannot establish hosted upload behavior. No dependencies/application code changed. All O02 acceptance/exit checkboxes remain open; Phase 03/04 formal gates remain incomplete. Next official task: **O03 — Staff payment review and confirmation**, not started.
 
 ## Task sequence
 
