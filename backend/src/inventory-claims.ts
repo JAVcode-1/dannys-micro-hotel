@@ -120,7 +120,7 @@ export async function createClaims(
         }>(
           `select i.id, c.code as category, i.room_id, i.start_at, i.end_at, i.buffer_minutes
        from staytrack.inventory_claims i join staytrack.room_categories c on c.id = i.category_id
-       where i.state <> 'released' and c.code = any($1::text[])`,
+       where i.state not in ('released', 'expired') and c.code = any($1::text[])`,
           [categories.rows.map((row) => row.code)],
         );
         const existing: Occupancy[] = priorClaims.rows.map((row) => ({
@@ -168,8 +168,8 @@ export async function createClaims(
           )!.id;
           const result = await client.query<{ id: string }>(
             `insert into staytrack.inventory_claims
-         (idempotency_key, item_index, category_id, room_id, start_at, end_at, buffer_minutes, buffered_end_at, state)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, 'held') returning id`,
+         (idempotency_key, item_index, category_id, room_id, start_at, end_at, buffer_minutes, buffered_end_at, state, proof_deadline_at)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, 'held', now() + interval '30 minutes') returning id`,
             [
               key,
               index,
@@ -224,7 +224,7 @@ export async function releaseClaims(
         safeId(row.category_id),
       ]);
     await client.query(
-      "update staytrack.inventory_claims set state = 'released' where idempotency_key = $1 and state <> 'released'",
+      "update staytrack.inventory_claims set state = 'released' where idempotency_key = $1 and state in ('held', 'confirmed')",
       [key],
     );
     await client.query("commit");
@@ -289,7 +289,9 @@ export async function revalidateClaim(
     );
     if (
       !current.rowCount ||
-      current.rows[0].state === "released" ||
+      ["released", "expired", "proof_pending_review"].includes(
+        current.rows[0].state,
+      ) ||
       (current.rows[0].state === "confirmed" && next.state !== "confirmed")
     ) {
       await client.query("rollback");
@@ -316,7 +318,7 @@ export async function revalidateClaim(
       buffer_minutes: number;
     }>(
       `select id, start_at, end_at, buffer_minutes from staytrack.inventory_claims
-       where room_id = $1 and id <> $2 and state <> 'released'`,
+       where room_id = $1 and id <> $2 and state not in ('released', 'expired')`,
       [next.roomId, id],
     );
     const blocks = await client.query<{ start_at: Date; end_at: Date | null }>(

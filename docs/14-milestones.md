@@ -15,7 +15,7 @@ status: in-progress
 | Phase 01 Foundation | In progress — F01 complete; F02 under verification; F03 checkpoint under verification | [[phases/01-foundation-and-tooling]]; F02 gate pending; F03 isolated DB and CI runs pending |
 | Phase 02 Auth | In progress — A01 development checkpoint, not accepted | [[phases/02-auth-and-authorization]]; migration unapplied; hosted Auth and rate limits unverified |
 | Phase 03 Catalog and rooms | Not started | [[phases/03-catalog-inventory-settings]] |
-| Phase 04 Safe availability and holds | Not started | [[phases/04-availability-and-holds]] |
+| Phase 04 Safe availability and holds | In progress — V01/V02 checkpoints, V03 implementation pending database acceptance | [[phases/04-availability-and-holds]] |
 | Phase 05 Online booking and GCash | Not started | [[phases/05-online-booking-and-gcash]] |
 | Phase 06 Walk-ins and countdown | Not started | [[phases/06-walkins-and-stay-monitoring]] |
 | Phase 07 Changes/refunds/extensions | Not started | [[phases/07-changes-refunds-and-ledger]] |
@@ -91,3 +91,5 @@ Change **Not started → In progress → Done** only after acceptance gates. Inc
 **V02 retry follow-up:** Bounded retries for serialization/deadlock failures were added to claim creation with a focused failing-then-passing regression test. This is a development check, not evidence that the hosted candidate migration was applied or that Phase 04 is complete.
 
 **V02 final verification:** [GitHub Actions run #19](https://github.com/JAVcode-1/dannys-micro-hotel/actions/runs/44281199949) succeeded after the retry fix; local build/typecheck/lint/format/application checks passed. The migration is still unapplied and V01/V02 live-flow acceptance remains pending.
+
+**V03 checkpoint (2026-11-18):** Owner verified `20261118000300_inventory_claims.sql` applied to Supabase `pgbierfxeviouyjsmjnh`; four local and remote migrations match. V03 code adds a 30-minute proof deadline, repeatable expiry job, protected pending-review transition, late-proof reconciliation result, and 15/30/60-minute review flags from submission. `20261118000400_claim_hold_lifecycle.sql` is prepared but unapplied. Local build, typecheck, lint and application tests passed; isolated PostgreSQL V03 and hosted migration checks have not run. Real 15-room inventory, reservation-dependent price snapshots, private proof Storage, scheduler deployment, staff payment verification, and full Phase 04 exit remain open. No V03 checkbox is marked Done.

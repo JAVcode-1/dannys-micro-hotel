@@ -165,3 +165,7 @@ No new owner decision. Feasibility uses UTC epoch milliseconds and half-open occ
 ## V02 implementation note - 2026-11-18
 
 No new owner policy. Pending migration `20261118000300_inventory_claims.sql` stores an internal provisional room for every active claim so PostgreSQL can exclude overlapping room ranges. Express will remain the authorization boundary when booking routes are added; current claim operations have no HTTP route. Category locks and same-transaction V01 revalidation protect capacity across concurrent backend calls, while request keys make retries idempotent. The migration is unapplied pending owner approval; V03 proof deadlines and protected-review lifecycle are not included.
+
+## V03 implementation note - 2026-11-18
+
+The owner reports V02 migration `20261118000300_inventory_claims.sql` applied to project `pgbierfxeviouyjsmjnh`, with four local/remote migrations matching; this supersedes the V02 unapplied status above. No new business policy is approved. The V03 candidate migration `20261118000400_claim_hold_lifecycle.sql` remains unapplied pending owner review. Late proof goes to manual reconciliation, never automatic confirmation. Proof-state transitions are internal until Phase 05 adds private Storage, reference validation, staff authorization and actor audit. Maintenance blocks remain in V01/V02 feasibility reads; a future maintenance write workflow must coordinate with claims and staff audit before real use.

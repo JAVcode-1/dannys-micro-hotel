@@ -9,6 +9,11 @@ import {
   releaseClaims,
   revalidateClaim,
 } from "../dist/inventory-claims.js";
+import {
+  expireClaims,
+  submitClaimProof,
+  reviewAge,
+} from "../dist/claim-holds.js";
 
 test("isolated PostgreSQL serializes thirty capacity contenders and replays idempotently", async () => {
   const connectionString = process.env.TEST_DATABASE_URL;
@@ -25,6 +30,7 @@ test("isolated PostgreSQL serializes thirty capacity contenders and replays idem
     for (const file of [
       "20261117000100_foundation_catalog.sql",
       "20261118000300_inventory_claims.sql",
+      "20261118000400_claim_hold_lifecycle.sql",
     ])
       await pool.query(
         readFileSync(
@@ -121,6 +127,52 @@ test("isolated PostgreSQL serializes thirty capacity contenders and replays idem
     assert.equal(
       (await createClaims("test-v02-after-release", [item], pool)).status,
       "created",
+    );
+    const heldId = (
+      await pool.query(
+        "select id from staytrack.inventory_claims where idempotency_key = 'test-v02-after-release'",
+      )
+    ).rows[0].id;
+    const fakeNow = Date.UTC(2026, 10, 18, 12);
+    await pool.query(
+      "update staytrack.inventory_claims set proof_deadline_at = $2 where id = $1",
+      [heldId, new Date(fakeNow)],
+    );
+    assert.equal(await expireClaims(fakeNow, pool), 1);
+    assert.equal(await expireClaims(fakeNow, pool), 0);
+    assert.equal(
+      await submitClaimProof(Number(heldId), fakeNow + 1, pool),
+      "late_reconciliation",
+    );
+    const protectedClaim = await createClaims(
+      "test-v03-proof-protected",
+      [item],
+      pool,
+    );
+    assert.equal(protectedClaim.status, "created");
+    const protectedId = protectedClaim.ids[0];
+    await pool.query(
+      "update staytrack.inventory_claims set proof_deadline_at = $2 where id = $1",
+      [protectedId, new Date(fakeNow + 29 * 60000)],
+    );
+    assert.equal(
+      await submitClaimProof(protectedId, fakeNow + 29 * 60000, pool),
+      "protected",
+    );
+    assert.equal(await expireClaims(fakeNow + 90 * 60000, pool), 0);
+    assert.equal(
+      reviewAge(fakeNow + 29 * 60000, fakeNow + 90 * 60000),
+      "critical",
+    );
+    assert.equal(await releaseClaims("test-v03-proof-protected", pool), true);
+    assert.equal(
+      (
+        await pool.query(
+          "select state from staytrack.inventory_claims where id = $1",
+          [protectedId],
+        )
+      ).rows[0].state,
+      "proof_pending_review",
     );
   } finally {
     await pool.end();
