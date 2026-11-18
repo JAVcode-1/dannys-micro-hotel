@@ -4,6 +4,8 @@ status: docs-first-handoff
 ---
 # Session Context — StayTrack / Danny's Micro Hotel
 
+**Latest checkpoint — O02 (2026-11-19):** Owner confirms O01 migration applied; read-only SQL verifies six versions through `20261118000500`. Added audited private staff QR configuration, guarded guest screenshot/reference handlers, atomic all-item proof protection, original booked amount/deadline UI and durable 15/25-minute reminder times (email delivery disabled). `/payment-preview` is labelled sample-only with no real QR/payment/file upload. Production guest payment routes and O01 booking creation stay closed; no confirmation/O03. Candidate `20261118000600_payment_proof_submission.sql` remains unapplied, with private buckets/RLS/reminder trigger and no real inventory/media seed. Build/typecheck/lint/format and 72 app tests pass; four-rule limited Semgrep found none. Independent review's uncertain-commit cleanup bug was reproduced/fixed/rechecked; private ambiguous uploads are retained for reconciliation. New named O02 PostgreSQL fixture awaits observed CI result; no local isolated URL. Hosted Storage/provider/shared throttling/retention, live QR approval, visual/mobile checks and Phase 03/04 formal gates remain pending. Details and file inventory: [[phases/05-online-booking-and-gcash]]. Stop after O02.
+
 **Project status:** Phase 01 F01 complete; F02 quality gate pending; F03 testing and CI prepared as an unverified checkpoint. Later phases have not started. This is not a deployed application.
 
 ## Read first

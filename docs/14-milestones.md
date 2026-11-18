@@ -4,7 +4,9 @@ status: in-progress
 ---
 # 14 — Milestones & Work Tracker
 
-**Snapshot date:** 2026-11-18. F01 is complete; Phase 01 remains in progress because F02 and F03 are open. A checked item requires implementation plus tests, not just a plan.
+**Snapshot date:** 2026-11-19. F01 is complete; Phase 01 remains in progress because F02 and F03 are open. A checked item requires implementation plus tests, not just a plan.
+
+**O02 development checkpoint (2026-11-19):** Owner confirms O01 applied; read-only SQL verifies six prior migrations. Added audited staff QR upload/signed preview, private screenshot/reference service and ownership-protected handlers, atomic multi-item pending-review protection, 15/25-minute reminder records (delivery disabled), five-minute/countdown/expiry UI and labelled `/payment-preview` (HTTP 200). Production guest payment/booking remains closed, O03 untouched. Candidate `20261118000600_payment_proof_submission.sql` is unapplied, with no inventory/media seed. Build/typecheck/lint/format and 72 app tests pass (52 backend, 20 frontend). Four local Semgrep starter rules on 11 source files found none, not a full gate. Independent review's uncertain-commit image deletion finding was reproduced/fixed with QR/proof regressions and confirmed resolved. New isolated PostgreSQL O02 assertions await CI execution; no local TEST_DATABASE_URL. Staged source is reviewed for secrets; final scan/push evidence is recorded with this checkpoint. File inventory and hosted Storage/email/retention/rate-limit limits: [[phases/05-online-booking-and-gcash]]. Phase 03/04 formal gates remain incomplete.
 
 **O01 CI fix verified:** [Run 44339371390](https://github.com/JAVcode-1/dannys-micro-hotel/actions/runs/44339371390), commit `6c479a8`, passed build/typecheck/lint/format, 64 application tests and **6 isolated PostgreSQL tests, 0 failed/skipped**. Log explicitly names the passing O01 guest multi-room migration/schedules/snapshots/ownership/rollback/Family-bed subtest. This supersedes prior pending-CI notes. O01 migration remains unapplied, real bookings/payments disabled, formal Phase 03/04 gates incomplete and O02 untouched.
 

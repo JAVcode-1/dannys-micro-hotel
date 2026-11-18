@@ -4,6 +4,10 @@ status: approved-baseline
 ---
 # 17 — Approved Decisions Register
 
+## O02 implementation note — 2026-11-19
+
+Owner confirms O01 `20261118000500` applied to `pgbierfxeviouyjsmjnh`; read-only history verifies six versions, superseding prior unapplied notes. O02 is development only: backend/private Storage, staff-configured QR, screenshot plus reference, pending staff verification. The 5 MB PNG/JPEG limit and 120-second QR links are technical choices, not hotel policy; signatures are checked, not full image/malware decoding. `payment_qr` replaces free-text C03 metadata as the payment source. Guest payment routes stay closed in production; test construction opens only isolated coverage. Original deadlines/booked prices remain authoritative. Claims are protected atomically after upload and fresh DB-clock checks, never confirmed. Uncertain commits retain private media for reconciliation. Reminder times persist, but delivery/scheduler remain disabled. O02 migration remains unapplied and hosted Storage/retention acceptance pending; no O03, verified reference uniqueness, refund, formal phase completion or live activation. Details: [[phases/05-online-booking-and-gcash]].
+
 > **Always prefer the most recent owner clarification.** Decision IDs are durable citations; amend via a new change record rather than quietly rewriting history. D = approved, P = proposed/pending.
 
 | ID | Decision | Status |

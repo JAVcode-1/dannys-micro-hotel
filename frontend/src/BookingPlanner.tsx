@@ -492,6 +492,12 @@ export default function BookingPlanner() {
             >
               Booking not open
             </button>
+            <a
+              href="/payment-preview"
+              className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-primary"
+            >
+              Preview the payment proof screen
+            </a>
           </aside>
         </div>
       </div>

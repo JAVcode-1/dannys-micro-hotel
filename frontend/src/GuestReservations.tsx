@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import type { GuestReservation } from "@staytrack/shared";
 import { apiBase } from "./staff-auth";
 import { hotelTime, peso } from "./BookingPlanner";
+import GuestPayment from "./GuestPayment";
 
 export default function GuestReservations({ token }: { token: string }) {
   const [rows, setRows] = useState<GuestReservation[]>([]);
   const [message, setMessage] = useState("Loading your reservations…");
+  const [paymentId, setPaymentId] = useState<string | null>(null);
   useEffect(() => {
     const controller = new AbortController();
     void fetch(`${apiBase}/guest/reservations`, {
@@ -67,6 +69,15 @@ export default function GuestReservations({ token }: { token: string }) {
               </p>
             </div>
           ))}
+          <button
+            className="mt-3 min-h-11 text-sm font-semibold text-primary"
+            onClick={() => setPaymentId(row.id)}
+          >
+            Payment proof details
+          </button>
+          {paymentId === row.id && (
+            <GuestPayment token={token} reservationId={row.id} />
+          )}
         </article>
       ))}
     </section>

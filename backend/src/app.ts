@@ -7,6 +7,10 @@ import { verifyGuest } from "./guest-auth.js";
 import type { GuestIdentity } from "./guest-auth.js";
 import { BookingError, quoteBooking } from "./booking-quote.js";
 import { guestReservations } from "./guest-booking.js";
+import {
+  registerPaymentRoutes,
+  type PaymentRouteOptions,
+} from "./payment-routes.js";
 import { staffRooms } from "./rooms.js";
 import { getSettings, saveSettings } from "./operational-settings.js";
 import { evaluateOccupants } from "./occupants.js";
@@ -23,6 +27,7 @@ export function createApp(
   staffVerifier: (token: string) => Promise<StaffIdentity | null> = verifyStaff,
   audit: (actorId: string) => Promise<void> = auditStaffAccess,
   guestVerifier: (token: string) => Promise<GuestIdentity | null> = verifyGuest,
+  paymentOptions: PaymentRouteOptions = {},
 ) {
   const app = express();
   app.use(express.json({ limit: "8kb" }));
@@ -32,7 +37,7 @@ export function createApp(
       response.setHeader("Access-Control-Allow-Origin", allowedOrigin);
       response.setHeader(
         "Access-Control-Allow-Headers",
-        "Authorization, Content-Type",
+        "Authorization, Content-Type, X-GCash-Payee, X-Transaction-Reference",
       );
       response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
       response.setHeader("Vary", "Origin");
@@ -54,6 +59,8 @@ export function createApp(
       "/guest/me",
       "/guest/quote",
       "/guest/reservations",
+      "/guest/payments",
+      "/staff/payment-qr",
       "/staff/catalog",
       "/staff/catalog/package-price",
       "/staff/catalog/packages",
@@ -366,6 +373,7 @@ export function createApp(
     response.setHeader("Cache-Control", "no-store");
     response.json(result);
   });
+  registerPaymentRoutes(app, catalogStaff, guestVerifier, paymentOptions);
   return app;
 }
 

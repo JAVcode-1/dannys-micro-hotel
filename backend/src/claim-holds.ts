@@ -33,7 +33,7 @@ export async function expireClaims(
   return result.rowCount ?? 0;
 }
 
-// Call only after the private proof upload and reference have been accepted by a future booking API.
+// Single-claim internal helper. Multi-room O02 submission protects every item in one transaction.
 export async function submitClaimProof(
   id: number,
   submittedAt: number,

@@ -1,5 +1,6 @@
 import React from "react";
 import { apiBase } from "./staff-auth";
+import PaymentQrSettings from "./PaymentQrSettings";
 
 type Settings = {
   cleaningBufferMinutes: number | null;
@@ -102,32 +103,6 @@ export default function OperationalSettings({ token }: { token: string }) {
               }
             />
           </label>
-          <label className="text-sm font-medium">
-            Private GCash QR object key
-            <input
-              className="mt-1 min-h-11 w-full rounded-lg border border-subtle px-3"
-              value={value.gcashQrObjectKey ?? ""}
-              onChange={(event) =>
-                setValue({
-                  ...value,
-                  gcashQrObjectKey: event.target.value || null,
-                })
-              }
-            />
-          </label>
-          <label className="text-sm font-medium">
-            GCash payee label
-            <input
-              className="mt-1 min-h-11 w-full rounded-lg border border-subtle px-3"
-              value={value.gcashPayeeLabel ?? ""}
-              onChange={(event) =>
-                setValue({
-                  ...value,
-                  gcashPayeeLabel: event.target.value || null,
-                })
-              }
-            />
-          </label>
           <label className="text-sm font-medium sm:col-span-2">
             Cancellation display text
             <textarea
@@ -154,6 +129,7 @@ export default function OperationalSettings({ token }: { token: string }) {
           {message}
         </p>
       )}
+      <PaymentQrSettings token={token} />
     </section>
   );
 }

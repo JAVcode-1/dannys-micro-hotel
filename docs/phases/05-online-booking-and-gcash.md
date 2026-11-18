@@ -1,12 +1,14 @@
 ---
 tags: [phase-05, implementation, payments]
-status: o01-development-checkpoint
+status: o02-development-checkpoint
 ---
 # Phase 05 — Online Booking & Manual GCash Verification
 
 **Goal:** Guest portal that takes secure room holds and payment proof; Staff/Admin, not the upload, confirms receipt and reservation.
 
 **Dependencies:** [[02-auth-and-authorization]], [[04-availability-and-holds]], [[04-feature-specification]].
+
+**Current migration status (2026-11-19):** Owner confirms O01 `20261118000500_guest_multi_room_booking.sql` applied to `pgbierfxeviouyjsmjnh`; read-only SQL independently returned all six expected versions through O01. This supersedes historical O01-unapplied notes below. O02's seventh migration is a new, unapplied candidate. Phase 03/04 formal gates remain incomplete; live booking/payment confirmation stay disabled.
 
 ## Task sequence
 
@@ -67,6 +69,28 @@ Actual blocker: obtain the successful CI run/log for the reviewed commit, includ
 - [ ] Display `Payment submitted — awaiting staff verification`, never `Confirmed`.
 
 **Acceptance:** missing proof/ref rejected, expired hold handled, protected submitted proof remains (T07/T08).
+
+#### O02 development checkpoint — 2026-11-19
+
+Implemented only O02:
+- Secured staff settings offer PNG/JPEG QR upload (5 MB), manually verified payee label, 120-second signed preview and transactional actor audit. New `payment_qr` is authoritative; C03 free-text metadata remains for compatibility but is no longer edited or used by payments. Saving a QR does not open guest payments.
+- Guest handlers require verified Auth UUID plus matching reservation email. Amount is the saved full reservation price; sessions expose server time, original claim deadline, QR signed access and reminder times. **Production guest payment GET/POST routes remain closed (503)** with no environment toggle; isolated tests alone inject an open path. O01 hold creation stays disabled.
+- Both screenshot and transaction reference are required. Server-generated object paths, PNG/JPEG MIME/signature/header/footer checks, 5 MB limit, empty/type mismatch/SVG/HTML/control-character rejection and private Supabase Storage protect uploads. This is signature validation, not full decoding/malware scanning. The adapter refuses public buckets, never returns a public proof URL/listing, and candidate restrictive policies block client access even if another permissive Storage policy exists.
+- After upload, one transaction locks the owned reservation and all its claims, rechecks the database clock/deadlines, saves a pending-only submission/full amount, protects every item as `proof_pending_review`, and cancels reminders. Item schedules/prices remain unchanged. Identical retry replays; changed replacement is rejected for staff handling. Any expired/released/unavailable claim prevents partial acceptance. Late paid guests receive reconciliation guidance, not automatic confirmation or another payment.
+- Independent review found an uncertain-COMMIT cleanup race. Reproduced and fixed: both QR/proof retain private uploads on uncertain transport/commit results; only known rollback/replay cleans positively unreferenced media. Two regression tests pass and reviewer confirmed resolution. Failed cleanup, ambiguous uploads and superseded QR retention still need reconciliation before live activation. No perfect score/full milestone gate is claimed.
+- Candidate trigger persists 15/25-minute reminder records for future reservations; proof cancels them and the due selector excludes expired/submitted holds. **Email delivery, provider retry and deployed scheduler remain disabled/unimplemented.** UI has full amount, countdown, five-minute prompt, file/reference form, expiry guidance and exact `Payment submitted — awaiting staff verification` state. No actual-payment verification, receipt, confirmed state or refund is added (O03 untouched).
+
+**Preview:** `http://localhost:5173/payment-preview` returned HTTP 200; `/book` links to it. It explicitly shows a sample ₱2,700 reservation, no real QR/payee and no network file upload. Its pending-state form is demonstrable in the browser; component tests cover submission/expiry/unconfigured QR. `/staff/settings` includes the secured QR editor, requiring approved migration, private Storage and backend secret configuration. HTTP/component checks do not establish a manual visual/mobile walkthrough.
+
+**Migration:** `supabase/migrations/20261118000600_payment_proof_submission.sql` adds private pending submissions, QR configuration, reminder schedule/trigger, private bucket definitions and restrictive Storage guards. **Prepared, not applied; separate owner approval required.** It changes no V01–V03 constraints/O01 snapshots and seeds no rooms, reservations or media. Hosted generated DB types are not claimed regenerated; shared payment DTOs describe this candidate.
+
+**Changed files/dependencies:** `backend/src/payment-{media,proofs,routes}.ts`, app registration/rate limits, V03 helper comment; shared payment DTO; guest payment/preview and staff QR components, planner/reservation/settings integration; payment media/rollback/route/Storage and UI tests; named `o02-postgres.mjs` scenarios invoked by the existing isolated fixture; CI step label and Obsidian notes. No dependency installed.
+
+**Verification:** build/typecheck/lint/format and **72 application tests passed (52 backend, 20 frontend)**. Scoped Semgrep: four pinned starter rules, 11 source files, zero findings (limited coverage). Staged secret review recorded in milestones. Named isolated O02 coverage includes migration/RLS, restrictive Storage policy despite a permissive fixture policy, staff audit, ownership denial, missing image/ref, rollback, replay/full amount, multi-item protection, reminder timing, late/expired rejection and minute-90 proof retention. No local `TEST_DATABASE_URL`; CI result must be observed separately. CI substitutes the Storage catalog/provider and cannot establish hosted Storage API acceptance.
+
+**Remaining acceptance:** owner migration readiness/approval and hosted private bucket/object tests, real guest/staff sessions and QR/payee approval, sender/scheduler/shared rate limits, upload failures/concurrency/retention, deeper media checks, real-device accessibility, historical Phase 03 inventory and Phase 04 channel/maintenance/expiry/full gate. All checklist/exit boxes stay open for dependent acceptance. Real payments/booking confirmation remain disabled. Stop after O02; O03 requires another instruction.
+
+Integration references: [Supabase Storage access controls](https://supabase.com/docs/guides/storage/security/access-control), [server upload API](https://supabase.com/docs/reference/javascript/storage-from-upload). References are not hosted acceptance evidence.
 
 ### O03 — Staff payment review and confirmation
 - [ ] Staff sees 15/30/60m aging; checks actual GCash account against amount, recipient, time/ref.
