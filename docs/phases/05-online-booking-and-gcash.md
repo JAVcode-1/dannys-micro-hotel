@@ -92,6 +92,8 @@ Implemented only O02:
 
 Integration references: [Supabase Storage access controls](https://supabase.com/docs/guides/storage/security/access-control), [server upload API](https://supabase.com/docs/reference/javascript/storage-from-upload). References are not hosted acceptance evidence.
 
+**O02 CI evidence (2026-11-19):** [Run 44344674739](https://github.com/JAVcode-1/dannys-micro-hotel/actions/runs/44344674739), checkpoint `794e3a0fa09da7b098901b37293e503dbafb012b`, passed build/typecheck/lint/format, all 72 application tests and **7 isolated PostgreSQL tests, 0 failed, 0 skipped**. Its log explicitly reports `ok 2 - O02 PostgreSQL: private QR/proof, ownership, atomic pending review, deadlines and reminder schedule`, alongside passing O01/V02/V03 coverage. This supersedes the pending-CI note above. The candidate SQL ran only against disposable CI PostgreSQL with a Storage catalog substitute, not hosted Supabase. Staged Gitleaks scan found no leaks. No hosted migration, real QR/proof upload, payment, booking confirmation, physical inventory seed or O03 work occurred. Hosted/provider/email/retention and formal Phase 03/04 acceptance remain pending.
+
 ### O03 — Staff payment review and confirmation
 - [ ] Staff sees 15/30/60m aging; checks actual GCash account against amount, recipient, time/ref.
 - [ ] Prevent verified duplicate transaction reference and double approval with idempotency.
