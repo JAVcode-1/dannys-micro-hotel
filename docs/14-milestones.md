@@ -36,6 +36,10 @@ status: in-progress
 
 **A01 two-account activation (2026-11-18):** Owner-approved Auth UUIDs `955ab3cb-0b07-44ed-a5e1-f373d7c75702` and `d3eb81cb-7fb1-44b8-b7ca-307849f9918f` were verified as invited and email-confirmed, inserted into `staff_accounts` with inactive defaults, and activated. No other Auth users or hotel data changed. Readback shows both active; missing and invalid tokens yielded 401/403 with a valid publishable key supplied in memory. Build, typecheck, lint and application tests passed. Normal backend `.env` lacks the publishable key; real separate login/audit, guest-session denial and deactivation tests remain pending, so A01 stays open.
 
+**A01 live login follow-up (2026-11-18):** The browser-safe key was added only to ignored local `backend/.env`; backend reload restored invalid-token 403. Hosted audit has distinct `staff.session_verified` events for both approved Auth UUIDs. The account ending `f9918f` was deactivated and restored; both memberships read back active. The inactive-session response was not clearly reported, and real guest-session denial remains untested. A01 stays open.
+
+**A01 hosted revocation gate check (2026-11-18):** A controlled Auth identity for the inactive account ending `f9918f` received 403 through `/staff/me` against the hosted membership table, without a new audit row. The membership was restored active in `finally`. Real-token revocation and real guest-session denial remain pending; A01 stays open.
+
 ## Session log
 
 **2026-11-18 setup checkpoint:** Root combined dev command starts Vite at `http://localhost:5173/` and Express at `http://localhost:3001/`; the frontend page and `/health` returned HTTP 200. Build, typecheck, lint and application tests passed (21 backend, 11 frontend). Ponytail Full was installed through the official Codex plugin commands. A01 migration remains unapplied; isolated SQL/RLS, hosted Auth, shared rate limiting and real employee acceptance remain pending. No checklist status changed.
