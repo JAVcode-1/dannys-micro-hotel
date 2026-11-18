@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src test",
     "test": "npm run build && node --test test/*.test.mjs",
-    "test:db": "node --test --test-concurrency=1 test/*.integration.mjs"
+    "test:db": "node --test --test-reporter=tap --test-concurrency=1 test/*.integration.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",

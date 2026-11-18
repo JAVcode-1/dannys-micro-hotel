@@ -177,6 +177,8 @@ The owner confirms V03 migration `20261118000400_claim_hold_lifecycle.sql` appli
 
 ## O01 implementation boundary — 2026-11-18
 
+**CI reporting clarification (2026-11-18):** No policy change. The earlier five-test database summary concealed O01 inside the V02 test body; O01 was not excluded by the integration glob. A separately named awaited subtest and explicit TAP reporting now expose its result. The assertions and isolated database safeguards remain; exact schedule and one-time Family bed line checks were added. CI success must be observed separately before migration readiness changes.
+
 **Readiness review follow-up (2026-11-18):** No new policy. Remote SQL confirms the five prior migrations; a password-based Supabase dry run succeeds and lists only O01 pending after one login-role 403. This does not establish SQL application correctness. O01 coverage exists in CI, but its actual private Actions result is inaccessible, so readiness remains **NOT SAFE TO APPLY pending CI evidence**. Eleven focused tests passed; no code/migration change or schema application occurred. Details: [[phases/05-online-booking-and-gcash]].
 
 No new hotel policy. Owner authorizes the Phase 05 O01 development checkpoint while Phase 03/04 exit gates remain incomplete. Guests explicitly choose consecutive allowed package blocks; no optimization/tie-break discount is invented (P-003 remains open). One Family bed costs 10000 centavos once per continuous item stay; stock/extension acceptance remains pending. Server quote, existing V01/V02 claims, V03 deadline creation and per-item price snapshots share one transaction internally. O01 snapshots remain immutable and replay does not reprice from the catalog. Existing claims gain no new lifecycle transitions.

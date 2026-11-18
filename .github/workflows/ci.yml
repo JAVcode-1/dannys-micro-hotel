@@ -37,4 +37,5 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm test
-      - run: npm run test:db
+      - name: PostgreSQL integration — V02/V03 and O01 guest multi-room booking
+        run: npm run test:db
