@@ -1,4 +1,5 @@
 import StaffLogin from "./StaffLogin";
+import GuestAccess from "./GuestAccess";
 import { staffInviteCallback } from "./staff-auth";
 
 export default function App() {
@@ -15,6 +16,15 @@ export default function App() {
     return (
       <main className="min-h-svh bg-canvas px-6 py-16 text-main">
         <StaffLogin />
+      </main>
+    );
+  if (
+    typeof window !== "undefined" &&
+    ["/verify", "/login", "/register"].includes(window.location.pathname)
+  )
+    return (
+      <main className="min-h-svh bg-canvas px-6 py-16 text-main">
+        <GuestAccess />
       </main>
     );
   return (
@@ -36,7 +46,7 @@ export default function App() {
             </div>
           </div>
           <span className="rounded-full bg-selected px-3 py-1 text-xs font-semibold text-primary">
-            Foundation preview
+            <a href="/verify">Guest access</a>
           </span>
         </header>
 

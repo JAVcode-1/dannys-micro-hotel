@@ -124,3 +124,7 @@ See [[18-backlog]].
 **2026-11-18 A01 post-application note:** Owner subsequently reported successful A01 application. Read-only database verification confirms both expected migration versions and staff schema isolation. This supersedes the earlier application hold as an operational status, without deciding the project's environment classification. Account activation and hosted Auth/rate-limit acceptance are still pending.
 
 A01 verification note (2026-11-18): Existing per-process Express throttling is not a shared deployment rate limit. No new architecture decision was made; hosted rate-limit configuration remains pending.
+
+## A02 implementation note - 2026-11-18
+
+Guest verification uses Supabase Auth email OTP and Express confirms the resulting managed identity and confirmed email. A verified Auth user need not have an app guest profile. Reservation access remains unavailable until an ownership-aware API exists; a public reference alone will never grant access. No new business decision or migration was made.

@@ -61,3 +61,5 @@ status: in-progress
 - [ ] Record results in [[14-milestones]].
 
 **Next:** [[03-catalog-inventory-settings]].
+
+**A02 development checkpoint (2026-11-18):** Guest `/verify` (also `/login` and `/register`) accepts email and six-digit Supabase Auth OTP, then requires successful Express `/guest/me` verification before showing success. Express checks the managed token and confirmed email. Guest and staff identity endpoints share a local per-process request limit. No reservation table or lookup endpoint exists, so ownership/cross-guest acceptance remains open. Hosted OTP template, actual expiry, provider/shared throttling, and live wrong/replay/brute-force checks are unverified. No migration was added or applied. A01/F02/F03 debt remains open.

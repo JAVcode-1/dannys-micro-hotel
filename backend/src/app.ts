@@ -3,11 +3,14 @@ import type { HealthResponse } from "@staytrack/shared";
 import { probeDatabase } from "./database.js";
 import { auditStaffAccess, verifyStaff } from "./staff-auth.js";
 import type { StaffIdentity } from "./staff-auth.js";
+import { verifyGuest } from "./guest-auth.js";
+import type { GuestIdentity } from "./guest-auth.js";
 
 export function createApp(
   databaseProbe: () => Promise<void> = probeDatabase,
   staffVerifier: (token: string) => Promise<StaffIdentity | null> = verifyStaff,
   audit: (actorId: string) => Promise<void> = auditStaffAccess,
+  guestVerifier: (token: string) => Promise<GuestIdentity | null> = verifyGuest,
 ) {
   const app = express();
   app.use((request, response, next) => {
@@ -28,6 +31,35 @@ export function createApp(
   let lastProbeAt = 0;
   let probeInFlight = false;
   const attempts = new Map<string, { count: number; resetAt: number }>();
+
+  app.use(["/staff/me", "/guest/me"], (request, response, next) => {
+    const now = Date.now();
+    const address = request.ip ?? "unknown";
+    if (attempts.size >= 10000) {
+      for (const [key, value] of attempts)
+        if (value.resetAt <= now) attempts.delete(key);
+      if (!attempts.has(address) && attempts.size >= 10000) {
+        response.status(429).json({ error: "Too many requests" });
+        return;
+      }
+    }
+    const current = attempts.get(address);
+    const bucket =
+      current && current.resetAt > now
+        ? current
+        : { count: 0, resetAt: now + 60000 };
+    bucket.count += 1;
+    attempts.set(address, bucket);
+    if (bucket.count > 30) {
+      response.setHeader(
+        "Retry-After",
+        String(Math.ceil((bucket.resetAt - now) / 1000)),
+      );
+      response.status(429).json({ error: "Too many requests" });
+      return;
+    }
+    next();
+  });
 
   app.get("/health", (_request, response) => {
     const body: HealthResponse = { status: "ok" };
@@ -62,31 +94,6 @@ export function createApp(
     }
   });
   app.get("/staff/me", async (request, response) => {
-    const now = Date.now();
-    const address = request.ip ?? "unknown";
-    if (attempts.size >= 10000) {
-      for (const [key, value] of attempts)
-        if (value.resetAt <= now) attempts.delete(key);
-      if (!attempts.has(address) && attempts.size >= 10000) {
-        response.status(429).json({ error: "Too many requests" });
-        return;
-      }
-    }
-    const current = attempts.get(address);
-    const bucket =
-      current && current.resetAt > now
-        ? current
-        : { count: 0, resetAt: now + 60000 };
-    bucket.count += 1;
-    attempts.set(address, bucket);
-    if (bucket.count > 30) {
-      response.setHeader(
-        "Retry-After",
-        String(Math.ceil((bucket.resetAt - now) / 1000)),
-      );
-      response.status(429).json({ error: "Too many requests" });
-      return;
-    }
     const authorization = request.header("authorization");
     const match = /^Bearer ([^\s]+)$/.exec(authorization ?? "");
     if (!match) {
@@ -104,6 +111,26 @@ export function createApp(
       response.json({ id: staff.id, email: staff.email });
     } catch {
       response.status(503).json({ error: "Staff access unavailable" });
+    }
+  });
+  app.get("/guest/me", async (request, response) => {
+    const match = /^Bearer ([^\s]+)$/.exec(
+      request.header("authorization") ?? "",
+    );
+    if (!match) {
+      response.status(401).json({ error: "Authentication required" });
+      return;
+    }
+    try {
+      const guest = await guestVerifier(match[1]);
+      if (!guest) {
+        response.status(403).json({ error: "Guest access denied" });
+        return;
+      }
+      response.setHeader("Cache-Control", "no-store");
+      response.json({ id: guest.id, email: guest.email });
+    } catch {
+      response.status(503).json({ error: "Guest access unavailable" });
     }
   });
   return app;
