@@ -139,6 +139,8 @@ Preview: local Vite `http://127.0.0.1:5173/staff/payment-review-preview` returne
 
 Staged review included all 19 in-scope files; Gitleaks scanned the staged diff with redaction and found no leaks. No new Semgrep/OSV or full scanloop/greploop gate was run for this ordinary development checkpoint. Prior full-gate debt remains unresolved.
 
+CI follow-up: checkpoint `8ed5b7b` was pushed and remote main verified. [Run 44357026744](https://github.com/JAVcode-1/dannys-micro-hotel/actions/runs/44357026744) passed build/typecheck/lint/format and 82 application tests, but O03 PostgreSQL failed at the full-amount check. Root cause was the test's old 270000-centavo input after O01 deliberately revised the Standard 3h catalog price to 30000; the fresh O03 booking correctly costs 280000. Updated only those synthetic expected amounts, retaining O01's revision/snapshot assertions and the server's mismatch rejection. No production logic/migration change. New CI PostgreSQL outcome remains pending observation.
+
 Remaining acceptance: observe O03 isolated CI, review/approve/apply candidate separately, authorized synthetic Storage/object/signed-link denial/expiry tests, real staff/guest sessions and ledger operating procedure/payee approval, verified cancellation terms/legal review, late-payment guest-consent/refund reconciliation drill, notification delivery/retry scheduling, shared throttling, retention/media validation, actual room/channel/maintenance integration, real-device/accessibility and full milestone security gate. All O03/phase acceptance boxes remain open. Stop after O03; next work is its acceptance/migration review only when instructed, not another feature.
 
 ## Exit gate

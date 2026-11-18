@@ -115,7 +115,8 @@ export async function o03Postgres(t, pool) {
             timeChecked: true,
             reference,
             recipient: "TEST PAYEE ONLY",
-            amountCentavos: 270000,
+            // O01 deliberately revised the Standard 3h rate to 30000 earlier in this fixture.
+            amountCentavos: 280000,
             receivedAt,
           },
         };
@@ -164,7 +165,7 @@ export async function o03Postgres(t, pool) {
       ).rows[0];
       assert.ok(reservation.online_confirmation_at);
       assert.match(reservation.cancellation_terms_snapshot, /one hour/);
-      assert.equal(reservation.total_centavos, "270000");
+      assert.equal(reservation.total_centavos, "280000");
       const outbox = (
         await pool.query(
           "select state,payload from staytrack.payment_notification_outbox where reservation_id=$1",
@@ -173,7 +174,7 @@ export async function o03Postgres(t, pool) {
       ).rows[0];
       assert.equal(outbox.state, "pending");
       assert.equal(outbox.payload.items.length, 2);
-      assert.equal(outbox.payload.amountCentavos, 270000);
+      assert.equal(outbox.payload.amountCentavos, 280000);
       assert.deepEqual(await decide(confirmed), {
         status: "confirmed",
         version: 1,
