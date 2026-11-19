@@ -5,6 +5,7 @@ import BookingPlanner from "./BookingPlanner";
 import { PaymentPreview } from "./GuestPayment";
 import { PaymentReviewPreview } from "./StaffPaymentReviews";
 import { WalkInPreview } from "./WalkInDesk";
+import CheckInDesk from "./CheckInDesk";
 import { staffInviteCallback } from "./staff-auth";
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
       window.location.pathname === "/staff/settings" ||
       window.location.pathname === "/staff/payments" ||
       window.location.pathname === "/staff/walkins" ||
+      window.location.pathname === "/staff/check-ins" ||
       inviteCallback)
   )
     return (
@@ -56,6 +58,15 @@ export default function App() {
     window.location.pathname === "/staff/walkin-preview"
   )
     return <WalkInPreview />;
+  if (
+    typeof window !== "undefined" &&
+    window.location.pathname === "/staff/check-in-preview"
+  )
+    return (
+      <main className="min-h-svh bg-canvas p-6 text-main">
+        <CheckInDesk />
+      </main>
+    );
   return (
     <main className="min-h-svh bg-canvas px-6 py-8 text-main sm:px-10">
       <div className="mx-auto flex max-w-5xl flex-col gap-16">

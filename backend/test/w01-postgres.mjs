@@ -15,11 +15,12 @@ import {
 } from "../dist/payment-review.js";
 import { expireClaims } from "../dist/claim-holds.js";
 import { revalidateClaim } from "../dist/inventory-claims.js";
+import { checkIn, checkInItems } from "../dist/check-in.js";
 
 export async function w01Postgres(t, pool) {
   await t.test(
     "W01 PostgreSQL: shared walk-in capacity, journal balances, verified mixed payments, cross-channel references, retries and rollback",
-    async () => {
+    async (w01) => {
       // O03 already asserted maintenance denial; remove only its deliberately conflicting test blocks.
       await pool.query(
         "delete from staytrack.room_blocks where reason='O03 TEST MAINTENANCE'",
@@ -515,6 +516,114 @@ export async function w01Postgres(t, pool) {
           pool,
         ),
         /no longer available/,
+      );
+      await w01.test(
+        "W02 check-in rejects unpaid and dirty stays, preserves online checkout and serializes room occupancy",
+        async () => {
+          await pool.query(
+            readFileSync(
+              new URL(
+                "../../supabase/migrations/20261119000900_room_check_in.sql",
+                import.meta.url,
+              ),
+              "utf8",
+            ),
+          );
+          const item = same.booking.items[0];
+          const key = "w02-fixture-retry";
+          await assert.rejects(
+            checkIn(actor, afterOnline.booking.items[0].id, room.id, key, pool),
+            /50% payment minimum/,
+          );
+          await pool.query(
+            "update staytrack.rooms set operational_state='cleaning' where id=$1",
+            [room.id],
+          );
+          await assert.rejects(
+            checkIn(actor, item.id, room.id, key, pool),
+            /Ready room/,
+          );
+          await pool.query(
+            "update staytrack.rooms set operational_state='ready' where id=$1",
+            [room.id],
+          );
+          const block = (
+            await pool.query(
+              `insert into staytrack.room_blocks(room_id,start_at,end_at,reason)
+          values ($1,clock_timestamp()-interval '1 minute',null,'W02 TEST BLOCK') returning id`,
+              [room.id],
+            )
+          ).rows[0];
+          await assert.rejects(
+            checkIn(actor, item.id, room.id, key, pool),
+            /Maintenance overlaps/,
+          );
+          await pool.query("delete from staytrack.room_blocks where id=$1", [
+            block.id,
+          ]);
+          const results = await Promise.allSettled([
+            checkIn(actor, item.id, room.id, key, pool),
+            checkIn(actor, item.id, room.id, "w02-other-attempt", pool),
+          ]);
+          assert.equal(
+            results.filter((result) => result.status === "fulfilled").length,
+            1,
+          );
+          const stay = results.find(
+            (result) => result.status === "fulfilled",
+          ).value;
+          assert.equal(+stay.checkout_at - +stay.checked_in_at, 360 * 60000);
+          assert.deepEqual(
+            await checkIn(actor, item.id, room.id, stay.request_key, pool),
+            stay,
+          );
+          const occupied = await pool.query(
+            "select operational_state from staytrack.rooms where id=$1",
+            [room.id],
+          );
+          assert.equal(occupied.rows[0].operational_state, "occupied");
+
+          const onlineItem = (
+            await pool.query(
+              `select b.id,i.room_id from staytrack.room_bookings b
+          join staytrack.inventory_claims i on i.id=b.claim_id
+          where b.reservation_id=$1 and b.category_code='family_executive'`,
+              [verifiedOnline.holdId],
+            )
+          ).rows[0];
+          const checkout = new Date(Date.now() + 3 * 3600000);
+          await pool.query(
+            "update staytrack.room_bookings set start_at=$2,end_at=$3 where id=$1",
+            [onlineItem.id, new Date(Date.now() - 61 * 60000), checkout],
+          );
+          assert.equal(
+            (await checkInItems(pool)).find((row) => row.id === onlineItem.id)
+              .late,
+            true,
+          );
+          assert.equal(
+            (
+              await pool.query(
+                `select i.state from staytrack.inventory_claims i
+            join staytrack.room_bookings b on b.claim_id=i.id where b.id=$1`,
+                [onlineItem.id],
+              )
+            ).rows[0].state,
+            "confirmed",
+          );
+          await pool.query(
+            "update staytrack.room_bookings set start_at=$2,end_at=$3 where id=$1",
+            [onlineItem.id, new Date(Date.now() - 45 * 60000), checkout],
+          );
+          const onlineStay = await checkIn(
+            actor,
+            onlineItem.id,
+            onlineItem.room_id,
+            "w02-online-fixture",
+            pool,
+          );
+          assert.equal(+onlineStay.checkout_at, +checkout);
+        },
       );
     },
   );

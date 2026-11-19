@@ -4,6 +4,8 @@ status: approved-baseline
 ---
 # 17 — Approved Decisions Register
 
+**W01 hosted migration verified (2026-11-19).** The owner applied `20261119000800_walkin_booking_ledger.sql` to `pgbierfxeviouyjsmjnh`. A read-only PostgreSQL history query verified that all nine local and hosted migration versions match with none pending. The linked CLI returned 403 during login-role initialization. This supersedes earlier W01 unapplied notes. Live transactions remain disabled. Real hotel inventory, hosted acceptance, and prior exit gates remain open.
+
 **W01 final CI evidence (2026-11-19):** [Run 44432132249](https://github.com/JAVcode-1/dannys-micro-hotel/actions/runs/44432132249) on `307e580` passed build/typecheck/lint/format, **89 application tests and nine isolated PostgreSQL tests, zero failures/skips**. This supersedes W01 pending-CI statements below. The named W01 database fixture includes exactly two receipts (50% cash + 50% verified GCash), additional partial splits, reference races, retries and rollback. Implementation commit `7193d1b` and test follow-up `307e580` are pushed to main. The candidate ninth migration ran only in disposable CI PostgreSQL and remains **unapplied on hosted Supabase**, pending separate owner review/approval. No formal W01/phase checkbox is completed; hosted acceptance and Phase 03–05 dependencies remain open, live writes stay closed, and W02 is not started.
 
 ## W01 approved implementation boundary — 2026-11-19

@@ -4,6 +4,8 @@ status: w01-development-checkpoint
 ---
 # Phase 06 — Walk-In Desk, Check-In/Out & Countdown
 
+**W01 hosted migration verified (2026-11-19).** The owner applied `20261119000800_walkin_booking_ledger.sql` to `pgbierfxeviouyjsmjnh`. A read-only PostgreSQL history query verified that all nine local and hosted migration versions match with none pending. The linked CLI returned 403 during login-role initialization. This supersedes earlier W01 unapplied notes. Live transactions remain disabled. Real hotel inventory, hosted acceptance, and prior exit gates remain open.
+
 **W01 final CI evidence (2026-11-19):** [Run 44432132249](https://github.com/JAVcode-1/dannys-micro-hotel/actions/runs/44432132249) on `307e580` passed build/typecheck/lint/format, **89 application tests and nine isolated PostgreSQL tests, zero failures/skips**. This supersedes W01 pending-CI statements below. The named W01 database fixture includes exactly two receipts (50% cash + 50% verified GCash), additional partial splits, reference races, retries and rollback. Implementation commit `7193d1b` and test follow-up `307e580` are pushed to main. The candidate ninth migration ran only in disposable CI PostgreSQL and remains **unapplied on hosted Supabase**, pending separate owner review/approval. No formal W01/phase checkbox is completed; hosted acceptance and Phase 03–05 dependencies remain open, live writes stay closed, and W02 is not started.
 
 **Goal:** Real staff/front desk operation on same inventory; room-specific reliable countdown.
@@ -54,6 +56,10 @@ Remaining acceptance: owner review/application of candidate, approved isolated/h
 - [ ] Enforce room status transition Ready → Occupied; prevent a second conflicting check-in.
 
 **Acceptance:** T12/T13/T14/T21 pass.
+
+**W02 development checkpoint (2026-11-19).** The staff check-in desk lists Ready candidates and flags online arrivals at one hour without altering capacity. Check-in rechecks staff, payment eligibility, room readiness, maintenance and the buffered claim in one transaction. The room becomes Occupied with an immutable check-in record and staff audit. Walk-ins use actual check-in plus purchased duration. Online stays retain their scheduled checkout. The synthetic preview is available at http://127.0.0.1:5174/staff/check-in-preview.
+
+Build, typecheck, lint, formatting, and 90 application tests passed locally. The isolated PostgreSQL suite requires `TEST_DATABASE_URL`, which is unavailable locally. The CI fixture covers T12/T13/T14/T21 and concurrent check-in. Migration `20261119000900_room_check_in.sql` is prepared for separate owner approval. Live check-in remains disabled. Formal acceptance, real inventory, and prior exit gates remain open.
 
 ### W03 — Countdown, overdue and checkout
 - [ ] Dashboard computes from persisted server timestamps; reload/reopen no drift.

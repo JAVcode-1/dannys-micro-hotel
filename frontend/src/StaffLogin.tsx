@@ -7,6 +7,7 @@ import StaffRooms from "./StaffRooms";
 import OperationalSettings from "./OperationalSettings";
 import StaffPaymentReviews from "./StaffPaymentReviews";
 import WalkInDesk from "./WalkInDesk";
+import CheckInDesk from "./CheckInDesk";
 
 export default function StaffLogin({
   authClient = staffAuth,
@@ -205,6 +206,12 @@ export default function StaffLogin({
           <nav className="mt-5 flex flex-wrap gap-2 text-sm font-semibold">
             <a
               className="rounded-lg bg-selected px-3 py-2 text-primary"
+              href="/staff/check-ins"
+            >
+              Check-in
+            </a>
+            <a
+              className="rounded-lg bg-selected px-3 py-2 text-primary"
               href="/staff/walkins"
             >
               Walk-ins
@@ -241,6 +248,8 @@ export default function StaffLogin({
               <OperationalSettings token={session.access_token} />
             ) : window.location.pathname === "/staff/payments" ? (
               <StaffPaymentReviews token={session.access_token} />
+            ) : window.location.pathname === "/staff/check-ins" ? (
+              <CheckInDesk token={session.access_token} />
             ) : window.location.pathname === "/staff/walkins" ? (
               <WalkInDesk token={session.access_token} />
             ) : (
