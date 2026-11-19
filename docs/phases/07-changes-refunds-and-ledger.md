@@ -1,8 +1,15 @@
 ---
 tags: [phase-07, implementation, changes]
-status: not-started
+status: x01-development-checkpoint-acceptance-pending
 ---
 # Phase 07 — Cancellations, Rescheduling, Extensions & Refunds
+
+**X01 current development status - 2026-11-19:** Implementation `c4cc21b` and test follow-up `586e5c7` are pushed. [CI run 44459769726](https://github.com/JAVcode-1/dannys-micro-hotel/actions/runs/44459769726) on `586e5c7a46de2f04bcf117813dba2d58f9e320b6` passed build/typecheck/lint/format, **100 application tests (70 backend + 30 frontend) and 12 isolated PostgreSQL tests, zero failures/skips**, explicitly including X01 T17/T18/T19/T27, production timing boundaries, item/capacity protection, retries, audit rollback, refund claimant authorization and financial integrity. This supersedes pending-CI and first-run fixture failure notes. No production safeguard was weakened.
+
+Migration `20261119001100_item_cancellation_manual_refund.sql` ran only in disposable CI PostgreSQL and remains **unapplied on hosted Supabase**, pending separate owner readiness review/approval; SHA-256 `6BE85B3F431AD085A1ED5EDF074B1AED669BD1962DB664A63368400AAC215D99`. The prior eleven migrations remain owner-confirmed applied/synchronized. Live transactions, cancellation/refund writes and automatic transfers remain disabled. Synthetic preview: http://127.0.0.1:5175/staff/cancellation-preview (HTTP 200, component interaction passed; manual visual/device acceptance unclaimed). No dependencies added.
+
+X01 is a verified development checkpoint, not formal acceptance. Pending: hosted migration approval/application, authorized synthetic guest/staff/payer/refund reconciliation acceptance, unresolved walk-in and partial extra-bed policy, privacy/retention/receipt and full milestone security/device checks. Phase 03-06 formal gates remain FAIL/acceptance pending. No checkbox is marked Done. Only X01 was implemented; X02/rescheduling/extensions are not started. Next action is X01 readiness/acceptance review when instructed; stop here.
+
 
 **Goal:** Handle individual room-item changes and money correctly without harming other booked rooms.
 
