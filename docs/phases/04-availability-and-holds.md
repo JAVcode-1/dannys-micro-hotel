@@ -4,6 +4,9 @@ status: in-progress
 ---
 # Phase 04 — Conflict-Safe Availability & Payment Holds
 
+**Cross-phase status reconciliation - 2026-11-19 (after W03):** V01-V03 are development checkpoints. Later gated online/walk-in flows now call the allocator/transactional claims and have isolated concurrency, buffer, protected-proof and retry evidence; older missing-application-path statements are historical. Actual room inventory, authorized hosted all-channel acceptance, coordinated maintenance writes, deployed expiry schedule and full milestone quality gate remain outstanding. The formal Phase 04 exit remains FAIL. This documentation review reuses W03 CI (96 application + 11 isolated PostgreSQL tests); no new tests or hosted operations are claimed. Phase 06 also fails formal acceptance; Phase 07 X01 is identified only, not started. See [[06-walkins-and-stay-monitoring]].
+
+
 **Goal:** Implement **the core technical invariant**: shared room inventory cannot be sold to overlapping stays, regardless of channel, payment state, buffers or maintenance.
 
 **Dependencies:** [[03-catalog-inventory-settings]], [[06-architecture]], [[07-database-schema]].

@@ -4,6 +4,9 @@ status: not-started
 ---
 # Phase 03 — Catalog, Room Inventory & Settings
 
+**Cross-phase status reconciliation - 2026-11-19 (after W03):** C01-C03 are development checkpoints. Later O01/W01-W03 code and reused CI now demonstrate persisted per-room bookings and immutable booked-price snapshots; older statements that reservation tables do not exist or snapshots have no automated test are historical. Verified actual 10 Standard + 5 Family room identities, owner operational/legal settings and full hosted/phase acceptance remain pending. The formal Phase 03 exit remains FAIL. This documentation review reuses W03 CI (96 application + 11 isolated PostgreSQL tests); no new tests or hosted operations are claimed. Phase 06 also fails formal acceptance; Phase 07 X01 is identified only, not started. See [[06-walkins-and-stay-monitoring]].
+
+
 **Goal:** Model 15 physical rooms and offered packages without wrong Family 3h pricing.
 
 **Dependencies:** [[01-foundation-and-tooling]], [[02-auth-and-authorization]], [[19-seed-data]].

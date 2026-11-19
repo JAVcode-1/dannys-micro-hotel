@@ -4,6 +4,9 @@ status: exit-gate-failed-acceptance-pending
 ---
 # Phase 05 — Online Booking & Manual GCash Verification
 
+**Cross-phase status reconciliation - 2026-11-19 (after W03):** O01-O03 are development checkpoints. All 11 migrations through W03 are now owner-confirmed applied/synchronized; earlier eight-migration/unapplied counts are historical. Hosted Auth/OTP/staff/guest/proof-access, actual receiving-account verification and late-paid reconciliation procedures remain pending. Notification delivery/retry worker and scheduler remain unimplemented. Real inventory, channel/maintenance/expiry, retention/shared throttling/device/policy and full milestone gate gaps remain open. The formal Phase 05 exit remains FAIL. This documentation review reuses W03 CI (96 application + 11 isolated PostgreSQL tests); no new tests or hosted operations are claimed. Phase 06 also fails formal acceptance; Phase 07 X01 is identified only, not started. See [[06-walkins-and-stay-monitoring]].
+
+
 **Goal:** Guest portal that takes secure room holds and payment proof; Staff/Admin, not the upload, confirms receipt and reservation.
 
 **Dependencies:** [[02-auth-and-authorization]], [[04-availability-and-holds]], [[04-feature-specification]].
