@@ -309,6 +309,20 @@ export async function w01Postgres(t, pool) {
         (await walkInBooking(same.booking.id, pool)).collectedCentavos,
         55000,
       );
+      await collect(same, payment("gcash", 55000, "W01-T11-MIXED"));
+      const mixed = await walkInBooking(same.booking.id, pool);
+      assert.deepEqual(
+        mixed.ledger
+          .filter((entry) => entry.kind === "payment")
+          .map((entry) => [entry.method, entry.amountCentavos])
+          .sort(),
+        [
+          ["cash", 55000],
+          ["gcash", 55000],
+        ],
+      );
+      assert.equal(mixed.collectedCentavos, 110000);
+      assert.equal(mixed.balanceCentavos, 0);
 
       async function online(reference) {
         counter++;
