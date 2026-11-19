@@ -4,6 +4,22 @@ status: approved-baseline
 ---
 # 17 — Approved Decisions Register
 
+
+## Owner-approved future scope decision — 2026-11-20
+
+Record the six-feature Analytics & Reports scope in [[future-analytics-and-reports]] and the confirmed separate Function Hall facility in [[future-function-hall-requirements]]. Hall base pricing follows the reservation start: 8:00 AM to before 5:00 PM is ₱3,000/3 hours; starts beginning at 5:00 PM are ₱5,000/3 hours, subject to unresolved latest-time rules. Crossing 5:00 PM does not reprice the base; each additional full hour is ₱1,000. Theater Type maximum is 70 persons; Room Type maximum is 50 persons. Inclusions: air-conditioning, sound system and mineral water only. Unresolved hall policies remain owner questions, not inherited room policies.
+
+Required order: remaining approved core features, Analytics, Function Hall, then final integration/testing/business acceptance/UI refinement/deployment readiness. Existing phase and task IDs are retained; no new official ID is assigned. This approves documentation of future scope, not implementation, activation, an accounting policy or a fabricated existing hotel process.
+
+## Current owner-confirmed status - 2026-11-20
+
+Feature development is temporarily paused for this documentation update. **X01, X02 and X03 development checkpoints are implemented. All 14 Supabase migrations are owner-verified and synchronized.** This records the owner's supplied confirmation, not a fresh hosted query or migration execution. Existing acceptance gaps and formal phase gates remain open; **live transactions remain disabled**. Analytics & Reports and Function Hall Reservation & Management are planned, not implemented.
+
+This dated notice supersedes older next-task/unstarted/candidate/unapplied statements below where they conflict; historical evidence remains preserved. No acceptance checkbox is completed by this update. No code, dependency, migration, inventory change, Supabase reset or live activation occurs.
+
+Approved order: **remaining approved core StayTrack features -> Analytics & Reports -> Function Hall Reservation & Management -> final integration, comprehensive testing, business acceptance, UI/UX refinement and deployment readiness**. Preserve existing phase/task IDs. See [[future-analytics-and-reports]], [[future-function-hall-requirements]] and [[13-development-roadmap]]. No next development task starts in this session; future execution requires a separate instruction.
+
+
 **X02 development checkpoint - 2026-11-19:** Owner approved the written specification/implementation plan and NATIVE execution. Implemented verified guest/staff-assisted per-item requests, staff approval/rejection, immutable request/decision/financial-proposal history and versioned current schedules. Shared allocation and SQL guards atomically move the existing claim and schedule, with audit rollback and immutable item/reservation/claim binding. Original booked prices, payment/confirmation records, strict cancellation deadline and sibling schedules remain intact. Normal live reschedule writes remain unconditionally closed; no environment toggle opens them.
 
 Preserved-package schedule moves are approvable only after active-staff, current-state, ownership, capacity, maintenance and cancellation/check-in revalidation. Changed duration/package pricing, walk-in and paid extra-bed cases remain policy-pending; proposed deltas never post charges, payments, credits or refunds. No X03 work or automatic transfers. Guest/staff forms keep separate drafts across refresh/errors; current blockers, requested packages/reason and exact original deadline are shown. Retry responses remain stable after later decisions.

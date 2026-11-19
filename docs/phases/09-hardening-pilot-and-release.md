@@ -8,6 +8,12 @@ status: not-started
 
 **Dependencies:** All prior phases; [[08-security-and-risks]], [[15-testing-plan]], [[16-deployment]].
 
+## Owner-approved sequencing - 2026-11-20
+
+Final integration, comprehensive testing, business acceptance, UI/UX refinement and deployment readiness follow remaining approved core StayTrack features, then [[future-analytics-and-reports|Analytics & Reports]], then [[future-function-hall-requirements|Function Hall Reservation & Management]]. Preserve R01-R03 and existing phase IDs. Earlier acceptance/security checks remain required during development; this sequence does not postpone essential safeguards. Both future modules are unimplemented and live transactions remain disabled.
+
+Before final release, demonstrate report reconciliation/export/access correctness, approved hall pricing and capacity/overlap rules, facility-versus-room reporting isolation and owner-approved hall policies. These extend the scope of existing R01/R02/R03 validation; they are not new official task IDs or completed checks.
+
 ## Task sequence
 
 ### R01 — Security, privacy, money & concurrency audit

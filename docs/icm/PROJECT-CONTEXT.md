@@ -1,8 +1,18 @@
 ---
 tags: [icm, project-context]
-status: docs-first-handoff
+status: development-paused-future-scope-documented
 ---
 # Session Context — StayTrack / Danny's Micro Hotel
+
+
+## Current owner-confirmed status - 2026-11-20
+
+Feature development is temporarily paused for this documentation update. **X01, X02 and X03 development checkpoints are implemented. All 14 Supabase migrations are owner-verified and synchronized.** This records the owner's supplied confirmation, not a fresh hosted query or migration execution. Existing acceptance gaps and formal phase gates remain open; **live transactions remain disabled**. Analytics & Reports and Function Hall Reservation & Management are planned, not implemented.
+
+This dated notice supersedes older next-task/unstarted/candidate/unapplied statements below where they conflict; historical evidence remains preserved. No acceptance checkbox is completed by this update. No code, dependency, migration, inventory change, Supabase reset or live activation occurs.
+
+Approved order: **remaining approved core StayTrack features -> Analytics & Reports -> Function Hall Reservation & Management -> final integration, comprehensive testing, business acceptance, UI/UX refinement and deployment readiness**. Preserve existing phase/task IDs. See [[future-analytics-and-reports]], [[future-function-hall-requirements]] and [[13-development-roadmap]]. No next development task starts in this session; future execution requires a separate instruction.
+
 
 **X02 development checkpoint - 2026-11-19:** Owner approved the written specification/implementation plan and NATIVE execution. Implemented verified guest/staff-assisted per-item requests, staff approval/rejection, immutable request/decision/financial-proposal history and versioned current schedules. Shared allocation and SQL guards atomically move the existing claim and schedule, with audit rollback and immutable item/reservation/claim binding. Original booked prices, payment/confirmation records, strict cancellation deadline and sibling schedules remain intact. Normal live reschedule writes remain unconditionally closed; no environment toggle opens them.
 

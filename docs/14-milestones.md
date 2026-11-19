@@ -4,6 +4,18 @@ status: in-progress
 ---
 # 14 — Milestones & Work Tracker
 
+
+## Current owner-confirmed status - 2026-11-20
+
+Documentation checkpoint evidence: updated requirements/backlog, roadmap, milestones, decisions, context and Phase 07–09 notes; created dedicated future Analytics and Function Hall specifications. No dependency changes. Root build, typecheck, lint and **116 application tests (80 backend + 36 frontend, zero failures/skips)** pass; build/tests required elevated retries after sandbox `spawn EPERM`. Existing frontend >500 kB bundle warning remains. New wiki-link resolution, UTF-8, unchanged completed-checkbox counts, documentation-only scope and diff whitespace checks pass. Staged Gitleaks scan reports no leaks; explicit staged review excludes secrets, guest/payment proof data and unrelated workspace files. Database/hosted tests and full milestone scanloop/greploop were not run; this is a documentation checkpoint, not a release gate. ICM resolves only to a PowerShell alias, and no Graphify executable is available; canonical Markdown context is updated without claiming external synchronization. Remaining policy/hosted/device/full-gate acceptance stays open. Stop after documentation; await instruction before another development task.
+
+Feature development is temporarily paused for this documentation update. **X01, X02 and X03 development checkpoints are implemented. All 14 Supabase migrations are owner-verified and synchronized.** This records the owner's supplied confirmation, not a fresh hosted query or migration execution. Existing acceptance gaps and formal phase gates remain open; **live transactions remain disabled**. Analytics & Reports and Function Hall Reservation & Management are planned, not implemented.
+
+This dated notice supersedes older next-task/unstarted/candidate/unapplied statements below where they conflict; historical evidence remains preserved. No acceptance checkbox is completed by this update. No code, dependency, migration, inventory change, Supabase reset or live activation occurs.
+
+Approved order: **remaining approved core StayTrack features -> Analytics & Reports -> Function Hall Reservation & Management -> final integration, comprehensive testing, business acceptance, UI/UX refinement and deployment readiness**. Preserve existing phase/task IDs. See [[future-analytics-and-reports]], [[future-function-hall-requirements]] and [[13-development-roadmap]]. No next development task starts in this session; future execution requires a separate instruction.
+
+
 **X02 development checkpoint - 2026-11-19:** Owner approved the written specification/implementation plan and NATIVE execution. Implemented verified guest/staff-assisted per-item requests, staff approval/rejection, immutable request/decision/financial-proposal history and versioned current schedules. Shared allocation and SQL guards atomically move the existing claim and schedule, with audit rollback and immutable item/reservation/claim binding. Original booked prices, payment/confirmation records, strict cancellation deadline and sibling schedules remain intact. Normal live reschedule writes remain unconditionally closed; no environment toggle opens them.
 
 Preserved-package schedule moves are approvable only after active-staff, current-state, ownership, capacity, maintenance and cancellation/check-in revalidation. Changed duration/package pricing, walk-in and paid extra-bed cases remain policy-pending; proposed deltas never post charges, payments, credits or refunds. No X03 work or automatic transfers. Guest/staff forms keep separate drafts across refresh/errors; current blockers, requested packages/reason and exact original deadline are shown. Retry responses remain stable after later decisions.

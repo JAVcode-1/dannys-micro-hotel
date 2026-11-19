@@ -56,3 +56,9 @@ Write owner-verified answer + date to [[17-decisions]], change [[02-requirements
 - [ ] **Deployment (Phase 09):** choose web and independent Express hosts, confirm Supabase tier/cost and recoverable backups. Supabase doesn't automatically host Express.
 
 See [[22-supabase-setup]].
+
+## Owner-confirmed future modules - 2026-11-20
+
+Approved future Analytics scope: [[future-analytics-and-reports]]. The hotel also offers a separate Function Hall resource with Theater Type maximum 70 persons / Room Type maximum 50 persons; approved start-time-based pricing and inclusions are in [[future-function-hall-requirements]]. Neither software module is implemented. Hall inventory is not bedroom inventory; all existing accommodation counts/rates remain unchanged.
+
+Hall resource count/exclusivity, fractional excess-hour treatment, latest ending time/cross-midnight use, deposit, payment methods, cancellation/rescheduling/refunds, preparation/cleaning buffer, equipment/service charges and mineral-water quantities remain owner questions required before hall implementation. Starts before 8:00 AM are unsupported until clarified. Do not import accommodation policies. Analytics recognition and denominator definitions also require review before their acceptance. No new official backlog/task IDs are assigned here. Approved sequence is recorded in [[13-development-roadmap]].

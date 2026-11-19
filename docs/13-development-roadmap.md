@@ -5,7 +5,21 @@ status: planned
 # 13 — Phase-by-Phase Development Roadmap
 
 > [!important] BUILD ORDER
-> **Start with [[21-before-coding-checklist]] to prepare the workstation and repo; then choose a single unchecked task from the current phase.** Finish the task's acceptance tests and document outcome; then continue. All phases below are **not started** in this docs-only handoff.
+> **Start with [[21-before-coding-checklist]] to prepare the workstation and repo; then choose a single unchecked task from the current phase.** Finish the task's acceptance tests and document outcome; then continue. This phase structure is retained from the original planning handoff; it is not a current implementation-status claim. See the dated status below and [[14-milestones]].
+
+## Current owner-confirmed status - 2026-11-20
+
+Feature development is temporarily paused for this documentation update. **X01, X02 and X03 development checkpoints are implemented. All 14 Supabase migrations are owner-verified and synchronized.** This records the owner's supplied confirmation, not a fresh hosted query or migration execution. Existing acceptance gaps and formal phase gates remain open; **live transactions remain disabled**. Analytics & Reports and Function Hall Reservation & Management are planned, not implemented.
+
+This dated notice supersedes older next-task/unstarted/candidate/unapplied statements below where they conflict; historical evidence remains preserved. No acceptance checkbox is completed by this update. No code, dependency, migration, inventory change, Supabase reset or live activation occurs.
+
+Approved order: **remaining approved core StayTrack features -> Analytics & Reports -> Function Hall Reservation & Management -> final integration, comprehensive testing, business acceptance, UI/UX refinement and deployment readiness**. Preserve existing phase/task IDs. See [[future-analytics-and-reports]], [[future-function-hall-requirements]] and [[13-development-roadmap]]. No next development task starts in this session; future execution requires a separate instruction.
+
+## Approved future-work placement
+
+Complete remaining approved core tasks and acceptance gaps first, including housekeeping/maintenance and core incident/audit work. Expand existing Phase 08 reporting scope into the six-feature [[future-analytics-and-reports|Analytics & Reports Dashboard]]. Then implement [[future-function-hall-requirements|Function Hall Reservation & Management]] as future work after Analytics and before Phase 09 final readiness. This records the approved dependency order without inventing an official task ID or renumbering phases; detailed hall task mapping awaits its separately approved implementation plan.
+
+Analytics must support later facility-specific reporting without a complete redesign. Keep optional H04 reviews subject to their existing separate activation gate; this update does not add them to the required core scope. Final Phase 09 integration, comprehensive testing, business acceptance, UI/UX refinement and deployment readiness follow both future modules. Neither module nor any release gate is Done.
 
 ## Project milestones
 
@@ -37,10 +51,10 @@ Complete required PC-01 to PC-04 checks in [[21-before-coding-checklist]]. Owner
 
 1. Open its phase page and check prerequisites.
 2. Write expected behavior, boundary conditions and tests (references to [[15-testing-plan]]).
-3. Implement one vertical slice; run DB migration and unit/integration/E2E tests as applicable.
+3. Implement one authorized vertical slice; keep migrations unapplied until separately approved, and run isolated tests as applicable.
 4. Test concurrency/failure paths, not only happy path.
 5. Update progress in [[14-milestones]], adjust [[17-decisions]] if the approved behavior changes, and save an ICM memory after docs are updated.
-6. Commit only after tests and documentation match behavior. Begin the next task.
+6. Commit and push a verified development checkpoint after checks and documentation match behavior. Begin the next task only when instructed.
 
 ## Versioning and change control
 

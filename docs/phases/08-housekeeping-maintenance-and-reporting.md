@@ -8,6 +8,10 @@ status: not-started
 
 **Dependencies:** [[03-catalog-inventory-settings]], [[06-walkins-and-stay-monitoring]], [[07-changes-refunds-and-ledger]].
 
+## Owner-approved scope update - 2026-11-20
+
+Development is paused; Analytics & Reports remains planned, not implemented. Finish remaining approved core features first, then expand reporting under existing **H03**, then implement future Function Hall management before Phase 09 final readiness. No new task IDs or phase renumbering are introduced. Existing incident/audit work remains core. See [[13-development-roadmap]] and [[future-function-hall-requirements]].
+
 ## Task sequence
 
 ### H01 — Housekeeping & Ready workflow
@@ -27,7 +31,9 @@ status: not-started
 
 ### H03 — Incidents, reports, audit
 - [ ] Record no-smoking incident and staff-approved fee/waiver reason.
-- [ ] Reports: nightly/day revenue, method breakdown, unpaid balances, pending GCash, no-shows, cancellations/refunds, occupancy, cleaning/maintenance.
+- [ ] Analytics & Reports: revenue/collections, room occupancy in room-hours, dynamic room-category performance, approved-package popularity, booking trends/status/channel, payment reconciliation and outstanding balances; see [[future-analytics-and-reports]] for the six-feature scope and calculation requirements.
+- [ ] Date-range filters, CSV/Excel exports, staff-only access and Asia/Manila reporting; distinguish verified collections from earned revenue and prevent double counting of partial payments, extensions, refunds and multi-room bookings.
+- [ ] Preserve operational views for pending GCash, cleaning/maintenance and audit; future hall revenue/booking/utilization stays separate from accommodation occupancy. No initial AI forecasting or complex customer profiling.
 - [ ] Aggregate financial reports exclusively from verified ledger entries, label pending transactions separately.
 - [ ] Searchable audit by actor/action/date/subject, with sensitive masking.
 
@@ -49,4 +55,4 @@ status: not-started
 - [ ] Every maintenance/waiver action has traceable actor and reason.
 - [ ] Update [[14-milestones]].
 
-**Next:** [[09-hardening-pilot-and-release]].
+**Next in approved order:** after remaining core work and Analytics, future [[future-function-hall-requirements|Function Hall Reservation & Management]], then [[09-hardening-pilot-and-release]]. Detailed hall task mapping remains pending; do not begin it automatically.
