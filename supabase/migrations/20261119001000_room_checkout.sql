@@ -55,3 +55,29 @@ alter table staytrack.operational_settings add column checkout_warning_minutes i
     (cardinality(checkout_warning_minutes) between 1 and 10
       and array_position(checkout_warning_minutes,null) is null
       and 1 <= all(checkout_warning_minutes) and 1440 >= all(checkout_warning_minutes)));
+
+-- Preserve W01 journal checks while allowing collection after a documented departure.
+create or replace function staytrack.guard_walkin_ledger() returns trigger
+language plpgsql set search_path = '' as $$
+declare total bigint; charged bigint; paid bigint; item_total bigint;
+begin
+  select total_centavos into total from staytrack.reservations where id=new.reservation_id and channel='walk_in' for update;
+  if not found then raise exception 'Ledger requires a walk-in reservation'; end if;
+  perform 1 from staytrack.staff_accounts where auth_user_id=new.actor_auth_user_id and active for share;
+  if not found then raise exception 'Active staff required'; end if;
+  if new.kind='charge' then
+    select total_centavos into item_total from staytrack.room_bookings
+      where id=new.room_booking_id and reservation_id=new.reservation_id;
+    if not found or item_total<>new.amount_centavos then raise exception 'Charge must match the booked item'; end if;
+  else
+    select coalesce(sum(amount_centavos) filter (where kind='charge'),0),
+      coalesce(sum(amount_centavos) filter (where kind='payment'),0) into charged,paid
+      from staytrack.walkin_ledger where reservation_id=new.reservation_id;
+    if charged<>total or new.amount_centavos>charged-paid then raise exception 'Payment exceeds remaining journal balance or charges are incomplete'; end if;
+    if exists(select 1 from staytrack.room_bookings b join staytrack.inventory_claims i on i.id=b.claim_id
+      where b.reservation_id=new.reservation_id and i.state<>'walkin_reserved'
+      and not (i.state='released' and exists (select 1 from staytrack.room_checkouts o where o.room_booking_id=b.id))) then raise exception 'Walk-in capacity requires reconciliation'; end if;
+    if new.method='gcash' and new.received_at>clock_timestamp() then raise exception 'Future GCash receipt time'; end if;
+  end if;
+  return new;
+end; $$;

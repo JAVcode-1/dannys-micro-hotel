@@ -152,8 +152,19 @@ export async function w03Postgres(
         await pool.query(`insert into staytrack.rooms(category_id,code,operational_state,active)
     select id,'W03-SYNTHETIC-ONLY','ready',true from staytrack.room_categories where code='double_standard' returning id`)
       ).rows[0];
+      const conflicts =
+        await pool.query(`select i.id,i.state,rm.code,p.reason,p.start_at,p.end_at,
+        i.start_at as claim_start,i.buffered_end_at as claim_end
+        from staytrack.inventory_claims i join staytrack.rooms rm on rm.id=i.room_id
+        join staytrack.room_blocks p on p.room_id=i.room_id
+        where i.state not in ('released','expired') and tstzrange(i.start_at,i.buffered_end_at,'[)') && tstzrange(p.start_at,p.end_at,'[)')`);
+      assert.deepEqual(
+        conflicts.rows,
+        [],
+        "Existing fixture capacity must be feasible before the W03 cart",
+      );
       const start = new Date(
-        Math.ceil((Date.now() + 30 * 86400000) / 60000) * 60000,
+        Math.ceil((Date.now() + 100 * 86400000) / 60000) * 60000,
       ).toISOString();
       const booking = await createWalkInBooking(
         actor,
