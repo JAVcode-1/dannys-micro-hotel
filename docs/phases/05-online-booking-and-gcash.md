@@ -1,6 +1,6 @@
 ---
 tags: [phase-05, implementation, payments]
-status: exit-gate-open-o03-migration-applied
+status: exit-gate-failed-acceptance-pending
 ---
 # Phase 05 — Online Booking & Manual GCash Verification
 
@@ -9,6 +9,28 @@ status: exit-gate-open-o03-migration-applied
 **Dependencies:** [[02-auth-and-authorization]], [[04-availability-and-holds]], [[04-feature-specification]].
 
 **Current migration status (2026-11-19):** Owner confirms `20261119000700_staff_payment_review.sql` successfully applied to `pgbierfxeviouyjsmjnh`, with all eight local/remote migrations matching. This supersedes historical O03-unapplied/migration-readiness statements below. This session records the owner report; it does not claim a new hosted query or successful CLI dry run. Phase 03/04 gates remain incomplete; live bookings, guest payments and staff payment confirmation remain disabled.
+
+## Phase 05 exit-gate review — 2026-11-19
+
+**Verdict: FAIL for formal phase completion.** O01–O03 development checkpoints and the eight owner-confirmed applied migrations do not establish hosted acceptance. Live booking/payments/confirmation remain disabled. This review adds no feature, migration, dependency, hosted upload, room seed or transaction.
+
+| Official exit criterion | Existing evidence | Formal status |
+|---|---|---|
+| Demonstrate two independent room items under one online reservation | O01 planner/quote and isolated PostgreSQL coverage preserve independent schedules, immutable prices and one-time Family bed; O03 confirms all items atomically | Incomplete: authorized hosted end-to-end demonstration with real sessions is absent; creation remains gated |
+| Staff must approve actual payment for reservation confirmation | O03 active staff checks, mandatory receiving-ledger attestations, unique references, version/idempotency locks, audit/outbox transaction and rollback coverage | Incomplete: real-session operating-procedure acceptance against the actual receiving account is absent; screenshot alone never confirms and live confirmation remains gated |
+| Late proof / review aging reconciliation path tested | O02/V03 expiry and minute-90 protection, 15/30/60-minute aging, O03 reconciliation decisions retaining capacity are covered automatically | Incomplete: hosted late-paid guest contact/consent/manual-refund reconciliation drill is absent; replacement/refund payout processing is not implemented by O03 |
+| Update milestones | This review updates [[14-milestones]], [[17-decisions]] and [[icm/PROJECT-CONTEXT]] | Met as documentation evidence only; not phase completion |
+
+Implemented versus outstanding:
+- **O01:** server quote/atomic hold mechanics, identity/email ownership, independent items and booked-price snapshots are implemented. Hosted OTP delivery/expiry, cross-guest sessions, complete booking journey and inventory/channel acceptance remain pending.
+- **O02:** private bucket configuration was verified; API-brokered image/reference submission, validation and protected pending-review state are implemented. Actual-object synthetic upload/access-denial/size/type/signed-link-expiry/failure/cleanup acceptance remains pending; signature checks are not full image/malware validation. Reminder records/UI exist, but email sender/retries and deployed scheduler do not.
+- **O03:** staff queue, private proof links, manual verification checks, duplicate-reference/concurrent-decision controls, atomic confirmation/policy snapshot/audit and durable outbox are implemented. Hosted staff/session/proof-access and receiving-account procedures require acceptance. Outbox enqueue/rollback is tested; notification delivery/retry worker is unimplemented, not merely untested. Rejection/mismatch does not auto-refund or release protected capacity.
+
+**Critical exit dependencies:** owner-confirmed real inventory (10 Standard + 5 Family rooms, without invented identifiers); shared-channel and maintenance-write coordination/expiry scheduling from Phase 04; Phase 02 real-session/OTP security acceptance; approved payee/policy/privacy/retention inputs; shared throttling/cleanup and device/accessibility acceptance. Phase 03/04 and earlier milestone debt remain open. The mandatory full milestone quality gate has no passing evidence; no phase Done/PASS/CONDITIONAL PASS is asserted. Safe feature gates contain risk but do not satisfy these exit criteria.
+
+Reused evidence: [CI run 44358583870](https://github.com/JAVcode-1/dannys-micro-hotel/actions/runs/44358583870) on `ef0e22f` passed build/typecheck/lint/format, **82 application + eight isolated PostgreSQL tests, zero failures/skips**. Source/migrations are unchanged from that checkpoint; `49c1916` also records fresh passing application/static checks. No comprehensive tests, hosted probes or full-gate scripts are rerun for this documentation review; diff and staged-secret checks are performed. The owner confirms all eight hosted migrations synchronized; this is not new independent hosted verification.
+
+**First documented Phase 06 task: W01 — Walk-in booking and mixed ledger** in [[06-walkins-and-stay-monitoring]]: staff creates category room items using shared availability, records multiple cash/staff-verified GCash payments, enforces the 50% normal-check-in minimum, and journals method/amount/reference/actor/time. Acceptance is T11 (50% cash + 50% GCash; missing payment cannot admit a guest). Phase 06 depends on Phases 03–05 and is **not started by this review**. No O04 exists. Next action is to resolve Phase 05 acceptance/dependencies or obtain a separately scoped, safely gated development instruction.
 
 ## After O03 — documented task sequence exhausted
 
@@ -162,6 +184,6 @@ Remaining acceptance: review/approve/apply candidate separately, authorized synt
 - [ ] Demonstrate two independent room items under one online reservation.
 - [ ] Staff must approve actual payment for reservation confirmation.
 - [ ] Late proof / review aging reconciliation path tested.
-- [ ] Update [[14-milestones]].
+- [x] Update [[14-milestones]]. Evidence: 2026-11-19 exit review updates milestone/decision/context notes; this marks documentation only, not phase completion.
 
 **Next:** [[06-walkins-and-stay-monitoring]].

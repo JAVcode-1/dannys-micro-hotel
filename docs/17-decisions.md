@@ -4,6 +4,10 @@ status: approved-baseline
 ---
 # 17 — Approved Decisions Register
 
+## Phase 05 formal exit review — 2026-11-19
+
+**FAIL**, with no policy change or permission to enable live transactions. Applied migrations and passing isolated/application tests establish development evidence, not hosted operating acceptance. The three functional exit criteria remain incomplete; the milestone-documentation criterion alone is met. Notification delivery is unimplemented despite durable outbox records. Hosted Storage/session/receiving-account/late-payment reconciliation acceptance and real 15-room inventory/channel/maintenance/expiry plus earlier security/milestone dependencies remain open. No new task, feature, migration or hosted write is introduced. Phase 05 ends at O03; the first documented Phase 06 task is **W01 — Walk-in booking and mixed ledger** (T11), which is not started. See [[phases/05-online-booking-and-gcash]] for the evidence matrix and unresolved dependencies.
+
 ## O03 applied; Phase 05 task boundary — 2026-11-19
 
 Owner confirms O03 migration `20261119000700_staff_payment_review.sql` applied to `pgbierfxeviouyjsmjnh` and all eight versions match locally/remotely. This supersedes earlier unapplied/readiness notes, without claiming a new CLI dry run or granting live-payment approval. The canonical Phase 05 specification ends at O03; there is no next Phase 05 feature/O04 to invent. Stop development at the Phase 05 exit gate; Phase 06 needs a separate instruction and unresolved dependencies remain documented. No new business policy, code, migration, dependency, hosted upload or inventory seed. Hosted Storage acceptance, notification delivery, actual 15-room inventory, earlier phase/milestone gaps and full security gates remain pending; live booking/payment confirmation stays disabled.
