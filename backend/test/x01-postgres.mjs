@@ -248,7 +248,7 @@ export async function x01Postgres(t, pool) {
         /Cancellation protects/,
       );
       await pool.query(
-        `create function staytrack.x01_fail_audit() returns trigger language plpgsql as $$ begin if new.action like 'room.cancellation_%' then raise exception 'X01 audit failure'; end if; return new; end $$; create trigger x01_fail_audit before insert on staytrack.staff_audit for each row execute function staytrack.x01_fail_audit()`,
+        `create function staytrack.x01_fail_audit() returns trigger language plpgsql as $$ begin if new.action like 'room.cancellation_%' then raise exception 'X01 audit failure' using errcode='XX000'; end if; return new; end $$; create trigger x01_fail_audit before insert on staytrack.staff_audit for each row execute function staytrack.x01_fail_audit()`,
       );
       await assert.rejects(decision(item.id), /X01 audit failure/);
       assert.equal((await snapshot(item.id)).claim_state, "confirmed");
@@ -324,6 +324,46 @@ export async function x01Postgres(t, pool) {
           pool,
         ),
         (e) => e.status === 409,
+      );
+      const otherStaff = "44444444-4444-4444-8444-444444444444";
+      await pool.query(
+        "insert into auth.users(id) values($1) on conflict do nothing",
+        [otherStaff],
+      );
+      await pool.query(
+        "insert into staytrack.staff_accounts(auth_user_id,active) values($1,true) on conflict(auth_user_id) do update set active=true",
+        [otherStaff],
+      );
+      await assert.rejects(
+        recordManualRefund(
+          otherStaff,
+          item.id,
+          { ...transfer, requestKey: "x01-nonclaimant-001" },
+          pool,
+        ),
+        (e) => e.status === 409,
+      );
+      await pool.query(`create function staytrack.x01_refund_audit_fail() returns trigger language plpgsql as $$ begin if new.action='refund.manual_transfer_recorded' then raise exception 'X01 refund audit failure' using errcode='XX000'; end if; return new; end $$;
+        create trigger x01_refund_audit_fail before insert on staytrack.staff_audit for each row execute function staytrack.x01_refund_audit_fail()`);
+      await assert.rejects(
+        recordManualRefund(actor, item.id, transfer, pool),
+        /X01 refund audit failure/,
+      );
+      assert.equal(
+        (
+          await pool.query(
+            "select count(*)::int as n from staytrack.refund_transfers where room_booking_id=$1",
+            [item.id],
+          )
+        ).rows[0].n,
+        0,
+      );
+      assert.equal(
+        Number((await financial()).refund_due_centavos),
+        Number(item.total_centavos),
+      );
+      await pool.query(
+        "drop trigger x01_refund_audit_fail on staytrack.staff_audit; drop function staytrack.x01_refund_audit_fail()",
       );
       const transfers = await Promise.all([
         recordManualRefund(actor, item.id, transfer, pool),
