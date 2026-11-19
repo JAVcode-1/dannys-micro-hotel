@@ -12,6 +12,10 @@ import {
   type PaymentRouteOptions,
 } from "./payment-routes.js";
 import { staffRooms } from "./rooms.js";
+import {
+  registerWalkInRoutes,
+  type WalkInRouteOptions,
+} from "./walkin-routes.js";
 import { getSettings, saveSettings } from "./operational-settings.js";
 import { evaluateOccupants } from "./occupants.js";
 import {
@@ -28,6 +32,7 @@ export function createApp(
   audit: (actorId: string) => Promise<void> = auditStaffAccess,
   guestVerifier: (token: string) => Promise<GuestIdentity | null> = verifyGuest,
   paymentOptions: PaymentRouteOptions = {},
+  walkInOptions: WalkInRouteOptions = {},
 ) {
   const app = express();
   app.use(express.json({ limit: "8kb" }));
@@ -62,6 +67,7 @@ export function createApp(
       "/guest/payments",
       "/staff/payment-qr",
       "/staff/payment-reviews",
+      "/staff/walkins",
       "/staff/catalog",
       "/staff/catalog/package-price",
       "/staff/catalog/packages",
@@ -375,6 +381,7 @@ export function createApp(
     response.json(result);
   });
   registerPaymentRoutes(app, catalogStaff, guestVerifier, paymentOptions);
+  registerWalkInRoutes(app, catalogStaff, walkInOptions);
   return app;
 }
 

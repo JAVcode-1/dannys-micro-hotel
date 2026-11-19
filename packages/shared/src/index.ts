@@ -1,4 +1,5 @@
 export type HealthResponse = { status: "ok" };
+export type { WalkInPaymentInput, WalkInBooking } from "./walkin.js";
 export type {
   PaymentDecision,
   PaymentReviewInput,

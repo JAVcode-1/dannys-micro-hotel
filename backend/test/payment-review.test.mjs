@@ -201,7 +201,7 @@ test("O03 queue pages beyond the first hundred records and rejects invalid pages
     },
   };
   await staffPaymentReviews(pool, 2);
-  assert.deepEqual(queries[0].params, [200]);
+  assert.deepEqual(queries.at(-1).params, [200]);
   for (const page of [-1, 0.5, NaN, 1000001])
     await assert.rejects(staffPaymentReviews(pool, page), /page/i);
 });

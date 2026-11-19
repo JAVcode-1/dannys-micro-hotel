@@ -11,6 +11,7 @@ import {
   createClaimsInTransaction,
 } from "./inventory-claims.js";
 import { databasePool } from "./database.js";
+import { insertBookedItems } from "./booked-items.js";
 
 // Internal only until inventory, channel, Auth and payment readiness gates pass.
 // HTTP creation remains unconditionally disabled in app.ts.
@@ -90,28 +91,7 @@ export async function createGuestHold(
       [guest.id, email, name, claimKey, requestHash, quote.totalCentavos],
     );
     const id = reservation.rows[0].id;
-    for (const [index, item] of quote.items.entries()) {
-      await client.query(
-        `insert into staytrack.room_bookings
-        (reservation_id, item_index, claim_id, category_code, start_at, end_at, adult_count, child_count,
-         base_centavos, extra_bed_centavos, total_centavos, pricing_snapshot)
-        values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb)`,
-        [
-          id,
-          index,
-          claims.ids[index],
-          item.category,
-          item.startAt,
-          item.endAt,
-          item.adults,
-          item.children,
-          item.baseCentavos,
-          item.extraBedCentavos,
-          item.totalCentavos,
-          JSON.stringify(item.packages),
-        ],
-      );
-    }
+    await insertBookedItems(client, id, quote, claims.ids);
     return { id, replayed: false };
   }, pool);
 }

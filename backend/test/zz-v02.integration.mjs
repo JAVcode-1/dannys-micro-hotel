@@ -17,6 +17,7 @@ import {
 import { createGuestHold, guestReservations } from "../dist/guest-booking.js";
 import { o02Postgres } from "./o02-postgres.mjs";
 import { o03Postgres } from "./o03-postgres.mjs";
+import { w01Postgres } from "./w01-postgres.mjs";
 
 test("isolated PostgreSQL serializes thirty capacity contenders and replays idempotently", async (t) => {
   const connectionString = process.env.TEST_DATABASE_URL;
@@ -381,6 +382,7 @@ test("isolated PostgreSQL serializes thirty capacity contenders and replays idem
     );
     await o02Postgres(t, pool);
     await o03Postgres(t, pool);
+    await w01Postgres(t, pool);
   } finally {
     await pool.end();
   }

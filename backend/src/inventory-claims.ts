@@ -304,9 +304,12 @@ export async function revalidateClaim(
     );
     if (
       !current.rowCount ||
-      ["released", "expired", "proof_pending_review"].includes(
-        current.rows[0].state,
-      ) ||
+      [
+        "released",
+        "expired",
+        "proof_pending_review",
+        "walkin_reserved",
+      ].includes(current.rows[0].state) ||
       (current.rows[0].state === "confirmed" && next.state !== "confirmed")
     ) {
       await client.query("rollback");

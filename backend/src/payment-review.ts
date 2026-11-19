@@ -98,6 +98,16 @@ export async function staffPaymentReviews(
 ): Promise<StaffPaymentReview[]> {
   if (!Number.isSafeInteger(page) || page < 0 || page > 1000000)
     throw new BookingError("Invalid review page.");
+  // Preserve O03 on the eight-migration schema while W01 is awaiting approval.
+  const registry =
+    (
+      await pool.query<{ exists: boolean }>(
+        "select to_regclass('staytrack.gcash_reference_registry') is not null as exists",
+      )
+    ).rows[0]?.exists === true;
+  const duplicateSource = registry
+    ? "staytrack.gcash_reference_registry v where v.online_submission_id is distinct from p.id"
+    : "staytrack.verified_online_payments v where v.submission_id <> p.id";
   const { rows } = await pool.query<
     Omit<StaffPaymentReview, "age" | "submittedAt"> & {
       submittedAt: Date;
@@ -109,7 +119,7 @@ export async function staffPaymentReviews(
     p.submitted_at as "submittedAt", clock_timestamp() as "serverNow", p.status, p.review_version as version,
     (select json_build_object('note',pr.note,'actorId',pr.actor_auth_user_id,'createdAt',pr.created_at)
       from staytrack.payment_reviews pr where pr.submission_id=p.id order by pr.version desc limit 1) as "lastReview",
-    exists(select 1 from staytrack.verified_online_payments v where v.submission_id <> p.id
+    exists(select 1 from ${duplicateSource}
       and v.normalized_reference = upper(regexp_replace(p.transaction_reference, '[ -]', '', 'g'))) as "duplicateReference",
     (select json_agg(json_build_object('category',b.category_code,'startAt',b.start_at,'endAt',b.end_at,
       'totalCentavos',b.total_centavos) order by b.item_index) from staytrack.room_bookings b where b.reservation_id=r.id) as items
