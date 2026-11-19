@@ -17,3 +17,4 @@ export type {
   CancellationDecisionInput,
   RefundAction,
 } from "./cancellation.js";
+export * from "./rescheduling.js";

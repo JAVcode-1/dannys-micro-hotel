@@ -1,3 +1,4 @@
+import { x02Postgres } from "./x02-postgres.mjs";
 import { x01Postgres } from "./x01-postgres.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -385,6 +386,7 @@ test("isolated PostgreSQL serializes thirty capacity contenders and replays idem
     await o03Postgres(t, pool);
     await w01Postgres(t, pool);
     await x01Postgres(t, pool);
+    await x02Postgres(t, pool);
   } finally {
     await pool.end();
   }

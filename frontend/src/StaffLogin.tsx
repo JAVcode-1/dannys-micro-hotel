@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { apiBase, staffAuth, staffInviteCallback } from "./staff-auth";
 import CancellationDesk from "./CancellationDesk";
+import RescheduleDesk from "./RescheduleDesk";
 import StaffCatalog from "./StaffCatalog";
 import StaffRooms from "./StaffRooms";
 import OperationalSettings from "./OperationalSettings";
@@ -255,8 +256,16 @@ export default function StaffLogin({
               Settings
             </a>
           </nav>
+          <a
+            href="/staff/reschedules"
+            className="inline-flex min-h-11 items-center text-primary"
+          >
+            Rescheduling
+          </a>
           {session &&
-            (window.location.pathname === "/staff/cancellations" ? (
+            (window.location.pathname === "/staff/reschedules" ? (
+              <RescheduleDesk token={session.access_token} />
+            ) : window.location.pathname === "/staff/cancellations" ? (
               <CancellationDesk token={session.access_token} />
             ) : window.location.pathname === "/staff/rooms" ? (
               <StaffRooms token={session.access_token} />

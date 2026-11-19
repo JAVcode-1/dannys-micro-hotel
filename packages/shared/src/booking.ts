@@ -39,5 +39,9 @@ export type GuestReservation = {
     totalCentavos: number;
     state: string;
     proofDeadlineAt: string;
+    scheduleRevision?: number;
+    pendingReschedule?: boolean;
+    confirmationAt?: string | null;
+    blocks?: number[];
   }[];
 };

@@ -1,4 +1,5 @@
 import CancellationDesk from "./CancellationDesk";
+import { ReschedulePreview } from "./RescheduleDesk";
 import StaffLogin from "./StaffLogin";
 import GuestAccess from "./GuestAccess";
 import Catalog from "./Catalog";
@@ -27,11 +28,21 @@ export default function App() {
       window.location.pathname === "/staff/check-ins" ||
       window.location.pathname === "/staff/stays" ||
       window.location.pathname === "/staff/cancellations" ||
+      window.location.pathname === "/staff/reschedules" ||
       inviteCallback)
   )
     return (
       <main className="min-h-svh bg-canvas px-6 py-16 text-main">
         <StaffLogin />
+      </main>
+    );
+  if (
+    typeof window !== "undefined" &&
+    window.location.pathname === "/staff/reschedule-preview"
+  )
+    return (
+      <main className="min-h-svh bg-canvas p-6 text-main">
+        <ReschedulePreview />
       </main>
     );
   if (

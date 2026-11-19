@@ -12,9 +12,9 @@
 
 ## Approval and starting evidence
 
-Written specification and plan await final owner approval. Owner confirms all 12 Supabase migrations synchronized, including X01. This session performs no code implementation, hosted query, migration, reset or activation. Passing X01 CI 44459769726 (100 app + 12 isolated PostgreSQL tests) is baseline evidence only. No X02 tests have run or passed. Earlier phase and hosted acceptance remain open.
+Written specification and plan received final owner approval for NATIVE execution on 2026-11-19. Owner confirms all 12 Supabase migrations synchronized, including X01. The original writing session performed no implementation or hosted action; the execution record below documents the later approved gated implementation. Passing X01 CI 44459769726 (100 app + 12 isolated PostgreSQL tests) is baseline evidence only. No X02 tests have run or passed. Earlier phase and hosted acceptance remain open.
 
-The owner explicitly requested both artifacts now; do not wait for a separate document-writing round. Final written-artifact approval and execution-method selection are still required before coding. Recommend native execution because schema, projection guards and action contracts are tightly coupled. No subagents are launched by this plan-writing task.
+The owner explicitly requested both artifacts now; do not wait for a separate document-writing round. The owner selected native execution. One fresh read-only final reviewer was used as required by the execution skill; no implementation work was delegated.
 
 ## Global Constraints
 
@@ -224,4 +224,4 @@ Self-review performed while writing: T20/T28 map to Task 5; identity/ACL policy 
 
 The principal remaining product limitation is deliberate: duration/price-changing approvals are not implemented by this slice. Their requests/proposals remain review-only. Owner approval of the written spec must explicitly accept that boundary; otherwise revise the financial settlement design before implementation. All test commands above are future execution instructions, not claims of results.
 
-Final handoff: review this plan and the linked specification together, confirm the proposed boundary and choose native execution or explicitly request subagent-driven execution. Stop until that approval arrives.
+Execution handoff was approved for native execution. Implementation is now a verified gated development checkpoint: build/typecheck/lint/format passed, 108 application and 13 isolated PostgreSQL tests passed, and synthetic HTTP/component preview checked. One independent review was performed and its confirmed findings corrected. Candidate migration remains unapplied; hosted/device/full-phase acceptance and financial-policy activation remain pending. Planned step boxes above retain the original execution brief; actual evidence is in the Phase 07 checkpoint, not inferred from checkmarks. Stop after X02; no X03.

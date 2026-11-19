@@ -105,7 +105,11 @@ export async function guestReservations(
     r.created_at as "createdAt", r.total_centavos::float8 as "totalCentavos",
     (select json_agg(json_build_object('id', b.id, 'category', b.category_code,
       'startAt', b.start_at, 'endAt', b.end_at, 'adults', b.adult_count, 'children', b.child_count,
-      'totalCentavos', b.total_centavos, 'state', i.state, 'proofDeadlineAt', i.proof_deadline_at)
+      'totalCentavos', b.total_centavos, 'state', i.state, 'proofDeadlineAt', i.proof_deadline_at,
+      'scheduleRevision', coalesce((to_jsonb(b)->>'schedule_revision')::bigint,0),
+      'confirmationAt',to_jsonb(r)->>'online_confirmation_at',
+      'pendingReschedule',(to_jsonb(b)->>'pending_reschedule_id') is not null,
+      'blocks',(select json_agg((p->>'durationMinutes')::integer) from jsonb_array_elements(b.pricing_snapshot) p))
       order by b.item_index) from staytrack.room_bookings b
       join staytrack.inventory_claims i on i.id = b.claim_id where b.reservation_id = r.id) as items
     from staytrack.reservations r where r.owner_auth_user_id = $1 and r.verified_email = $2

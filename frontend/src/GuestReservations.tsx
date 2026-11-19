@@ -1,4 +1,5 @@
 import CancellationDesk, { GuestCancellationRequest } from "./CancellationDesk";
+import RescheduleDesk, { GuestRescheduleRequest } from "./RescheduleDesk";
 import { useEffect, useState } from "react";
 import type { GuestReservation } from "@staytrack/shared";
 import { apiBase } from "./staff-auth";
@@ -65,6 +66,18 @@ export default function GuestReservations({ token }: { token: string }) {
                 {peso(item.totalCentavos)}
               </p>
               <GuestCancellationRequest token={token} itemId={item.id} />
+              {item.blocks && (
+                <GuestRescheduleRequest
+                  key={item.id}
+                  token={token}
+                  itemId={item.id}
+                  revision={item.scheduleRevision ?? 0}
+                  startAt={item.startAt}
+                  endAt={item.endAt}
+                  blocks={item.blocks}
+                  confirmationAt={item.confirmationAt ?? null}
+                />
+              )}
               <p>
                 Capacity: {item.state.replaceAll("_", " ")}. Reservation
                 confirmation is unavailable in this preview.
@@ -83,6 +96,7 @@ export default function GuestReservations({ token }: { token: string }) {
         </article>
       ))}
       <CancellationDesk token={token} guest />
+      <RescheduleDesk token={token} guest />
     </section>
   );
 }

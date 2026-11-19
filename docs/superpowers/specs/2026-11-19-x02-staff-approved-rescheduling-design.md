@@ -1,10 +1,10 @@
 ---
 tags: [phase-07, x02, design, approval-pending]
-status: proposed-final-owner-review
+status: owner-approved-gated-development
 ---
 # X02 — Staff-Approved Rescheduling Design
 
-Date: 2026-11-19 (Asia/Manila). Architectural direction approved; this written specification and its implementation plan await final owner approval. No X02 application code or migration is implemented by these documents.
+Date: 2026-11-19 (Asia/Manila). Owner approved the written specification, implementation plan and native execution. The gated X02 development checkpoint now exists; see [[../../phases/07-changes-refunds-and-ledger]] for actual evidence and outstanding acceptance. These documents alone do not establish formal acceptance.
 
 ## Intent and evidence
 
@@ -16,7 +16,7 @@ The owner confirms all **12 local and hosted migrations synchronized** on `pgbie
 
 ## Scope and explicit safe financial boundary
 
-The approved direction is retained. These implementation choices are **proposals requiring final approval**, not new approved hotel policies:
+The approved direction is retained. These implementation choices are **owner-approved for this gated development slice**, not new approved hotel policies:
 
 1. An approvable X02 move changes start/end by the same offset, preserving category, occupants, purchased package sequence/duration, extra-bed selection and original booked price. The server derives the end from original purchased duration; a guest-supplied end must match. A later catalog rate does not automatically reprice an existing purchase.
 2. A request to change purchased duration is recorded for staff review with a separately stored server quote and proposed signed financial adjustment. It cannot be approved financially in this slice. The existing catalog provides a comparison quote, not an invented entitlement to a refund or a new mandatory charge.
@@ -157,6 +157,6 @@ Future candidate: `supabase/migrations/20261119001200_item_rescheduling.sql` (ve
 
 The candidate installation is transactional: failure leaves no partial objects. Application actions also roll back atomically. After committed use, do not drop history or reset schedules; disable reschedule writes and use an owner-reviewed corrective forward migration or backup restore/reconciliation plan. Do not deploy an old writer that can bypass X02 schedule guards. Existing readers keep working with the updated projection, and monetary totals keep X01 semantics.
 
-Acceptance distinction: owner-confirmed 12-migration synchronization is recorded, not independently reverified. No new migration/history/dry-run, application tests, scanner runs, hosted acceptance or device checks are performed for this writing task. All formal boxes remain open. Final owner review must approve the safe financial boundary above and the linked implementation plan before implementation. X03 and live activation are outside this approval.
+Acceptance distinction: owner-confirmed 12-migration synchronization is recorded, not independently reverified. No new migration/history/dry-run, application tests, scanner runs, hosted acceptance or device checks are performed for this writing task. All formal boxes remain open. The owner approved the safe financial boundary and linked implementation plan before native execution. X03 and live activation are outside this approval.
 
 Plan: [[../plans/2026-11-19-x02-staff-approved-rescheduling-plan]].
