@@ -9,6 +9,7 @@ type Item = {
   room_code: string;
   checked_in_at: string;
   checkout_at: string;
+  original_checkout_at?: string;
   checked_out_at?: string;
   balance_centavos: number;
   exception_reason?: string;
@@ -234,6 +235,12 @@ export default function StayMonitor({ token }: { token?: string }) {
             <p>
               Checked in {time(item.checked_in_at)} � Scheduled checkout{" "}
               {time(item.checkout_at)}
+              {item.original_checkout_at &&
+                item.original_checkout_at !== item.checkout_at && (
+                  <span className="block text-sm text-muted">
+                    Original checkout: {time(item.original_checkout_at)}
+                  </span>
+                )}
             </p>
             {item.checked_out_at ? (
               <p>

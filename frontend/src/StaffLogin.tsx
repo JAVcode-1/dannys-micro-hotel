@@ -1,3 +1,4 @@
+import StayChangesDesk from "./StayChangesDesk";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
@@ -173,7 +174,7 @@ export default function StaffLogin({
     );
   return (
     <section
-      className={`mx-auto rounded-2xl border border-subtle bg-white p-7 shadow-sm ${identity && ["/staff/cancellations", "/staff/stays", "/staff/check-ins", "/staff/rooms", "/staff/settings", "/staff/payments", "/staff/walkins"].includes(window.location.pathname) ? "max-w-6xl" : "max-w-md"}`}
+      className={`mx-auto rounded-2xl border border-subtle bg-white p-7 shadow-sm ${identity && ["/staff/stay-changes", "/staff/cancellations", "/staff/stays", "/staff/check-ins", "/staff/rooms", "/staff/settings", "/staff/payments", "/staff/walkins"].includes(window.location.pathname) ? "max-w-6xl" : "max-w-md"}`}
     >
       <h1 className="text-2xl font-bold text-main">Staff sign-in</h1>
       <p className="mt-2 text-sm text-muted">
@@ -258,12 +259,20 @@ export default function StaffLogin({
           </nav>
           <a
             href="/staff/reschedules"
-            className="inline-flex min-h-11 items-center text-primary"
+            className="inline-flex min-h-11 items-center pr-4 text-primary"
           >
             Rescheduling
           </a>
+          <a
+            href="/staff/stay-changes"
+            className="inline-flex min-h-11 items-center text-primary"
+          >
+            Extensions and charges
+          </a>
           {session &&
-            (window.location.pathname === "/staff/reschedules" ? (
+            (window.location.pathname === "/staff/stay-changes" ? (
+              <StayChangesDesk token={session.access_token} />
+            ) : window.location.pathname === "/staff/reschedules" ? (
               <RescheduleDesk token={session.access_token} />
             ) : window.location.pathname === "/staff/cancellations" ? (
               <CancellationDesk token={session.access_token} />

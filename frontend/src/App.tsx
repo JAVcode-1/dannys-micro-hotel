@@ -1,3 +1,4 @@
+import { StayChangesPreview } from "./StayChangesDesk";
 import CancellationDesk from "./CancellationDesk";
 import { ReschedulePreview } from "./RescheduleDesk";
 import StaffLogin from "./StaffLogin";
@@ -12,6 +13,15 @@ import CheckInDesk from "./CheckInDesk";
 import { staffInviteCallback } from "./staff-auth";
 
 export default function App() {
+  if (
+    typeof window !== "undefined" &&
+    window.location.pathname === "/staff/stay-changes-preview"
+  )
+    return (
+      <main className="min-h-svh bg-canvas p-6 text-main">
+        <StayChangesPreview />
+      </main>
+    );
   const inviteCallback =
     staffInviteCallback ||
     (typeof window !== "undefined" &&
@@ -29,6 +39,7 @@ export default function App() {
       window.location.pathname === "/staff/stays" ||
       window.location.pathname === "/staff/cancellations" ||
       window.location.pathname === "/staff/reschedules" ||
+      window.location.pathname === "/staff/stay-changes" ||
       inviteCallback)
   )
     return (

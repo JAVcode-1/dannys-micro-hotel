@@ -30,6 +30,8 @@ export type WalkInBooking = {
     provisionalRoomCode: string;
     claimState: string;
   }[];
+  additionalNetCentavos?: number;
+  settlementDueCentavos?: number;
   ledger: {
     id: string;
     kind: "charge" | "payment";

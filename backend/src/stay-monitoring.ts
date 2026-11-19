@@ -15,7 +15,7 @@ async function balance(db: PoolClient, reservationId: string) {
     const value = Number(
       (
         await db.query(
-          "select balance_centavos from staytrack.reservation_financials where reservation_id=$1",
+          "select coalesce((to_jsonb(f)->>'settlement_due_centavos')::bigint,balance_centavos) as balance_centavos from staytrack.reservation_financials f where reservation_id=$1",
           [reservationId],
         )
       ).rows[0]?.balance_centavos,
@@ -48,15 +48,21 @@ export async function monitoredStays(pool = databasePool()) {
         `select checkout_alert_minutes,checkout_warning_minutes from staytrack.operational_settings where id=true`,
       )
     ).rows[0];
+    const x03 = (
+      await db.query(
+        "select to_regclass('staytrack.stay_item_terms') is not null as installed",
+      )
+    ).rows[0].installed;
     const items = (
       await db.query(`select b.id,b.reservation_id,r.channel,b.category_code,
-      s.checked_in_at,s.checkout_at,rm.code as room_code,o.checked_out_at,o.exception_reason,
+      s.checked_in_at,${x03 ? "t.effective_checkout_at" : "s.checkout_at"} as checkout_at,s.checkout_at as original_checkout_at,rm.code as room_code,o.checked_out_at,o.exception_reason,
       rm.operational_state
       from staytrack.room_check_ins s join staytrack.room_bookings b on b.id=s.room_booking_id
       join staytrack.reservations r on r.id=b.reservation_id
       join staytrack.rooms rm on rm.id=s.room_id
       left join staytrack.room_checkouts o on o.room_booking_id=b.id
-      order by (o.room_booking_id is not null),s.checkout_at,b.id limit 100`)
+      ${x03 ? "join staytrack.stay_item_terms t on t.room_booking_id=b.id" : ""}
+      order by (o.room_booking_id is not null),checkout_at,b.id limit 100`)
     ).rows;
     for (const item of items)
       item.balance_centavos = await balance(db, item.reservation_id);
@@ -173,8 +179,8 @@ export async function checkout(
       const block = (
         await db.query(
           `insert into staytrack.room_blocks(room_id,start_at,end_at,reason)
-        values ($1,$2,$3,'Checkout cleaning buffer') returning id`,
-          [stay.room_id, now, protectionEnd],
+        values ($1,$2,greatest($3,(select buffered_end_at from staytrack.inventory_claims where id=$4)),'Checkout cleaning buffer') returning id`,
+          [stay.room_id, now, protectionEnd, item.claim_id],
         )
       ).rows[0];
       const result = (

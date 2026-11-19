@@ -59,8 +59,16 @@ export default function GuestReservations({ token }: { token: string }) {
                   : "Family Executive"}
               </p>
               <p>
-                {hotelTime(item.startAt)} → {hotelTime(item.endAt)}
+                {item.effectiveCheckoutAt && <span>Current stay: </span>}
+                {hotelTime(item.startAt)} →{" "}
+                {hotelTime(item.effectiveCheckoutAt ?? item.endAt)}
               </p>
+              {item.additionalCharges?.map((c, index) => (
+                <p key={index}>
+                  {c.kind.replaceAll("_", " ")}: {peso(c.amountCentavos)} | Paid{" "}
+                  {peso(c.paidCentavos)} | Credits {peso(c.creditedCentavos)}
+                </p>
+              ))}
               <p>
                 {item.adults} adults · {item.children} children ·{" "}
                 {peso(item.totalCentavos)}

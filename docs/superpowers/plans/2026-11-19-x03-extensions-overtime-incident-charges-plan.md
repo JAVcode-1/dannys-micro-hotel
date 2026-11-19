@@ -228,3 +228,13 @@ Use `[oldEffectiveEnd,newEffectiveEnd + storedBuffer)` as the allocator target w
 Coverage checked: immutable identity/history and guards (Tasks 2/4/6); T03/T16 plus funding/clock (Tasks 1/3/4/6); T23/policy/waiver history (Tasks 2/5/6); original payments and checkout settlement (Tasks 3/6); incoming references and allocation conservation (Tasks 2/3/6); authorization/audit and rollback (Tasks 2/4/5/6); UI/fallback/preview (Tasks 4/6/7); migration/hosting separation (Task 7). All five Review Focus conditions have specific tests. No new policy amounts, fabricated disclosures, unsupported payment methods or default billing rounding are required.
 
 This written plan is not implemented or tested. Default policy gates keep real fee posting and live transactions closed. Owner should review the specification and plan together, especially pending-money settlement isolation, disclosure/rounding gates and the immutable baseline/effective-checkout distinction. Choose native execution or explicitly request subagent-driven execution only after final artifact approval. Recommend native execution for these tightly coupled financial/claim interfaces. Stop here until approval; no next task is started.
+
+
+## Execution status ? 2026-11-19
+
+The owner subsequently gave final approval and explicitly selected native execution. The earlier awaiting-approval language records the artifact's original writing stage, not a remaining implementation permission gate. X03 integrated development checkpoint now has passing build/typecheck/lint/format, 116 application and 15 isolated PostgreSQL tests. New candidate `20261119001300_item_extensions_and_charges.sql` remains unapplied; all prior 13 migrations remain owner-confirmed synchronized. See the Phase 07 checkpoint for implemented scope, independent-review fixes, precise test coverage and remaining acceptance drills. Unchecked instructions above are not retroactively claimed complete: comprehensive permutation/hosted/device/policy/full milestone acceptance remains open. Live writes remain closed.
+
+
+## Implementation status ? 2026-11-19
+
+Final owner approval and native execution were subsequently granted. X03 is now implemented as a development checkpoint; see [[../../phases/07-changes-refunds-and-ledger#X03 development checkpoint ? 2026-11-19]] for implemented scope, actual checks and remaining acceptance. Candidate `20261119001300_item_extensions_and_charges.sql` remains unapplied. All previous 13 migrations remain owner-confirmed synchronized. Live writes are closed. This supersedes the writing-session approval-pending wording without treating unexecuted acceptance drills or Phase 07 exit gates as complete.

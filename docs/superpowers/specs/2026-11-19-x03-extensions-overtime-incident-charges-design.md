@@ -172,3 +172,13 @@ Future fourteenth candidate path: `supabase/migrations/20261119001300_item_exten
 Normal implementation checkpoint requires build/typecheck/lint/format/application tests plus isolated PostgreSQL evidence and essential security/secret inspection. Formal Phase 07 completion additionally requires outstanding hosted/device/policy/earlier-phase acceptance and the full executable milestone quality gate; no completed milestone is inferred from a checkpoint. All 13 synchronized migrations are owner evidence, not a fresh query by this writing session. No tests/scanners/hosted checks for X03 are claimed here. Written-artifact approval and an execution-method choice are the next gate; do not begin another task.
 
 Implementation plan: [[../plans/2026-11-19-x03-extensions-overtime-incident-charges-plan]].
+
+
+## Execution status ? 2026-11-19
+
+The owner subsequently gave final approval and explicitly selected native execution. The earlier awaiting-approval language records the artifact's original writing stage, not a remaining implementation permission gate. X03 integrated development checkpoint now has passing build/typecheck/lint/format, 116 application and 15 isolated PostgreSQL tests. New candidate `20261119001300_item_extensions_and_charges.sql` remains unapplied; all prior 13 migrations remain owner-confirmed synchronized. See the Phase 07 checkpoint for implemented scope, independent-review fixes, precise test coverage and remaining acceptance drills. Unchecked instructions above are not retroactively claimed complete: comprehensive permutation/hosted/device/policy/full milestone acceptance remains open. Live writes remain closed.
+
+
+## Implementation status ? 2026-11-19
+
+Final owner approval and native execution were subsequently granted. X03 is now implemented as a development checkpoint; see [[../../phases/07-changes-refunds-and-ledger#X03 development checkpoint ? 2026-11-19]] for implemented scope, actual checks and remaining acceptance. Candidate `20261119001300_item_extensions_and_charges.sql` remains unapplied. All previous 13 migrations remain owner-confirmed synchronized. Live writes are closed. This supersedes the writing-session approval-pending wording without treating unexecuted acceptance drills or Phase 07 exit gates as complete.

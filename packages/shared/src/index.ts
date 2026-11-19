@@ -18,3 +18,4 @@ export type {
   RefundAction,
 } from "./cancellation.js";
 export * from "./rescheduling.js";
+export * from "./stay-changes.js";

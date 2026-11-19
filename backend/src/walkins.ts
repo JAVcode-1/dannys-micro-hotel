@@ -1,3 +1,7 @@
+import {
+  captureChargeDisclosures,
+  parseChargeDisclosures,
+} from "./stay-disclosures.js";
 import { createHash } from "node:crypto";
 import type { PoolClient } from "pg";
 import type { WalkInBooking, WalkInPaymentInput } from "@staytrack/shared";
@@ -139,9 +143,29 @@ async function readWalkIn(
   if (row.charged !== row.total_centavos || !row.items?.length)
     throw new BookingError("Journal charges require reconciliation.", 503);
   const { total_centavos, charged, collected, ...record } = row;
+  const installed = (
+    await db.query(
+      "select to_regclass('staytrack.stay_item_terms') is not null as installed",
+    )
+  ).rows[0].installed;
+  const extra = installed
+    ? (
+        await db.query(
+          "select net_charge_centavos-original_centavos+cancellation_credit_centavos as extra,settlement_due_centavos from staytrack.reservation_financials where reservation_id=$1",
+          [id],
+        )
+      ).rows[0]
+    : null;
+
   void total_centavos;
   return {
     ...record,
+    ...(extra
+      ? {
+          additionalNetCentavos: Number(extra.extra),
+          settlementDueCentavos: Number(extra.settlement_due_centavos),
+        }
+      : {}),
     createdAt: row.createdAt.toISOString(),
     ...walkInBalance(
       Number(charged),
@@ -174,6 +198,7 @@ export async function createWalkInBooking(
   primaryName: unknown,
   value: unknown,
   pool = databasePool(),
+  chargeDisclosures: unknown = [],
 ) {
   checkKey(key);
   if (
@@ -186,9 +211,14 @@ export async function createWalkInBooking(
       "Enter the primary guest name (up to 120 characters).",
     );
   // Structural validation is time-independent so retries can replay after planned arrival.
+  const disclosures = parseChargeDisclosures(chargeDisclosures);
   const items = parseBookingItems(value, 0);
   const name = primaryName.trim();
-  const requestHash = hash({ items, name });
+  const requestHash = hash({
+    items,
+    name,
+    ...(disclosures.length ? { disclosures } : {}),
+  });
   const claimKey = hash(`walk_in:${actorId}:${key}`);
   return claimTransaction(async (client) => {
     await activeStaff(client, actorId);
@@ -270,6 +300,7 @@ export async function createWalkInBooking(
       "insert into staytrack.staff_audit(actor_auth_user_id,action) values ($1,'walkin.created')",
       [actorId],
     );
+    await captureChargeDisclosures(client, id, disclosures);
     return { booking: await readWalkIn(id, client), replayed: false };
   }, pool);
 }

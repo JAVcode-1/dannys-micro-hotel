@@ -29,11 +29,20 @@ export type GuestReservation = {
   primaryName: string;
   createdAt: string;
   totalCentavos: number;
+  financials?: import("./stay-changes.js").StayFinancials;
   items: {
     id: string;
     category: string;
     startAt: string;
     endAt: string;
+    originalCheckoutAt?: string | null;
+    effectiveCheckoutAt?: string | null;
+    additionalCharges?: {
+      kind: string;
+      amountCentavos: number;
+      paidCentavos: number;
+      creditedCentavos: number;
+    }[];
     adults: number;
     children: number;
     totalCentavos: number;

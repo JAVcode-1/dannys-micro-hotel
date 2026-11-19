@@ -1,3 +1,4 @@
+import { registerStayChanges } from "./extensions.js";
 import { registerCancellations } from "./cancellations.js";
 import { registerReschedules } from "./rescheduling.js";
 import express from "express";
@@ -74,6 +75,12 @@ export function createApp(
       "/staff/walkins",
       "/staff/check-ins",
       "/staff/stays",
+      "/staff/stay-changes",
+      "/staff/stay-extensions",
+      "/staff/stay-receipts",
+      "/staff/stay-allocations",
+      "/staff/stay-reviews",
+      "/staff/stay-charges",
       "/staff/cancellations",
       "/guest/cancellations",
       "/staff/reschedules",
@@ -86,6 +93,7 @@ export function createApp(
       "/staff/settings",
     ],
     (request, response, next) => {
+      response.setHeader("Cache-Control", "no-store");
       const now = Date.now();
       const address = request.ip ?? "unknown";
       if (attempts.size >= 10000) {
@@ -396,6 +404,7 @@ export function createApp(
   registerStayMonitoring(app, catalogStaff);
   registerCancellations(app, catalogStaff, guestVerifier);
   registerReschedules(app, catalogStaff, guestVerifier);
+  registerStayChanges(app, catalogStaff);
   return app;
 }
 

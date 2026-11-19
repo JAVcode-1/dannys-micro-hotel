@@ -5,17 +5,23 @@ import { databasePool } from "./database.js";
 import type { Express, RequestHandler } from "express";
 
 export async function checkInItems(pool = databasePool()) {
+  const x03 = (
+    await pool.query(
+      "select to_regclass('staytrack.stay_item_terms') is not null as installed",
+    )
+  ).rows[0].installed;
   const result = await pool.query(`
         select b.id, r.channel, b.category_code as category, b.start_at, b.end_at,
           coalesce(r.channel='online' and s.room_booking_id is null
             and clock_timestamp() >= b.start_at + interval '1 hour',false) as late,
-          s.checked_in_at, s.checkout_at, assigned.code as assigned_room,
+          s.checked_in_at, ${x03 ? "coalesce(t.effective_checkout_at,s.checkout_at)" : "s.checkout_at"} as checkout_at, s.checkout_at as original_checkout_at, assigned.code as assigned_room,
           coalesce((select json_agg(json_build_object('id',rm.id::text,'code',rm.code) order by rm.code)
             from staytrack.rooms rm where rm.category_id=i.category_id and rm.active
             and rm.operational_state='ready'),'[]'::json) as rooms
         from staytrack.room_bookings b join staytrack.reservations r on r.id=b.reservation_id
         join staytrack.inventory_claims i on i.id=b.claim_id
         left join staytrack.room_check_ins s on s.room_booking_id=b.id
+        ${x03 ? "left join staytrack.stay_item_terms t on t.room_booking_id=b.id" : ""}
         left join staytrack.rooms assigned on assigned.id=s.room_id
         where (r.channel='walk_in' and i.state='walkin_reserved')
            or (r.channel='online' and b.status='confirmed' and i.state='confirmed')

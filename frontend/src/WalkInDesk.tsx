@@ -490,7 +490,15 @@ export function WalkInLedger({
         </div>
         <div>
           <dt>Remaining balance</dt>
-          <dd>{peso(booking.balanceCentavos)}</dd>
+          <dd>{peso(booking.balanceCentavos)} (original booking)</dd>
+          {booking.settlementDueCentavos !== undefined && (
+            <>
+              <dt>Required settlement including additional stays</dt>
+              <dd>{peso(booking.settlementDueCentavos)}</dd>
+              <dt>Additional net charges</dt>
+              <dd>{peso(booking.additionalNetCentavos ?? 0)}</dd>
+            </>
+          )}
         </div>
         <div>
           <dt>50% minimum</dt>
