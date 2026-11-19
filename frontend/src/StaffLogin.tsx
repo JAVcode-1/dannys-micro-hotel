@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { apiBase, staffAuth, staffInviteCallback } from "./staff-auth";
+import CancellationDesk from "./CancellationDesk";
 import StaffCatalog from "./StaffCatalog";
 import StaffRooms from "./StaffRooms";
 import OperationalSettings from "./OperationalSettings";
@@ -171,7 +172,7 @@ export default function StaffLogin({
     );
   return (
     <section
-      className={`mx-auto rounded-2xl border border-subtle bg-white p-7 shadow-sm ${identity && ["/staff/stays", "/staff/check-ins", "/staff/rooms", "/staff/settings", "/staff/payments", "/staff/walkins"].includes(window.location.pathname) ? "max-w-6xl" : "max-w-md"}`}
+      className={`mx-auto rounded-2xl border border-subtle bg-white p-7 shadow-sm ${identity && ["/staff/cancellations", "/staff/stays", "/staff/check-ins", "/staff/rooms", "/staff/settings", "/staff/payments", "/staff/walkins"].includes(window.location.pathname) ? "max-w-6xl" : "max-w-md"}`}
     >
       <h1 className="text-2xl font-bold text-main">Staff sign-in</h1>
       <p className="mt-2 text-sm text-muted">
@@ -205,6 +206,12 @@ export default function StaffLogin({
         <div className="mt-6">
           <p>Signed in as {identity}</p>
           <nav className="mt-5 flex flex-wrap gap-2 text-sm font-semibold">
+            <a
+              className="rounded-lg bg-selected px-3 py-2 text-primary"
+              href="/staff/cancellations"
+            >
+              Cancellations and refunds
+            </a>
             <a
               className="rounded-lg bg-selected px-3 py-2 text-primary"
               href="/staff/stays"
@@ -249,7 +256,9 @@ export default function StaffLogin({
             </a>
           </nav>
           {session &&
-            (window.location.pathname === "/staff/rooms" ? (
+            (window.location.pathname === "/staff/cancellations" ? (
+              <CancellationDesk token={session.access_token} />
+            ) : window.location.pathname === "/staff/rooms" ? (
               <StaffRooms token={session.access_token} />
             ) : window.location.pathname === "/staff/settings" ? (
               <OperationalSettings token={session.access_token} />

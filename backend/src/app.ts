@@ -1,3 +1,4 @@
+import { registerCancellations } from "./cancellations.js";
 import express from "express";
 import type { HealthResponse } from "@staytrack/shared";
 import { probeDatabase } from "./database.js";
@@ -72,6 +73,8 @@ export function createApp(
       "/staff/walkins",
       "/staff/check-ins",
       "/staff/stays",
+      "/staff/cancellations",
+      "/guest/cancellations",
       "/staff/catalog",
       "/staff/catalog/package-price",
       "/staff/catalog/packages",
@@ -388,6 +391,7 @@ export function createApp(
   registerWalkInRoutes(app, catalogStaff, walkInOptions);
   registerCheckIn(app, catalogStaff);
   registerStayMonitoring(app, catalogStaff);
+  registerCancellations(app, catalogStaff, guestVerifier);
   return app;
 }
 

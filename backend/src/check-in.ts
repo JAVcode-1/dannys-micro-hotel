@@ -1,3 +1,4 @@
+import { assertNoCancellation } from "./cancellations.js";
 import { BookingError } from "./booking-quote.js";
 import { claimTransaction } from "./inventory-claims.js";
 import { databasePool } from "./database.js";
@@ -135,6 +136,7 @@ export async function checkIn(
           return prior;
         throw conflict("This booking item is already checked in.");
       }
+      await assertNoCancellation(db, bookingId);
       await db.query("select pg_advisory_xact_lock($1::bigint)", [
         item.category_id,
       ]);

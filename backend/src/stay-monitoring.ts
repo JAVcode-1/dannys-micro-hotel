@@ -6,6 +6,23 @@ import { BookingError } from "./booking-quote.js";
 
 // Payments have reservation scope: do not invent a per-room payment allocation.
 async function balance(db: PoolClient, reservationId: string) {
+  const installed = (
+    await db.query(
+      "select to_regclass('staytrack.reservation_financials') is not null as installed",
+    )
+  ).rows[0].installed;
+  if (installed) {
+    const value = Number(
+      (
+        await db.query(
+          "select balance_centavos from staytrack.reservation_financials where reservation_id=$1",
+          [reservationId],
+        )
+      ).rows[0]?.balance_centavos,
+    );
+    if (!Number.isSafeInteger(value)) throw new Error("Invalid balance");
+    return Math.max(0, value);
+  }
   const row = (
     await db.query<{ balance: string }>(
       `select greatest(0,r.total_centavos-

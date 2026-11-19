@@ -11,3 +11,9 @@ export type {
   BookingQuote,
   GuestReservation,
 } from "./booking.js";
+
+export type {
+  CancellationRow,
+  CancellationDecisionInput,
+  RefundAction,
+} from "./cancellation.js";

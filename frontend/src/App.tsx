@@ -1,3 +1,4 @@
+import CancellationDesk from "./CancellationDesk";
 import StaffLogin from "./StaffLogin";
 import GuestAccess from "./GuestAccess";
 import Catalog from "./Catalog";
@@ -25,6 +26,7 @@ export default function App() {
       window.location.pathname === "/staff/walkins" ||
       window.location.pathname === "/staff/check-ins" ||
       window.location.pathname === "/staff/stays" ||
+      window.location.pathname === "/staff/cancellations" ||
       inviteCallback)
   )
     return (
@@ -76,6 +78,15 @@ export default function App() {
     return (
       <main className="min-h-svh bg-canvas p-6 text-main">
         <StayMonitor />
+      </main>
+    );
+  if (
+    typeof window !== "undefined" &&
+    window.location.pathname === "/staff/cancellation-preview"
+  )
+    return (
+      <main className="min-h-svh bg-canvas p-6 text-main">
+        <CancellationDesk />
       </main>
     );
   return (
