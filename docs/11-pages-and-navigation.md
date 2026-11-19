@@ -34,7 +34,7 @@ status: planned
 | `/staff/housekeeping` | Dirty/cleaning/Ready workflow |
 | `/staff/maintenance` | Blocks, reasons, repair progress and impacts |
 | `/staff/incidents` | Smoking/other incident record, charge/waiver reasons |
-| `/staff/reports` | Payments, occupancy, no-show, refunds and adjustments |
+| `/staff/reports` | Planned Revenue Analytics, Room Category Performance and Package Popularity only; date filters and staff-authorized CSV/Excel exports |
 | `/staff/settings` | Room catalog, packages, buffer/alerts, QR, policies |
 | `/staff/audit` | Staff activity log with filters |
 | `/staff/reviews` | Moderate flagged public reviews, respond, hide/restore with mandatory policy reason and audit |
@@ -56,3 +56,5 @@ See [[09-ui-ux-design-system]].
 - Staff sidebar: **white** (minimalist ClkiQ-style reference), with Royal Blue active navigation and subtle Sky Blue `#EAF1FF` selected states; Royal Blue buttons with white text. Operational status colors remain semantic.
 - Mobile navigation remains easy to reach, with 44px minimum tap targets and visible focus.
 - Full specification and sample layout: [[09-ui-ux-design-system]] and [[design/brand-and-navigation-brief]].
+
+Analytics scope follows [[future-analytics-and-reports]]. Operational payments, balances, refunds and booking/stay management remain in their existing staff workflows.

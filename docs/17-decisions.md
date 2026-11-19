@@ -5,9 +5,17 @@ status: approved-baseline
 # 17 — Approved Decisions Register
 
 
+## Final Analytics scope revision - 2026-11-20
+
+Owner-approved Analytics scope is **only Revenue Analytics, Room Category Performance and Package Popularity**, with date-range filtering, staff authorization and CSV/Excel exports; see [[future-analytics-and-reports]]. This supersedes the earlier six-feature proposal and related historical scope statements. Payment & Outstanding Balance Reports, Room Occupancy Analytics, Booking Analytics and Peak Hours & Demand Analytics are excluded as dedicated analytics/dashboard features and must not return under alternate labels. Existing operational availability, check-in/out, payments, balances, manual refunds, booking management and stay-duration monitoring remain unchanged.
+
+Order: finish remaining core features, implement the three approved Analytics features, implement Function Hall Reservation & Management, then complete integration, testing, acceptance and deployment preparation. Preserve all confirmed [[future-function-hall-requirements|Function Hall requirements]] and pending owner decisions. X01-X03 checkpoints remain implemented; all 14 Supabase migrations remain owner-confirmed synchronized. Existing acceptance gaps stay open, live transactions stay disabled and both future modules remain unimplemented. Documentation only; no next implementation task begins.
+
+
+
 ## Owner-approved future scope decision — 2026-11-20
 
-Record the six-feature Analytics & Reports scope in [[future-analytics-and-reports]] and the confirmed separate Function Hall facility in [[future-function-hall-requirements]]. Hall base pricing follows the reservation start: 8:00 AM to before 5:00 PM is ₱3,000/3 hours; starts beginning at 5:00 PM are ₱5,000/3 hours, subject to unresolved latest-time rules. Crossing 5:00 PM does not reprice the base; each additional full hour is ₱1,000. Theater Type maximum is 70 persons; Room Type maximum is 50 persons. Inclusions: air-conditioning, sound system and mineral water only. Unresolved hall policies remain owner questions, not inherited room policies.
+Record the revised three-feature Analytics & Reports scope in [[future-analytics-and-reports]] and the confirmed separate Function Hall facility in [[future-function-hall-requirements]]. Hall base pricing follows the reservation start: 8:00 AM to before 5:00 PM is ₱3,000/3 hours; starts beginning at 5:00 PM are ₱5,000/3 hours, subject to unresolved latest-time rules. Crossing 5:00 PM does not reprice the base; each additional full hour is ₱1,000. Theater Type maximum is 70 persons; Room Type maximum is 50 persons. Inclusions: air-conditioning, sound system and mineral water only. Unresolved hall policies remain owner questions, not inherited room policies.
 
 Required order: remaining approved core features, Analytics, Function Hall, then final integration/testing/business acceptance/UI refinement/deployment readiness. Existing phase and task IDs are retained; no new official ID is assigned. This approves documentation of future scope, not implementation, activation, an accounting policy or a fabricated existing hotel process.
 

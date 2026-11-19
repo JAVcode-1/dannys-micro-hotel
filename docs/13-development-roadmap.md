@@ -4,6 +4,14 @@ status: planned
 ---
 # 13 — Phase-by-Phase Development Roadmap
 
+
+## Final Analytics scope revision - 2026-11-20
+
+Owner-approved Analytics scope is **only Revenue Analytics, Room Category Performance and Package Popularity**, with date-range filtering, staff authorization and CSV/Excel exports; see [[future-analytics-and-reports]]. This supersedes the earlier six-feature proposal and related historical scope statements. Payment & Outstanding Balance Reports, Room Occupancy Analytics, Booking Analytics and Peak Hours & Demand Analytics are excluded as dedicated analytics/dashboard features and must not return under alternate labels. Existing operational availability, check-in/out, payments, balances, manual refunds, booking management and stay-duration monitoring remain unchanged.
+
+Order: finish remaining core features, implement the three approved Analytics features, implement Function Hall Reservation & Management, then complete integration, testing, acceptance and deployment preparation. Preserve all confirmed [[future-function-hall-requirements|Function Hall requirements]] and pending owner decisions. X01-X03 checkpoints remain implemented; all 14 Supabase migrations remain owner-confirmed synchronized. Existing acceptance gaps stay open, live transactions stay disabled and both future modules remain unimplemented. Documentation only; no next implementation task begins.
+
+
 > [!important] BUILD ORDER
 > **Start with [[21-before-coding-checklist]] to prepare the workstation and repo; then choose a single unchecked task from the current phase.** Finish the task's acceptance tests and document outcome; then continue. This phase structure is retained from the original planning handoff; it is not a current implementation-status claim. See the dated status below and [[14-milestones]].
 
@@ -17,7 +25,7 @@ Approved order: **remaining approved core StayTrack features -> Analytics & Repo
 
 ## Approved future-work placement
 
-Complete remaining approved core tasks and acceptance gaps first, including housekeeping/maintenance and core incident/audit work. Expand existing Phase 08 reporting scope into the six-feature [[future-analytics-and-reports|Analytics & Reports Dashboard]]. Then implement [[future-function-hall-requirements|Function Hall Reservation & Management]] as future work after Analytics and before Phase 09 final readiness. This records the approved dependency order without inventing an official task ID or renumbering phases; detailed hall task mapping awaits its separately approved implementation plan.
+Complete remaining approved core tasks and acceptance gaps first, including housekeeping/maintenance and core incident/audit work. Expand existing Phase 08 reporting scope into the three-feature [[future-analytics-and-reports|Analytics & Reports Dashboard]]. Then implement [[future-function-hall-requirements|Function Hall Reservation & Management]] as future work after Analytics and before Phase 09 final readiness. This records the approved dependency order without inventing an official task ID or renumbering phases; detailed hall task mapping awaits its separately approved implementation plan.
 
 Analytics must support later facility-specific reporting without a complete redesign. Keep optional H04 reviews subject to their existing separate activation gate; this update does not add them to the required core scope. Final Phase 09 integration, comprehensive testing, business acceptance, UI/UX refinement and deployment readiness follow both future modules. Neither module nor any release gate is Done.
 

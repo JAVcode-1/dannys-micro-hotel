@@ -4,6 +4,14 @@ status: approved-baseline-with-pending-settings
 ---
 # 02 — Business & Functional Requirements
 
+
+## Final Analytics scope revision - 2026-11-20
+
+Owner-approved Analytics scope is **only Revenue Analytics, Room Category Performance and Package Popularity**, with date-range filtering, staff authorization and CSV/Excel exports; see [[future-analytics-and-reports]]. This supersedes the earlier six-feature proposal and related historical scope statements. Payment & Outstanding Balance Reports, Room Occupancy Analytics, Booking Analytics and Peak Hours & Demand Analytics are excluded as dedicated analytics/dashboard features and must not return under alternate labels. Existing operational availability, check-in/out, payments, balances, manual refunds, booking management and stay-duration monitoring remain unchanged.
+
+Order: finish remaining core features, implement the three approved Analytics features, implement Function Hall Reservation & Management, then complete integration, testing, acceptance and deployment preparation. Preserve all confirmed [[future-function-hall-requirements|Function Hall requirements]] and pending owner decisions. X01-X03 checkpoints remain implemented; all 14 Supabase migrations remain owner-confirmed synchronized. Existing acceptance gaps stay open, live transactions stay disabled and both future modules remain unimplemented. Documentation only; no next implementation task begins.
+
+
 > [!important] Priority
 > These are the latest agreed rules. Older assumptions (such as a Family Executive 3-hour package, strict *standard* room capacity or pay-at-hotel online reservations) are superseded.
 
@@ -93,4 +101,4 @@ There is **no 3h Family Executive package**. Multi-day stays consist of permitte
 
 Approved future Analytics scope: [[future-analytics-and-reports]]. The hotel also offers a separate Function Hall resource with Theater Type maximum 70 persons / Room Type maximum 50 persons; approved start-time-based pricing and inclusions are in [[future-function-hall-requirements]]. Neither software module is implemented. Hall inventory is not bedroom inventory; all existing accommodation counts/rates remain unchanged.
 
-Hall resource count/exclusivity, fractional excess-hour treatment, latest ending time/cross-midnight use, deposit, payment methods, cancellation/rescheduling/refunds, preparation/cleaning buffer, equipment/service charges and mineral-water quantities remain owner questions required before hall implementation. Starts before 8:00 AM are unsupported until clarified. Do not import accommodation policies. Analytics recognition and denominator definitions also require review before their acceptance. No new official backlog/task IDs are assigned here. Approved sequence is recorded in [[13-development-roadmap]].
+Hall resource count/exclusivity, fractional excess-hour treatment, latest ending time/cross-midnight use, deposit, payment methods, cancellation/rescheduling/refunds, preparation/cleaning buffer, equipment/service charges and mineral-water quantities remain owner questions required before hall implementation. Starts before 8:00 AM are unsupported until clarified. Do not import accommodation policies. Analytics revenue recognition and contribution definitions also require review before their acceptance. No new official backlog/task IDs are assigned here. Approved sequence is recorded in [[13-development-roadmap]].

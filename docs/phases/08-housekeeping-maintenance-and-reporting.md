@@ -4,6 +4,14 @@ status: not-started
 ---
 # Phase 08 — Housekeeping, Maintenance, Incidents & Reporting
 
+
+## Final Analytics scope revision - 2026-11-20
+
+Owner-approved Analytics scope is **only Revenue Analytics, Room Category Performance and Package Popularity**, with date-range filtering, staff authorization and CSV/Excel exports; see [[future-analytics-and-reports]]. This supersedes the earlier six-feature proposal and related historical scope statements. Payment & Outstanding Balance Reports, Room Occupancy Analytics, Booking Analytics and Peak Hours & Demand Analytics are excluded as dedicated analytics/dashboard features and must not return under alternate labels. Existing operational availability, check-in/out, payments, balances, manual refunds, booking management and stay-duration monitoring remain unchanged.
+
+Order: finish remaining core features, implement the three approved Analytics features, implement Function Hall Reservation & Management, then complete integration, testing, acceptance and deployment preparation. Preserve all confirmed [[future-function-hall-requirements|Function Hall requirements]] and pending owner decisions. X01-X03 checkpoints remain implemented; all 14 Supabase migrations remain owner-confirmed synchronized. Existing acceptance gaps stay open, live transactions stay disabled and both future modules remain unimplemented. Documentation only; no next implementation task begins.
+
+
 **Goal:** Match physical hotel operation to digital booking state and provide trustworthy reports.
 
 **Dependencies:** [[03-catalog-inventory-settings]], [[06-walkins-and-stay-monitoring]], [[07-changes-refunds-and-ledger]].
@@ -31,10 +39,10 @@ Development is paused; Analytics & Reports remains planned, not implemented. Fin
 
 ### H03 — Incidents, reports, audit
 - [ ] Record no-smoking incident and staff-approved fee/waiver reason.
-- [ ] Analytics & Reports: revenue/collections, room occupancy in room-hours, dynamic room-category performance, approved-package popularity, booking trends/status/channel, payment reconciliation and outstanding balances; see [[future-analytics-and-reports]] for the six-feature scope and calculation requirements.
-- [ ] Date-range filters, CSV/Excel exports, staff-only access and Asia/Manila reporting; distinguish verified collections from earned revenue and prevent double counting of partial payments, extensions, refunds and multi-room bookings.
-- [ ] Preserve operational views for pending GCash, cleaning/maintenance and audit; future hall revenue/booking/utilization stays separate from accommodation occupancy. No initial AI forecasting or complex customer profiling.
-- [ ] Aggregate financial reports exclusively from verified ledger entries, label pending transactions separately.
+- [ ] Analytics & Reports: only Revenue Analytics (daily/weekly/monthly trends), Room Category Performance (dynamic category revenue, future hall revenue separately identifiable) and Package Popularity (frequency and revenue contribution respecting category-specific packages); see [[future-analytics-and-reports]].
+- [ ] Date-range filters, CSV/Excel exports, staff-only access and Asia/Manila reporting; use trustworthy financial records and prevent revenue/contribution double counting of partial payments, extensions, refunds and multi-room bookings.
+- [ ] Preserve core operational views for pending GCash, cleaning/maintenance and audit. Future hall reporting belongs to the later Function Hall module. No occupancy, booking, payment/balance or peak-demand analytics, AI forecasting or complex customer profiling in this Analytics scope.
+- [ ] Derive approved revenue/category/package reporting from authoritative transaction and financial records; pending proof is not verified money.
 - [ ] Searchable audit by actor/action/date/subject, with sensitive masking.
 
 **Acceptance:** T23 + ledger reconciling against report totals on multi-room mixed payments.
@@ -51,7 +59,7 @@ Development is paused; Analytics & Reports remains planned, not implemented. Fin
 
 ## Exit gate
 
-- [ ] Room board and payment reports demonstrably reflect authoritative DB states.
+- [ ] Room board and the three approved Analytics features demonstrably reflect authoritative DB states.
 - [ ] Every maintenance/waiver action has traceable actor and reason.
 - [ ] Update [[14-milestones]].
 
