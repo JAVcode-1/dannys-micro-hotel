@@ -3,6 +3,7 @@ import { databasePool } from "./database.js";
 export type SettingsUpdate = {
   cleaningBufferMinutes: number | null;
   checkoutAlertMinutes: number | null;
+  checkoutWarningMinutes?: number[] | null;
   gcashQrObjectKey: string | null;
   gcashPayeeLabel: string | null;
   cancellationDisplayText: string | null;
@@ -19,6 +20,13 @@ export function validSettings(value: SettingsUpdate) {
       (Number.isSafeInteger(value.checkoutAlertMinutes) &&
         value.checkoutAlertMinutes >= 1 &&
         value.checkoutAlertMinutes <= 1440)) &&
+    (value.checkoutWarningMinutes == null ||
+      (Array.isArray(value.checkoutWarningMinutes) &&
+        value.checkoutWarningMinutes.length >= 1 &&
+        value.checkoutWarningMinutes.length <= 10 &&
+        value.checkoutWarningMinutes.every(
+          (m) => Number.isInteger(m) && m >= 1 && m <= 1440,
+        ))) &&
     (value.gcashQrObjectKey === null ||
       (typeof value.gcashQrObjectKey === "string" &&
         value.gcashQrObjectKey.length <= 240 &&
@@ -35,10 +43,16 @@ export function validSettings(value: SettingsUpdate) {
 export async function getSettings() {
   const { rows } = await databasePool()
     .query(`select cleaning_buffer_minutes as "cleaningBufferMinutes",
-    checkout_alert_minutes as "checkoutAlertMinutes", gcash_qr_object_key as "gcashQrObjectKey",
+    checkout_alert_minutes as "checkoutAlertMinutes",
+    to_jsonb(operational_settings)->'checkout_warning_minutes' as "checkoutWarningMinutes",
+    to_jsonb(operational_settings) ? 'checkout_warning_minutes' as "supportsWarnings", gcash_qr_object_key as "gcashQrObjectKey",
     gcash_payee_label as "gcashPayeeLabel", cancellation_display_text as "cancellationDisplayText"
     from staytrack.operational_settings where id = true`);
-  return rows[0] ?? null;
+  const row = rows[0];
+  if (!row) return null;
+  if (!row.supportsWarnings) delete row.checkoutWarningMinutes;
+  delete row.supportsWarnings;
+  return row;
 }
 
 export async function saveSettings(
@@ -68,6 +82,11 @@ export async function saveSettings(
       await client.query("rollback");
       return false;
     }
+    if (value.checkoutWarningMinutes !== undefined)
+      await client.query(
+        "update staytrack.operational_settings set checkout_warning_minutes=$1 where id=true",
+        [value.checkoutWarningMinutes],
+      );
     await client.query(
       `insert into staytrack.staff_audit (actor_auth_user_id, action)
       values ($1, 'settings.operational_updated')`,

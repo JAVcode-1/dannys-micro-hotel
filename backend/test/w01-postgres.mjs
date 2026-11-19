@@ -1,3 +1,4 @@
+import { w03Postgres } from "./w03-postgres.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { URL } from "node:url";
@@ -519,7 +520,7 @@ export async function w01Postgres(t, pool) {
       );
       await w01.test(
         "W02 check-in rejects unpaid and dirty stays, preserves online checkout and serializes room occupancy",
-        async () => {
+        async (w02) => {
           await pool.query(
             readFileSync(
               new URL(
@@ -623,6 +624,13 @@ export async function w01Postgres(t, pool) {
             pool,
           );
           assert.equal(+onlineStay.checkout_at, +checkout);
+          await w03Postgres(w02, pool, {
+            actor,
+            item,
+            stay,
+            onlineItem,
+            onlineStay,
+          });
         },
       );
     },

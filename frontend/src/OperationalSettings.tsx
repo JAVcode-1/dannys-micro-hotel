@@ -5,6 +5,7 @@ import PaymentQrSettings from "./PaymentQrSettings";
 type Settings = {
   cleaningBufferMinutes: number | null;
   checkoutAlertMinutes: number | null;
+  checkoutWarningMinutes?: number[] | null;
   gcashQrObjectKey: string | null;
   gcashPayeeLabel: string | null;
   cancellationDisplayText: string | null;
@@ -80,6 +81,23 @@ export default function OperationalSettings({ token }: { token: string }) {
                     event.target.value === ""
                       ? null
                       : Number(event.target.value),
+                })
+              }
+            />
+          </label>
+          <label className="text-sm font-medium">
+            Checkout warning thresholds (comma-separated minutes)
+            <input
+              className="mt-1 min-h-11 w-full rounded-lg border border-subtle px-3"
+              disabled={!("checkoutWarningMinutes" in value)}
+              placeholder="Pending owner configuration / approved migration"
+              defaultValue={value.checkoutWarningMinutes?.join(", ") ?? ""}
+              onChange={(event) =>
+                setValue({
+                  ...value,
+                  checkoutWarningMinutes: event.target.value.trim()
+                    ? event.target.value.split(",").map((v) => Number(v.trim()))
+                    : null,
                 })
               }
             />

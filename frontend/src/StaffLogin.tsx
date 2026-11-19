@@ -7,6 +7,7 @@ import StaffRooms from "./StaffRooms";
 import OperationalSettings from "./OperationalSettings";
 import StaffPaymentReviews from "./StaffPaymentReviews";
 import WalkInDesk from "./WalkInDesk";
+import StayMonitor from "./StayMonitor";
 import CheckInDesk from "./CheckInDesk";
 
 export default function StaffLogin({
@@ -170,7 +171,7 @@ export default function StaffLogin({
     );
   return (
     <section
-      className={`mx-auto rounded-2xl border border-subtle bg-white p-7 shadow-sm ${identity && ["/staff/rooms", "/staff/settings", "/staff/payments", "/staff/walkins"].includes(window.location.pathname) ? "max-w-6xl" : "max-w-md"}`}
+      className={`mx-auto rounded-2xl border border-subtle bg-white p-7 shadow-sm ${identity && ["/staff/stays", "/staff/check-ins", "/staff/rooms", "/staff/settings", "/staff/payments", "/staff/walkins"].includes(window.location.pathname) ? "max-w-6xl" : "max-w-md"}`}
     >
       <h1 className="text-2xl font-bold text-main">Staff sign-in</h1>
       <p className="mt-2 text-sm text-muted">
@@ -204,6 +205,12 @@ export default function StaffLogin({
         <div className="mt-6">
           <p>Signed in as {identity}</p>
           <nav className="mt-5 flex flex-wrap gap-2 text-sm font-semibold">
+            <a
+              className="rounded-lg bg-selected px-3 py-2 text-primary"
+              href="/staff/stays"
+            >
+              Stays and checkout
+            </a>
             <a
               className="rounded-lg bg-selected px-3 py-2 text-primary"
               href="/staff/check-ins"
@@ -248,6 +255,8 @@ export default function StaffLogin({
               <OperationalSettings token={session.access_token} />
             ) : window.location.pathname === "/staff/payments" ? (
               <StaffPaymentReviews token={session.access_token} />
+            ) : window.location.pathname === "/staff/stays" ? (
+              <StayMonitor token={session.access_token} />
             ) : window.location.pathname === "/staff/check-ins" ? (
               <CheckInDesk token={session.access_token} />
             ) : window.location.pathname === "/staff/walkins" ? (

@@ -316,11 +316,28 @@ export async function recordWalkInPayment(
         [id],
       );
       const current = await readWalkIn(id, client);
-      if (current.items.some((item) => item.claimState !== "walkin_reserved"))
-        throw new BookingError(
-          "Capacity requires reconciliation before collecting payment.",
-          409,
-        );
+      const departed = current.items.filter(
+        (item) => item.claimState !== "walkin_reserved",
+      );
+      if (departed.length) {
+        const installed = (
+          await client.query(
+            "select to_regclass('staytrack.room_checkouts') is not null as installed",
+          )
+        ).rows[0].installed;
+        const completed =
+          installed && departed.every((item) => item.claimState === "released")
+            ? await client.query(
+                "select room_booking_id from staytrack.room_checkouts where room_booking_id=any($1::uuid[])",
+                [departed.map((item) => item.id)],
+              )
+            : null;
+        if (completed?.rowCount !== departed.length)
+          throw new BookingError(
+            "Capacity requires reconciliation before collecting payment.",
+            409,
+          );
+      }
       if (input.amountCentavos > current.balanceCentavos)
         throw new BookingError("Payment exceeds the remaining balance.", 409);
       const v = input.verification;

@@ -12,6 +12,7 @@ import {
   type PaymentRouteOptions,
 } from "./payment-routes.js";
 import { staffRooms } from "./rooms.js";
+import { registerStayMonitoring } from "./stay-monitoring.js";
 import { registerCheckIn } from "./check-in.js";
 import {
   registerWalkInRoutes,
@@ -70,6 +71,7 @@ export function createApp(
       "/staff/payment-reviews",
       "/staff/walkins",
       "/staff/check-ins",
+      "/staff/stays",
       "/staff/catalog",
       "/staff/catalog/package-price",
       "/staff/catalog/packages",
@@ -385,6 +387,7 @@ export function createApp(
   registerPaymentRoutes(app, catalogStaff, guestVerifier, paymentOptions);
   registerWalkInRoutes(app, catalogStaff, walkInOptions);
   registerCheckIn(app, catalogStaff);
+  registerStayMonitoring(app, catalogStaff);
   return app;
 }
 
