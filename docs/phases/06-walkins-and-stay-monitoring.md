@@ -59,7 +59,7 @@ Remaining acceptance: owner review/application of candidate, approved isolated/h
 
 **W02 development checkpoint (2026-11-19).** The staff check-in desk lists Ready candidates and flags online arrivals at one hour without altering capacity. Check-in rechecks staff, payment eligibility, room readiness, maintenance and the buffered claim in one transaction. The room becomes Occupied with an immutable check-in record and staff audit. Walk-ins use actual check-in plus purchased duration. Online stays retain their scheduled checkout. The synthetic preview is available at http://127.0.0.1:5174/staff/check-in-preview.
 
-Build, typecheck, lint, formatting, and 90 application tests passed locally. The isolated PostgreSQL suite requires `TEST_DATABASE_URL`, which is unavailable locally. The CI fixture covers T12/T13/T14/T21 and concurrent check-in. Migration `20261119000900_room_check_in.sql` is prepared for separate owner approval. Live check-in remains disabled. Formal acceptance, real inventory, and prior exit gates remain open.
+Build, typecheck, lint, formatting, 90 application tests, and 10 isolated PostgreSQL tests passed on `8ea19a5`. The W02 fixture covers T12/T13/T14/T21 and concurrent check-in. The local database command stopped because `TEST_DATABASE_URL` was absent. Migration `20261119000900_room_check_in.sql` ran in isolated CI and awaits separate owner approval for hosted application. Live check-in remains disabled. Formal acceptance, real inventory, and prior exit gates remain open. [GitHub Actions run 44447042367](https://github.com/JAVcode-1/dannys-micro-hotel/actions/runs/44447042367)
 
 ### W03 — Countdown, overdue and checkout
 - [ ] Dashboard computes from persisted server timestamps; reload/reopen no drift.
