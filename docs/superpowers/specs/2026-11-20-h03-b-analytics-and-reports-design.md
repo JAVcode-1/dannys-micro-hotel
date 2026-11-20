@@ -1,0 +1,45 @@
+# H03-B Analytics & Reports
+
+The owner approved the accounting decisions and architecture following checkpoint `82f9429`. This specification covers Revenue Analytics, Room Category Performance, and Package Popularity. Net Collections means gross cash and verified GCash less completed refunds.
+
+## Authoritative events
+
+| Event | Source | Manila reporting date derives from |
+|---|---|---|
+| Online GCash | `verified_online_payments`, linked to its submission for reservation identity | `received_at` |
+| Walk-in cash / verified GCash | `walkin_ledger` payment rows | Cash `recorded_at`, GCash `received_at` |
+| Additional cash / verified GCash | `stay_receipts` | `received_at` |
+| Completed refund | `refund_transfers`, linked through `refund_claims` | `transferred_at` |
+
+Normalize these sources into one transient event stream before joining to room items. Validate each GCash source against the private `gcash_reference_registry`. Its unique normalized reference, exclusive source foreign keys, and insertion triggers enforce cross-source identity. A registry mismatch or conflicting source claim fails the report with a generic data-integrity error. Submissions, reference registry rows, allocations, and audits never independently contribute money. Walk-in cash and stay cash are separate journals with distinct write flows and idempotency constraints. Both require actual cash events. Cash has no shared external transaction identifier. Do not collapse legitimate equal-value receipts based on amount and time, and document that a human recording one handover through two different workflows cannot be identified reliably from existing records. Refund claims, unpaid obligations, credits and waivers are not cash movements.
+
+## Allocation and reconciliation
+
+Replay complete relevant reservation history through the report cutoff. Use database-precision timestamps and durable causal links. Order explicit allocations and releases by recorded time, respecting their original receipt and allocation references. Use cash dates for trend buckets even when a later recorded event establishes or changes attribution within the report cutoff. Keep unapproved extension commitments outside package performance. A release removes the corresponding commitment and returns the amount to available attribution, without creating any receipt or refund. Never allow a fallback allocation to compete with a recorded allocation for the same centavos.
+
+For fallback, distribute the receipt remainder by outstanding room-item balance at the payment event, then by outstanding original package, extension and additional-charge balances for each assigned room item. Derive balances from immutable original snapshots, recorded debits, applicable credits, and prior receipt applications. Use integer quotient and remainder with stable item IDs and snapshot line ordinal to break ties. Cap fallback at supported balances and retain any remainder as unclassified or unattributed. Keep a known item/category even when the underlying line cannot be established. Where event ordering or historical amounts cannot be substantiated, retain only supported attribution. Never use current catalog prices to reconstruct history.
+
+Associate completed refunds with their recorded item and original verified online receipt. Where the refundable snapshot and original funding establish specific package lines, reverse the supported amounts. Refunds without line-level evidence remain unclassified within the known category. Cash collections and refunds remain independent of popularity eligibility. Assert reconciliation for both gross and refunds and derive net by subtraction. Overall equals categories plus unattributed. Each category equals its package contributions, additional charges, and unclassified amounts. Verify these identities before applying a package display filter.
+
+## Popularity
+
+Expand actual purchased snapshot lines, preserving category, package identity and version, duration, and price. Report original and extension counts separately with a combined count. Count online originals by recorded confirmation and the existing verified full-payment rule. For walk-ins, use the recorded event at which the ceiling-rounded 50% minimum was first met, requiring evidence of paid confirmation or completed service. For extensions, require an approved decision and the existing verified funding minimum, including the supported zero-price case. Count at the first recorded time both conditions are established. Exclude approved item cancellations and preserve siblings. Retain eligible confirmed paid reservations without a recorded check-in. The schema has no explicit no-show event, so it cannot provide a no-show breakdown or verify a distinct no-show cohort.
+
+## API, UI and exports
+
+Use a read-only, repeatable-read transaction per request behind existing active-staff authorization. Project only required internal identifiers, timestamps, amounts, states and package snapshots. Select in-range event and purchase candidates first, then load relevant history for their reservation IDs through the cutoff, including prior-period receipts for refunds. Parameterize queries and bound statement duration, candidate count, and cumulative input rows. Overflow and timeout produce explicit errors. Agree on internal thresholds using representative isolated query plans before calling performance verified. Independent requests can observe newer data, so parity means the same output for the same filter and database snapshot.
+
+Expose dashboard aggregates and downloads through the same filter parser, calculator and projection. Allow a maximum of 366 local calendar days. Use half-open UTC intervals derived from Manila dates, Monday-start weeks and calendar months. Package category filtering applies to the package view and export, with overall and category reconciliation computed from the complete report. Display separate category and purchase-date meanings in the staff UI. Use the existing Royal Horizon staff shell and navigation, responsive tables, accessible filter inputs, and loading, empty and unavailable states. Clear report data when the staff session changes.
+
+Use the same ordered export rows for CSV and XLSX and reject exports over 10,000 data rows. Quote and escape CSV fields and neutralize formula-leading text, including leading whitespace and control characters. Render XLSX labels as literal strings and amounts as numeric cells, with explicit failure for values Excel cannot represent at centavo precision. Use private, non-cacheable responses and fixed safe filenames. Output contains aggregates and allowlisted reporting labels only.
+
+Use backend-only `write-excel-file@4.1.1` as the candidate workbook writer. It is MIT-licensed and its publisher records 2026 releases, including a Node ZIP implementation update. It provides genuine XLSX output with typed cells, avoiding a custom workbook implementation. Use generation only, with no untrusted workbook input, macro, external link, or formula support. Verify the pinned dependency and resolved transitive versions against advisories before installation. In particular, check the resolved `fflate` version against the malformed ZIP64 advisory even though reporting uses only archive generation. Verify workbook contents with an independent reader in acceptance tests. [Publisher package](https://www.npmjs.com/package/write-excel-file) · [Release history](https://github.com/catamphetamine/write-excel-file/blob/master/CHANGELOG.md) · [ZIP64 advisory](https://github.com/advisories/GHSA-px8p-9vwx-vf98)
+
+## Acceptance and checkpoint
+
+- Hand-calculate partial cash, verified and unverified GCash, mixed methods, multi-room and component allocation, explicit precedence, and timestamped releases before and after cutoff. Assert exact-once cash recognition under duplicate joins and cross-source reference attempts.
+- Cover purchased and unpaid extensions, completed and pending refunds, cancelled items with preserved siblings, the confirmed-paid basis for retained bookings, waived charges, rate changes, missing history, and centavo ties. Assert source, category and component totals independently.
+- Cover Manila day, Monday-week and month boundaries, API authorization, private-field exclusion, export formula safety, CSV/XLSX parity, explicit bounds, stable snapshot reads, and representative isolated query plans.
+- Run build, typecheck, lint, formatting, application tests and isolated PostgreSQL tests. Review the diff and staged files for sensitive data. Record evidence in milestones, decisions and project context before the verified H03-B development checkpoint on `main`.
+
+The reporting design requires no migration or reporting index. Any later proposal for either needs separate justification and approval. Hosted Supabase is outside verification, H01/H02 stay unapplied there, and existing inventory reconciliation blockers and disabled live transaction gates remain in effect. The held-badge defect, H04, Function Hall, and other analytics are outside H03-B.
