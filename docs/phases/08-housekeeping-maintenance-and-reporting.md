@@ -98,3 +98,14 @@ Development is paused; Analytics & Reports remains planned, not implemented. Fin
 - [ ] Update [[14-milestones]].
 
 **Next in approved order:** after remaining core work and Analytics, future [[future-function-hall-requirements|Function Hall Reservation & Management]], then [[09-hardening-pilot-and-release]]. Detailed hall task mapping remains pending; do not begin it automatically.
+
+
+## H03-B development checkpoint - 2026-11-20
+
+The staff Analytics desk and staff-only dashboard and download routes provide Net Collections trends, room category performance and package popularity. The report reads authoritative receipts, verified GCash registry ownership, completed transfers and immutable snapshots through a read-only repeatable-read PostgreSQL transaction. The shared calculator uses centavo arithmetic, explicit allocation priority, historical balances, separate purchase eligibility and unclassified or unattributed buckets. An independent review identified three major cases that now have regression coverage: explicit allocations reserving charge balances, walk-in deposit dates preceding recorded check-in, and missing package snapshots retaining their known room balance.
+
+The 366-day Manila date range, 10,000 candidate reservations, 50,000 input rows, five-second query budget and 10,000 export rows apply. Application fixtures exercise bounds and authorization. The backend-only MIT-licensed write-excel-file 4.1.1 resolves to MIT-licensed fflate 0.8.3. npm reported zero vulnerabilities at installation. Independent ZIP/XML and CSV parsing confirmed workbook structure, literal text, numeric cells and matching fixture values.
+
+Explicit no-show cohort verification remains unavailable in the current schema. Distinct authoritative cash records count separately, and duplicate human entry across workflows has no shared external identifier. Formal staff/device acceptance and representative high-volume query profiling remain pending. Hosted Supabase was untouched, H01/H02 inventory reconciliation remains pending, live writes stay disabled, and no database migration or index accompanies this checkpoint.
+
+Build, typecheck, lint and formatting passed. All 141 application tests (99 backend and 42 frontend) and 22 isolated PostgreSQL tests passed without failures or skips. Bounded analytics snapshot read in 14 ms on the isolated fixture set.

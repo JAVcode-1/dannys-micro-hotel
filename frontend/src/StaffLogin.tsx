@@ -1,3 +1,4 @@
+import StaffAnalytics from "./StaffAnalytics";
 import StaffAuditDesk from "./StaffAuditDesk";
 import StayChangesDesk from "./StayChangesDesk";
 import { useEffect, useState } from "react";
@@ -175,7 +176,7 @@ export default function StaffLogin({
     );
   return (
     <section
-      className={`mx-auto rounded-2xl border border-subtle bg-white p-7 shadow-sm ${identity && ["/staff/audit", "/staff/stay-changes", "/staff/cancellations", "/staff/stays", "/staff/check-ins", "/staff/rooms", "/staff/settings", "/staff/payments", "/staff/walkins"].includes(window.location.pathname) ? "max-w-6xl" : "max-w-md"}`}
+      className={`mx-auto rounded-2xl border border-subtle bg-white p-7 shadow-sm ${identity && ["/staff/analytics", "/staff/audit", "/staff/stay-changes", "/staff/cancellations", "/staff/stays", "/staff/check-ins", "/staff/rooms", "/staff/settings", "/staff/payments", "/staff/walkins"].includes(window.location.pathname) ? "max-w-6xl" : "max-w-md"}`}
     >
       <h1 className="text-2xl font-bold text-main">Staff sign-in</h1>
       <p className="mt-2 text-sm text-muted">
@@ -276,8 +277,19 @@ export default function StaffLogin({
           >
             Staff audit
           </a>
+          <a
+            href="/staff/analytics"
+            className="inline-flex min-h-11 items-center pl-4 text-primary"
+          >
+            Analytics
+          </a>
           {session &&
-            (window.location.pathname === "/staff/audit" ? (
+            (window.location.pathname === "/staff/analytics" ? (
+              <StaffAnalytics
+                key={session.access_token}
+                token={session.access_token}
+              />
+            ) : window.location.pathname === "/staff/audit" ? (
               <StaffAuditDesk
                 key={session.access_token}
                 token={session.access_token}

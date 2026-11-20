@@ -1,3 +1,4 @@
+import { registerAnalytics } from "./analytics.js";
 import { registerAudit } from "./audit.js";
 import { registerMaintenance } from "./maintenance.js";
 import { registerStayChanges } from "./extensions.js";
@@ -93,6 +94,7 @@ export function createApp(
       "/staff/catalog/categories",
       "/staff/rooms",
       "/staff/audit",
+      "/staff/analytics",
       "/staff/settings",
     ],
     (request, response, next) => {
@@ -408,6 +410,7 @@ export function createApp(
   registerHousekeeping(app, catalogStaff);
   registerMaintenance(app, catalogStaff);
   registerAudit(app, catalogStaff);
+  registerAnalytics(app, catalogStaff);
   registerCancellations(app, catalogStaff, guestVerifier);
   registerReschedules(app, catalogStaff, guestVerifier);
   registerStayChanges(app, catalogStaff);

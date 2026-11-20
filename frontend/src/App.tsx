@@ -31,6 +31,7 @@ export default function App() {
   if (
     typeof window !== "undefined" &&
     (window.location.pathname === "/staff" ||
+      window.location.pathname === "/staff/analytics" ||
       window.location.pathname === "/staff/rooms" ||
       window.location.pathname === "/staff/settings" ||
       window.location.pathname === "/staff/payments" ||

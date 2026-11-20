@@ -1,3 +1,4 @@
+import { h03AnalyticsPostgres } from "./h03-analytics-postgres.mjs";
 import { h03AuditPostgres } from "./h03-audit-postgres.mjs";
 import { h02Postgres } from "./h02-postgres.mjs";
 import { x03Postgres, x03Behavior } from "./x03-postgres.mjs";
@@ -396,6 +397,7 @@ test("isolated PostgreSQL serializes thirty capacity contenders and replays idem
     await h01Postgres(t, pool);
     await h02Postgres(t, pool);
     await h03AuditPostgres(t, pool);
+    await h03AnalyticsPostgres(t, pool);
   } finally {
     await pool.end();
   }
