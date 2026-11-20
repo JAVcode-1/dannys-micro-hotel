@@ -5,6 +5,12 @@ status: in-progress
 # 14 — Milestones & Work Tracker
 
 
+## H03-A development checkpoint - 2026-11-20
+
+H03-A adds staff audit search over the existing event records and verifies T23 through X03's existing policy-aware incident, fee and waiver workflows. No migration or dependency added. H03 analytics, the separately scoped room-board held badge correction, hosted H01/H02 reconciliation and formal Phase 08 acceptance remain open. See [[phases/08-housekeeping-maintenance-and-reporting]].
+
+Verification passed for build, typecheck, lint, formatting, 128 application tests and 21 isolated PostgreSQL tests.
+
 ## H02 development checkpoint - 2026-11-20
 
 H02 adds audited maintenance opening, progress and clearance, blocks the room from allocation, exposes affected paid room items, and preserves existing bookings and checkout turnover. Live gates remain closed. Build, typecheck, lint, formatting, 125 application tests and 20 isolated PostgreSQL tests passed. The H02 migration remains local and depends on the unapplied H01 migration. H01 legacy Ready-room compatibility remains a hosted deployment blocker. Formal acceptance remains open. See [[phases/08-housekeeping-maintenance-and-reporting]].

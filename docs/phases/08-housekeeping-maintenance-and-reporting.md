@@ -1,9 +1,19 @@
 ---
 tags: [phase-08, implementation, operations]
-status: h02-development-checkpoint-acceptance-pending
+status: h03-a-development-checkpoint-acceptance-pending
 ---
 # Phase 08 — Housekeeping, Maintenance, Incidents & Reporting
 
+
+## H03-A development checkpoint - 2026-11-20
+
+The owner authorized the incident and audit slice only. The X03 staff incident desk, policy/disclosure enforcement, charge and waiver writes, and immutable ledger remain the source of truth. H03-A adds T23 evidence for the recorded actor, reason and time, waiver and approved-charge retries, immutable history, and payment and sibling-item preservation.
+
+Authenticated active staff can search the **Staff audit** page or `GET /staff/audit` by actor, action, Manila date range and recorded subject. The query reads an allowlisted projection of existing audit, room, housekeeping, maintenance, payment review and booking/financial event records. It prefers authoritative subject-bearing events over their duplicate generic audit entries. Historical rows without durable subject evidence remain subjectless. Results omit free-form notes, guest/payer data, credentials, GCash proof and payment references. Pages are bounded and ordered by the full database timestamp and a source-qualified event ID.
+
+No schema migration or new dependency was needed. H01 and H02 remain unapplied to hosted Supabase, with the legacy Ready-room reconciliation and other hosted inventory conditions pending. Live mutation gates remain closed. The room-board `pending_review` versus `proof_pending_review` badge defect is tracked separately. Analytics & Reports still requires owner approval of revenue recognition and allocation rules. H04 and Function Hall remain outside this checkpoint. Formal Phase 08 acceptance remains open.
+
+Build, typecheck, lint and formatting passed. All 128 application tests (87 backend and 41 frontend) and 21 isolated PostgreSQL tests passed with no failures or skips. The isolated suite included H01 and H02, T23 policy and disclosure enforcement, charge and waiver retry evidence, exact Manila date boundaries, stable pagination across tied timestamps, subject filters and masking. Hosted acceptance and the full milestone quality gate remain pending.
 
 ## H02 development checkpoint - 2026-11-20
 

@@ -1,11 +1,15 @@
 ---
 tags: [icm, project-context]
-status: h02-development-checkpoint-acceptance-pending
+status: h03-a-development-checkpoint-acceptance-pending
 ---
 # Session Context — StayTrack / Danny's Micro Hotel
 
 
-## Latest H02 checkpoint - 2026-11-20
+## Latest H03-A checkpoint - 2026-11-20
+
+H03-A reuses X03 incident policy, disclosures, charges and waivers and adds searchable staff audit with actor, exact action, Manila dates and recorded subject, bounded cursor pagination and sensitive fields excluded. Existing H01/H02 events supply room subjects where recorded. No migration, reporting calculation or dependency added. Both hosted migrations remain unapplied and live gates closed. Carry forward the H01 legacy Ready mismatch, orphan Cleaning, inconsistent stays and legacy maintenance reconciliation conditions. H03-B awaits specific owner approval and accounting definitions. The held-badge state mismatch remains separately scoped. Formal Phase 08 acceptance remains open.
+
+## H02 checkpoint - 2026-11-20
 
 H02 implements staff maintenance opening, progress, explicit clearance and affected room-item review. Category-before-block-before-room locking protects existing allocations and rejects occupied rooms. Clearance preserves H01 readiness and turnover. The H02 candidate migration depends on H01. Both remain unapplied to hosted Supabase and live mutation gates remain closed. Build, typecheck, lint, format, 125 application tests and 20 isolated PostgreSQL tests passed. The H01 legacy Ready-room mismatch stays a deployment blocker pending hosted inventory and migration readiness review. Formal acceptance stays open. See [[../phases/08-housekeeping-maintenance-and-reporting]].
 

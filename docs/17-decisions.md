@@ -5,6 +5,10 @@ status: approved-baseline
 # 17 — Approved Decisions Register
 
 
+## H03-A approved incident and audit boundary - 2026-11-20
+
+Reuse X03's existing incident and ledger actions. Staff-only audit search exposes a fixed safe field set and uses authoritative subject identifiers where recorded. Generic historical audit rows have an unknown subject, and no subject is backfilled. There is no schema migration. Finance reporting remains pending separate authorization and approved recognition, allocation and adjustment definitions. The room-board held badge mismatch remains a separately scoped defect.
+
 ## H02 approved maintenance boundary - 2026-11-20
 
 Open maintenance only for an unoccupied physical room. Reuse the existing room block, preserve affected bookings for explicit staff resolution and retain immutable progress history. Clearance requires an authorized action, and returning a previously Ready room to service requires explicit confirmation, valid H01 history and expired turnover protection. Missing H01 readiness sends the room through existing housekeeping. Live gates stay disabled and no hosted migration is authorized. Legacy Ready rooms with historical checkouts and missing H01 events require hosted reconciliation before deployment.

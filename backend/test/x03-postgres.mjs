@@ -332,11 +332,46 @@ export async function x03Behavior(t, pool) {
         ),
         (e) => e.status === 409,
       );
-      await decideStayReview(
+      const waiverInput = { requestKey: key(), reason, action: "waive" };
+      const paymentSnapshot = async () =>
+        (
+          await pool.query(
+            "select 'base' as source,to_jsonb(l) as entry from staytrack.walkin_ledger l where reservation_id=$1 union all select 'stay',to_jsonb(r) from staytrack.stay_receipts r where reservation_id=$1 order by source,entry",
+            [f.reservation],
+          )
+        ).rows;
+      const beforeWaiver = await paymentSnapshot();
+      const waiver = await decideStayReview(
         actor,
         review.id,
-        { requestKey: key(), reason, action: "waive" },
+        waiverInput,
         pool,
+      );
+      assert.deepEqual(
+        await decideStayReview(actor, review.id, waiverInput, pool),
+        waiver,
+      );
+      const evidence = (
+        await pool.query(
+          "select r.reason as incident_reason,r.actor_auth_user_id as incident_actor,r.recorded_at as incident_at,w.reason,w.actor_auth_user_id,w.recorded_at,w.amount_centavos from staytrack.stay_charge_reviews r join staytrack.stay_charge_entries w on w.review_id=r.id where r.id=$1 and w.id=$2",
+          [review.id, waiver.id],
+        )
+      ).rows[0];
+      assert.equal(evidence.incident_reason, reason);
+      assert.equal(evidence.incident_actor, actor);
+      assert.ok(evidence.incident_at instanceof Date);
+      assert.equal(evidence.reason, reason);
+      assert.equal(evidence.actor_auth_user_id, actor);
+      assert.ok(evidence.recorded_at instanceof Date);
+      assert.equal(Number(evidence.amount_centavos), 0);
+      assert.deepEqual(await paymentSnapshot(), beforeWaiver);
+      assert.deepEqual(await snap(f.sibling.id), sibling);
+      await assert.rejects(
+        pool.query(
+          "update staytrack.stay_charge_entries set reason='changed' where id=$1",
+          [waiver.id],
+        ),
+        /immutable/i,
       );
       await assert.rejects(
         decideStayReview(
@@ -519,12 +554,24 @@ export async function x03Behavior(t, pool) {
         },
         pool,
       );
-      const sc = await decideStayReview(
-        actor,
-        sr.id,
-        { requestKey: key(), reason, action: "charge" },
-        pool,
+      const chargeInput = { requestKey: key(), reason, action: "charge" };
+      const sc = await decideStayReview(actor, sr.id, chargeInput, pool);
+      assert.deepEqual(
+        await decideStayReview(actor, sr.id, chargeInput, pool),
+        sc,
       );
+      const charges = (
+        await pool.query(
+          "select id,amount_centavos,actor_auth_user_id,reason,recorded_at from staytrack.stay_charge_entries where review_id=$1",
+          [sr.id],
+        )
+      ).rows;
+      assert.equal(charges.length, 1);
+      assert.equal(charges[0].id, sc.id);
+      assert.equal(Number(charges[0].amount_centavos), 2500);
+      assert.equal(charges[0].actor_auth_user_id, actor);
+      assert.equal(charges[0].reason, reason);
+      assert.ok(charges[0].recorded_at instanceof Date);
       const money = await receipt(disclosed, 1000);
       await allocateStayReceipt(
         actor,
