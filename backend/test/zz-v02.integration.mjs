@@ -1,3 +1,4 @@
+import { h04ReviewsPostgres } from "./h04-reviews-postgres.mjs";
 import { h03AnalyticsPostgres } from "./h03-analytics-postgres.mjs";
 import { h03AuditPostgres } from "./h03-audit-postgres.mjs";
 import { h02Postgres } from "./h02-postgres.mjs";
@@ -398,6 +399,7 @@ test("isolated PostgreSQL serializes thirty capacity contenders and replays idem
     await h02Postgres(t, pool);
     await h03AuditPostgres(t, pool);
     await h03AnalyticsPostgres(t, pool);
+    await h04ReviewsPostgres(t, pool);
   } finally {
     await pool.end();
   }

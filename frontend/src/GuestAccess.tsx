@@ -6,8 +6,10 @@ import GuestReservations from "./GuestReservations";
 
 export default function GuestAccess({
   authClient = staffAuth,
+  reviewsEnabled = false,
 }: {
   authClient?: SupabaseClient | null;
+  reviewsEnabled?: boolean;
 }) {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -173,7 +175,9 @@ export default function GuestAccess({
           {message}
         </p>
       )}
-      {step === "verified" && token && <GuestReservations token={token} />}
+      {step === "verified" && token && (
+        <GuestReservations token={token} reviewsEnabled={reviewsEnabled} />
+      )}
     </section>
   );
 }

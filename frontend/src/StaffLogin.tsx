@@ -1,4 +1,5 @@
 import StaffAnalytics from "./StaffAnalytics";
+import StaffReviewDesk from "./StaffReviewDesk";
 import StaffAuditDesk from "./StaffAuditDesk";
 import StayChangesDesk from "./StayChangesDesk";
 import { useEffect, useState } from "react";
@@ -18,9 +19,11 @@ import CheckInDesk from "./CheckInDesk";
 export default function StaffLogin({
   authClient = staffAuth,
   apiUrl = apiBase,
+  reviewsEnabled = false,
 }: {
   authClient?: typeof staffAuth;
   apiUrl?: string;
+  reviewsEnabled?: boolean;
 } = {}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -283,8 +286,23 @@ export default function StaffLogin({
           >
             Analytics
           </a>
+          {reviewsEnabled && (
+            <nav className="flex flex-wrap gap-4 py-2 text-primary">
+              <a href="/staff/reviews">Review moderation</a>
+              <a href="/staff/feedback">Private feedback</a>
+            </nav>
+          )}
           {session &&
-            (window.location.pathname === "/staff/analytics" ? (
+            (reviewsEnabled &&
+            ["/staff/reviews", "/staff/feedback"].includes(
+              window.location.pathname,
+            ) ? (
+              <StaffReviewDesk
+                key={session.access_token}
+                token={session.access_token}
+                feedback={window.location.pathname === "/staff/feedback"}
+              />
+            ) : window.location.pathname === "/staff/analytics" ? (
               <StaffAnalytics
                 key={session.access_token}
                 token={session.access_token}

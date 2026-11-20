@@ -1,3 +1,4 @@
+import { registerReviews } from "./review-routes.js";
 import { registerAnalytics } from "./analytics.js";
 import { registerAudit } from "./audit.js";
 import { registerMaintenance } from "./maintenance.js";
@@ -50,7 +51,7 @@ export function createApp(
       response.setHeader("Access-Control-Allow-Origin", allowedOrigin);
       response.setHeader(
         "Access-Control-Allow-Headers",
-        "Authorization, Content-Type, X-GCash-Payee, X-Transaction-Reference",
+        "Authorization, Content-Type, Idempotency-Key, X-GCash-Payee, X-Transaction-Reference",
       );
       response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
       response.setHeader("Vary", "Origin");
@@ -411,6 +412,7 @@ export function createApp(
   registerMaintenance(app, catalogStaff);
   registerAudit(app, catalogStaff);
   registerAnalytics(app, catalogStaff);
+  registerReviews(app, catalogStaff, guestVerifier);
   registerCancellations(app, catalogStaff, guestVerifier);
   registerReschedules(app, catalogStaff, guestVerifier);
   registerStayChanges(app, catalogStaff);

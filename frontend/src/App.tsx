@@ -11,8 +11,32 @@ import { WalkInPreview } from "./WalkInDesk";
 import StayMonitor from "./StayMonitor";
 import CheckInDesk from "./CheckInDesk";
 import { staffInviteCallback } from "./staff-auth";
+import GuestReviews from "./GuestReviews";
+import GuestReviewAccess from "./GuestReviewAccess";
 
-export default function App() {
+export default function App({
+  reviewsEnabled = false,
+}: { reviewsEnabled?: boolean } = {}) {
+  if (reviewsEnabled && typeof window !== "undefined") {
+    const path = window.location.pathname;
+    if (
+      path === "/reviews" ||
+      path === "/reviews/submit" ||
+      path === "/feedback/private"
+    ) {
+      return (
+        <main className="min-h-svh bg-canvas px-6 py-12 text-main">
+          {path === "/reviews" ? (
+            <GuestReviews />
+          ) : (
+            <GuestReviewAccess
+              initial={path === "/feedback/private" ? "feedback" : "review"}
+            />
+          )}
+        </main>
+      );
+    }
+  }
   if (
     typeof window !== "undefined" &&
     window.location.pathname === "/staff/stay-changes-preview"
@@ -30,7 +54,11 @@ export default function App() {
         new URLSearchParams(window.location.search).get("type") === "invite"));
   if (
     typeof window !== "undefined" &&
-    (window.location.pathname === "/staff" ||
+    ((reviewsEnabled &&
+      ["/staff/reviews", "/staff/feedback"].includes(
+        window.location.pathname,
+      )) ||
+      window.location.pathname === "/staff" ||
       window.location.pathname === "/staff/analytics" ||
       window.location.pathname === "/staff/rooms" ||
       window.location.pathname === "/staff/settings" ||
@@ -45,7 +73,7 @@ export default function App() {
   )
     return (
       <main className="min-h-svh bg-canvas px-6 py-16 text-main">
-        <StaffLogin />
+        <StaffLogin reviewsEnabled={reviewsEnabled} />
       </main>
     );
   if (
@@ -63,7 +91,7 @@ export default function App() {
   )
     return (
       <main className="min-h-svh bg-canvas px-6 py-16 text-main">
-        <GuestAccess />
+        <GuestAccess reviewsEnabled={reviewsEnabled} />
       </main>
     );
   if (typeof window !== "undefined" && window.location.pathname === "/rooms")

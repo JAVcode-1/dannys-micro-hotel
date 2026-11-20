@@ -5,11 +5,19 @@ import type { GuestReservation } from "@staytrack/shared";
 import { apiBase } from "./staff-auth";
 import { hotelTime, peso } from "./BookingPlanner";
 import GuestPayment from "./GuestPayment";
+import GuestReviewAccess from "./GuestReviewAccess";
 
-export default function GuestReservations({ token }: { token: string }) {
+export default function GuestReservations({
+  token,
+  reviewsEnabled = false,
+}: {
+  token: string;
+  reviewsEnabled?: boolean;
+}) {
   const [rows, setRows] = useState<GuestReservation[]>([]);
   const [message, setMessage] = useState("Loading your reservations…");
   const [paymentId, setPaymentId] = useState<string | null>(null);
+  const [reviewId, setReviewId] = useState<string | null>(null);
   useEffect(() => {
     const controller = new AbortController();
     void fetch(`${apiBase}/guest/reservations`, {
@@ -100,6 +108,23 @@ export default function GuestReservations({ token }: { token: string }) {
           </button>
           {paymentId === row.id && (
             <GuestPayment token={token} reservationId={row.id} />
+          )}
+          {reviewsEnabled && (
+            <div className="mt-3">
+              <button
+                className="min-h-11 text-primary"
+                onClick={() => setReviewId(row.id)}
+              >
+                Review or send feedback
+              </button>
+              {reviewId === row.id && (
+                <GuestReviewAccess
+                  key={row.id}
+                  token={token}
+                  reservation={row.id}
+                />
+              )}
+            </div>
           )}
         </article>
       ))}
