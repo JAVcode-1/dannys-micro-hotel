@@ -44,7 +44,7 @@ test("foundation page renders with approved Royal Horizon tokens", () => {
   }
 });
 
-test("Vite serves the themed foundation page", async () => {
+test("Vite serves the themed foundation page and protected deep links", async () => {
   const server = await preview({
     configFile: fileURLToPath(new URL("../vite.config.ts", import.meta.url)),
     root: fileURLToPath(new URL("../", import.meta.url)),
@@ -58,6 +58,9 @@ test("Vite serves the themed foundation page", async () => {
     assert.equal(page.status, 200);
     const html = await page.text();
     assert.match(html, /StayTrack - Danny's Micro Hotel/);
+    const staffPage = await fetch(`${origin}/staff/analytics`);
+    assert.equal(staffPage.status, 200);
+    assert.equal(await staffPage.text(), html);
     const cssPath = html.match(/href="(\/assets\/[^"]+\.css)"/)?.[1];
     assert.ok(cssPath, "built CSS is linked from the page");
     const stylesheet = await fetch(`${origin}${cssPath}`);

@@ -4,6 +4,10 @@ status: approved-baseline
 ---
 # 17 — Approved Decisions Register
 
+## Staff session routing before UI refinement - 2026-11-20
+
+React Router keeps one staff session provider and layout mounted across protected pages. Restoration and Express membership verification use a loading state. A confirmed signed-out, invalid or expired session opens `/staff/sign-in`. A successful sign-in returns the employee to the requested staff page. Express remains the authority for all privileged requests, and Hall and Reviews keep their existing feature gates.
+
 
 ## H03-A approved incident and audit boundary - 2026-11-20
 

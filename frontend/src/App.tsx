@@ -1,7 +1,9 @@
+import { useState } from "react";
+import { BrowserRouter, Route, Routes } from "react-router";
+import { staffRoutes } from "./StaffRoutes";
 import { StayChangesPreview } from "./StayChangesDesk";
 import CancellationDesk from "./CancellationDesk";
 import { ReschedulePreview } from "./RescheduleDesk";
-import StaffLogin from "./StaffLogin";
 import GuestAccess from "./GuestAccess";
 import Catalog from "./Catalog";
 import BookingPlanner from "./BookingPlanner";
@@ -10,15 +12,55 @@ import { PaymentReviewPreview } from "./StaffPaymentReviews";
 import { WalkInPreview } from "./WalkInDesk";
 import StayMonitor from "./StayMonitor";
 import CheckInDesk from "./CheckInDesk";
-import { staffInviteCallback } from "./staff-auth";
+import { staffAuth, staffInviteCallback } from "./staff-auth";
 import GuestReviews from "./GuestReviews";
 import GuestReviewAccess from "./GuestReviewAccess";
 import { HallInformation } from "./HallDesk";
 
+type AppOptions = {
+  reviewsEnabled?: boolean;
+  hallEnabled?: boolean;
+  staffAuthClient?: typeof staffAuth;
+};
+
 export default function App({
   reviewsEnabled = false,
   hallEnabled = false,
-}: { reviewsEnabled?: boolean; hallEnabled?: boolean } = {}) {
+  staffAuthClient,
+}: AppOptions = {}) {
+  const [invitePath] = useState(() => {
+    if (typeof window === "undefined") return null;
+    const { hash, search, pathname } = window.location;
+    return staffInviteCallback ||
+      new URLSearchParams(hash.slice(1)).get("type") === "invite" ||
+      new URLSearchParams(search).get("type") === "invite"
+      ? pathname
+      : null;
+  });
+  const publicPages = (
+    <PublicPages reviewsEnabled={reviewsEnabled} hallEnabled={hallEnabled} />
+  );
+
+  if (typeof window === "undefined") return publicPages;
+  return (
+    <BrowserRouter>
+      <Routes>
+        {staffRoutes({
+          authClient: staffAuthClient,
+          reviewsEnabled,
+          hallEnabled,
+          invitePath,
+        })}
+        <Route path="*" element={publicPages} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+function PublicPages({
+  reviewsEnabled,
+  hallEnabled,
+}: Required<Pick<AppOptions, "reviewsEnabled" | "hallEnabled">>) {
   if (
     hallEnabled &&
     typeof window !== "undefined" &&
@@ -52,37 +94,6 @@ export default function App({
     return (
       <main className="min-h-svh bg-canvas p-6 text-main">
         <StayChangesPreview />
-      </main>
-    );
-  const inviteCallback =
-    staffInviteCallback ||
-    (typeof window !== "undefined" &&
-      (new URLSearchParams(window.location.hash.slice(1)).get("type") ===
-        "invite" ||
-        new URLSearchParams(window.location.search).get("type") === "invite"));
-  if (
-    typeof window !== "undefined" &&
-    ((reviewsEnabled &&
-      ["/staff/reviews", "/staff/feedback"].includes(
-        window.location.pathname,
-      )) ||
-      window.location.pathname === "/staff" ||
-      window.location.pathname === "/staff/analytics" ||
-      (hallEnabled && window.location.pathname === "/staff/hall") ||
-      window.location.pathname === "/staff/rooms" ||
-      window.location.pathname === "/staff/settings" ||
-      window.location.pathname === "/staff/payments" ||
-      window.location.pathname === "/staff/walkins" ||
-      window.location.pathname === "/staff/check-ins" ||
-      window.location.pathname === "/staff/stays" ||
-      window.location.pathname === "/staff/cancellations" ||
-      window.location.pathname === "/staff/reschedules" ||
-      window.location.pathname === "/staff/stay-changes" ||
-      inviteCallback)
-  )
-    return (
-      <main className="min-h-svh bg-canvas px-6 py-16 text-main">
-        <StaffLogin reviewsEnabled={reviewsEnabled} hallEnabled={hallEnabled} />
       </main>
     );
   if (
