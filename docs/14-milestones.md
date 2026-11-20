@@ -5,6 +5,16 @@ status: in-progress
 # 14 — Milestones & Work Tracker
 
 
+## H01 verified development checkpoint - 2026-11-20
+
+Staged security check: Gitleaks reported no leaks in the explicit H01 staged diff; unrelated Obsidian/editor/nested-vault changes and sensitive files are excluded. Semgrep/OSV and the full executable milestone gate were not run.
+
+Owner approved H01 only. Implemented immutable per-checkout cleaning start/finish/explicit Ready with staff actor/server time, validated transactional transitions, retries/concurrency, maintenance conflicts and separate protected turnover. Existing staff board integrates controls and authoritative readiness/capacity/block/history information; normal housekeeping and all existing live transaction gates remain disabled. No H02 or later feature is started. Details and acceptance limits: [[phases/08-housekeeping-maintenance-and-reporting]].
+
+Evidence: root build/typecheck/lint/format and `npm test` pass, **123 application tests (84 backend + 39 frontend)**; disposable loopback PostgreSQL 17 complete suite **19 tests passed, zero failures/skips**, including H01 T21, immutable/client-denied events, active staff, maintenance state/block conflicts and observed lock contention, audit rollback, buffer boundary/readiness separation and sibling preservation. Fixed the existing X03 lock observer to refresh its statistics snapshot; all original contention assertions remain. One read-only native review completed, minor validation/session-display corrections covered. No full milestone scanner/CLI-review gate, manual device or hosted acceptance is claimed. Existing frontend chunk warning remains.
+
+Changed scope: backend rooms/app, shared housekeeping contracts/export, existing StaffRooms, focused API/UI/SQL tests, integration wiring, X03 test observer and four canonical Markdown records. No new runtime dependency, lockfile or root dev-command change. Candidate fifteenth migration `20261120001400_housekeeping_ready.sql` is **unapplied on hosted Supabase**; prior 14 synchronized migrations are owner evidence. No hosted connection/reset/seed/live enablement. Formal phase/task checkboxes remain open. Next: separate migration readiness review/owner application authorization and synthetic staff/device acceptance; H02 only when instructed.
+
 ## Final Analytics scope revision - 2026-11-20
 
 Revision checkpoint validation is documentation-only: review scope/links, unchanged completion-checkbox counts, unchanged Function Hall specification and migration files, diff whitespace and staged secret scan. No dependency or application change; application/database suites and the full milestone gate are not rerun for this revision. The 116-test evidence below belongs to the preceding checkpoint, not a new run. Existing acceptance gaps remain open; no implementation task starts.

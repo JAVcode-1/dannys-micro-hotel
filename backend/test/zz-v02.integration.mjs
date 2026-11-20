@@ -1,4 +1,5 @@
 import { x03Postgres, x03Behavior } from "./x03-postgres.mjs";
+import { h01Postgres } from "./h01-postgres.mjs";
 import { x02Postgres } from "./x02-postgres.mjs";
 import { x01Postgres } from "./x01-postgres.mjs";
 import assert from "node:assert/strict";
@@ -390,6 +391,7 @@ test("isolated PostgreSQL serializes thirty capacity contenders and replays idem
     await x02Postgres(t, pool);
     await x03Postgres(t, pool);
     await x03Behavior(t, pool);
+    await h01Postgres(t, pool);
   } finally {
     await pool.end();
   }

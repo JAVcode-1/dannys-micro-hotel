@@ -1,14 +1,10 @@
 import React from "react";
 import { apiBase } from "./staff-auth";
-
-type Room = {
-  id: number;
-  code: string;
-  category_code: string;
-  category_name: string;
-  operational_state: string;
-  active: boolean;
-};
+import type {
+  StaffRoom,
+  HousekeepingAction,
+  HousekeepingInput,
+} from "@staytrack/shared";
 const status: Record<string, string> = {
   ready: "bg-green-100 text-green-800",
   occupied: "bg-purple-100 text-purple-800",
@@ -18,19 +14,34 @@ const status: Record<string, string> = {
 };
 
 export default function StaffRooms({ token }: { token: string }) {
-  const [rooms, setRooms] = React.useState<Room[]>([]);
+  const [rooms, setRooms] = React.useState<StaffRoom[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [checks, setChecks] = React.useState<Record<string, boolean>>({});
+  const retries = React.useRef<Record<string, HousekeepingInput>>({});
+  const load = React.useCallback(
+    async (signal?: AbortSignal) => {
+      const response = await fetch(`${apiBase}/staff/rooms`, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal,
+      });
+      if (!response.ok)
+        throw new Error(
+          "Room board is unavailable. Check staff access and try again.",
+        );
+      setRooms((await response.json()) as StaffRoom[]);
+    },
+    [token],
+  );
   React.useEffect(() => {
     const controller = new AbortController();
-    void fetch(`${apiBase}/staff/rooms`, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error();
-        setRooms((await response.json()) as Room[]);
-      })
+    setRooms([]);
+    setError("");
+    setLoading(true);
+    setChecks({});
+    retries.current = {};
+    void load(controller.signal)
       .catch(() => {
         if (!controller.signal.aborted)
           setError(
@@ -41,7 +52,62 @@ export default function StaffRooms({ token }: { token: string }) {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [token]);
+  }, [token, load]);
+  async function act(room: StaffRoom, action: HousekeepingAction) {
+    if (!room.checkout_id || busy) return;
+    const cycle = `${room.id}:${room.checkout_id}`;
+    const retry = `${cycle}:${action}`;
+    const input = retries.current[retry] ?? {
+      checkoutId: room.checkout_id,
+      action,
+      requestKey: crypto.randomUUID(),
+      ...(action === "ready" ? { checksConfirmed: true } : {}),
+    };
+    retries.current[retry] = input;
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch(
+        `${apiBase}/staff/rooms/${room.id}/housekeeping`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(input),
+        },
+      );
+      if (!response.ok) {
+        const body = await response.json();
+        throw new Error(
+          body.error ??
+            "Housekeeping could not be recorded. Refresh and retry.",
+        );
+      }
+      await load();
+      delete retries.current[retry];
+      setChecks((current) => ({ ...current, [cycle]: false }));
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Housekeeping unavailable. Refresh and retry.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  const time = (value: string) =>
+    new Date(value).toLocaleString("en-PH", {
+      timeZone: "Asia/Manila",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
   return (
     <section className="mt-8 border-t border-subtle pt-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -54,7 +120,25 @@ export default function StaffRooms({ token }: { token: string }) {
         <span className="rounded-full bg-selected px-3 py-2 text-sm font-semibold text-primary">
           {rooms.length} rooms on record
         </span>
+        <button
+          type="button"
+          className="min-h-11 rounded-lg border border-subtle px-4 text-sm font-semibold disabled:opacity-50"
+          disabled={busy || loading}
+          onClick={() => {
+            setBusy(true);
+            setError("");
+            void load()
+              .catch(() => setError("Room board refresh failed."))
+              .finally(() => setBusy(false));
+          }}
+        >
+          Refresh room board
+        </button>
       </div>
+      <p className="mt-3 text-sm text-muted">
+        Physical readiness and turnover protection are separate. Capacity claims
+        below are provisional, not guest room assignments.
+      </p>
       {loading && (
         <p role="status" className="mt-6 text-muted">
           Loading room board…
@@ -72,32 +156,143 @@ export default function StaffRooms({ token }: { token: string }) {
         </p>
       )}
       <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {rooms.map((room) => (
-          <article
-            key={room.id}
-            className="rounded-xl border border-subtle bg-white p-4"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="font-bold">{room.code}</h3>
-                <p className="mt-1 text-sm text-muted">{room.category_name}</p>
+        {rooms.map((room) => {
+          const events = room.housekeeping ?? [];
+          const stage = events.at(-1)?.action;
+          const action: HousekeepingAction =
+            stage === "start"
+              ? "finish"
+              : stage === "finish"
+                ? "ready"
+                : "start";
+          const label = {
+            start: "Start cleaning",
+            finish: "Finish cleaning",
+            ready: "Mark Ready",
+          }[action];
+          const cycle = `${room.id}:${room.checkout_id}`;
+          return (
+            <article
+              key={room.id}
+              className="rounded-xl border border-subtle bg-white p-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-bold">{room.code}</h3>
+                  <p className="mt-1 text-sm text-muted">
+                    {room.category_name}
+                  </p>
+                </div>
+                <span
+                  className={`rounded-full px-2 py-1 text-xs font-semibold ${status[room.operational_state] ?? status.unverified}`}
+                >
+                  {room.operational_state === "unverified"
+                    ? "Unverified"
+                    : room.operational_state[0].toUpperCase() +
+                      room.operational_state.slice(1)}
+                </span>
               </div>
-              <span
-                className={`rounded-full px-2 py-1 text-xs font-semibold ${status[room.operational_state] ?? status.unverified}`}
-              >
-                {room.operational_state === "unverified"
-                  ? "Unverified"
-                  : room.operational_state[0].toUpperCase() +
-                    room.operational_state.slice(1)}
-              </span>
-            </div>
-            {!room.active && (
-              <p className="mt-4 text-xs font-semibold text-muted">
-                Inactive · unavailable for booking
-              </p>
-            )}
-          </article>
-        ))}
+              <div className="mt-4 space-y-2 text-sm">
+                {room.available_now && (
+                  <p className="font-semibold text-green-800">Available now</p>
+                )}
+                {room.operational_state === "cleaning" && (
+                  <p className="font-semibold text-amber-800">
+                    {stage === "finish"
+                      ? "Cleaning finished · Not Ready"
+                      : stage === "start"
+                        ? "Cleaning in progress · Not Ready"
+                        : "Needs cleaning · Not Ready"}
+                  </p>
+                )}
+                {room.maintenance_now && (
+                  <p className="font-semibold">Maintenance block active</p>
+                )}
+                {room.turnover_until && (
+                  <p>
+                    Turnover protected until {time(room.turnover_until)}{" "}
+                    (Asia/Manila)
+                  </p>
+                )}
+                {room.held_now > 0 && (
+                  <p>
+                    Held / awaiting review: {room.held_now} provisional claim
+                  </p>
+                )}
+                {room.reserved_now > 0 && (
+                  <p>Reserved: {room.reserved_now} provisional claim</p>
+                )}
+                {events.map((event) => (
+                  <p
+                    key={event.action}
+                    className="break-words text-xs text-muted"
+                  >
+                    {
+                      {
+                        start: "Cleaning started",
+                        finish: "Cleaning finished",
+                        ready: "Marked Ready",
+                      }[event.action]
+                    }{" "}
+                    · {time(event.occurredAt)} · Staff {event.actorId}
+                  </p>
+                ))}
+              </div>
+              {room.operational_state === "cleaning" &&
+                room.checkout_id &&
+                stage !== "ready" && (
+                  <div className="mt-4 space-y-3 border-t border-subtle pt-4">
+                    {!room.housekeeping_enabled && (
+                      <p className="text-sm text-muted">
+                        Live housekeeping is closed pending acceptance.
+                      </p>
+                    )}
+                    {action === "ready" && (
+                      <label className="flex min-h-11 items-start gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          className="mt-1"
+                          disabled={
+                            busy ||
+                            !room.housekeeping_enabled ||
+                            room.maintenance_now
+                          }
+                          checked={checks[cycle] ?? false}
+                          onChange={(event) =>
+                            setChecks((current) => ({
+                              ...current,
+                              [cycle]: event.target.checked,
+                            }))
+                          }
+                        />
+                        I completed the applicable room checks and confirm this
+                        room is Ready.
+                      </label>
+                    )}
+                    <button
+                      type="button"
+                      className="min-h-11 rounded-lg bg-primary px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={
+                        busy ||
+                        !room.active ||
+                        !room.housekeeping_enabled ||
+                        room.maintenance_now ||
+                        (action === "ready" && !checks[cycle])
+                      }
+                      onClick={() => void act(room, action)}
+                    >
+                      {label}
+                    </button>
+                  </div>
+                )}
+              {!room.active && (
+                <p className="mt-4 text-xs font-semibold text-muted">
+                  Inactive · unavailable for booking
+                </p>
+              )}
+            </article>
+          );
+        })}
       </div>
     </section>
   );

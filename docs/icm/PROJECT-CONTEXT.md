@@ -1,9 +1,19 @@
 ---
 tags: [icm, project-context]
-status: development-paused-future-scope-documented
+status: h01-development-checkpoint-acceptance-pending
 ---
 # Session Context — StayTrack / Danny's Micro Hotel
 
+
+## Latest H01 checkpoint - 2026-11-20
+
+Owner approved bounded H01 implementation only. Reused existing checkout/Ready/buffer architecture and room states; added immutable per-checkout start/finish/explicit Ready with authenticated staff, database timestamps, checks attestation, exact retries, transactional state/maintenance protection and atomic audit. Integrated the existing room board with physical readiness, current provisional capacity claims, availability, maintenance, protected turnover and event history/controls. Normal H01 writes and all prior live gates stay disabled. Buffer expiry cannot mark Ready; Ready cannot release a buffer or bypass check-in safeguards. No reservation, payment, booked price or sibling history rewrite.
+
+Candidate fifteenth migration: `supabase/migrations/20261120001400_housekeeping_ready.sql`, **local/unapplied to hosted Supabase**; SHA-256 `532AB3518556C573F96860A601B09D40C629480B44EAB24EFE0C05514653B59F`. Prior 14 migrations are owner-confirmed synchronized. No hosted query/write/reset/seed or live activation. No new dependency, lockfile or root dev-command change. Relevant files: backend rooms/app, shared housekeeping contract/export, StaffRooms, focused API/UI/SQL tests and integration wiring. X03's existing contention observer now refreshes its statistics snapshot per poll without reducing assertions.
+
+Fresh verification: root build/typecheck/lint/format and tests passed, **123 application tests (84 backend + 39 frontend)** and **19 isolated PostgreSQL 17 tests**, zero failures/skips. Existing ignored portable tooling ran the complete suite against a new loopback `staytrack_test` database; no hosted fallback. H01 coverage includes T21, buffer boundaries/Ready independence, transition and stale-checkout checks, active-staff denial, duplicate/competing actions, actual-lock maintenance contention, audit rollback, immutable/client-denied history, sibling independence, UI actions/retries and session-switch clearing. One independent native read-only review found no critical/major defect; its minor validation and stale display findings were corrected. This is not a full scanloop/greploop executable milestone gate. Existing >500 kB frontend warning persists.
+
+Formal Phase 07/08 and earlier acceptance remain open, as do hosted synthetic sessions, actual inventory/buffer configuration, P08 operational checks, device/browser walkthrough and predeployment gate. Canonical details: [[../phases/08-housekeeping-maintenance-and-reporting]]. No ICM/Graphify external sync performed. Next: separately review/authorize candidate migration application and acceptance; **stop after H01, do not begin H02 automatically**. Later future-module scope notes remain valid; their historical pause no longer blocks this expressly approved H01 checkpoint.
 
 ## Final Analytics scope revision - 2026-11-20
 

@@ -626,6 +626,8 @@ export async function x03Behavior(t, pool) {
         let first, second;
         async function wait(count) {
           for (let i = 0; i < 200; i++) {
+            // The gate transaction must observe fresh backend activity on every poll.
+            await gate.query("select pg_stat_clear_snapshot()");
             const n = (
               await gate.query(
                 "select count(*)::int as n from pg_stat_activity where datname=current_database() and wait_event_type='Lock' and pid<>pg_backend_pid()",

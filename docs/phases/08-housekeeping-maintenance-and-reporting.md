@@ -1,9 +1,23 @@
 ---
 tags: [phase-08, implementation, operations]
-status: not-started
+status: h01-development-checkpoint-acceptance-pending
 ---
 # Phase 08 — Housekeeping, Maintenance, Incidents & Reporting
 
+
+## H01 development checkpoint - 2026-11-20
+
+The owner explicitly approved the bounded H01 design and implementation. This supersedes the historical development pause for **H01 only**. H02/H03/H04 and Function Hall are not implemented or authorized by this checkpoint. Phase 07/08 formal acceptance remains pending; all formal checkboxes below stay open.
+
+Dependencies: existing W03 checkout/immutable turnover blocks, W02 Ready-only check-in, shared category/table/room transaction locking and individual active staff. The prior **14 migrations remain owner-confirmed synchronized**, not independently rechecked here. Candidate `supabase/migrations/20261120001400_housekeeping_ready.sql` is local and **unapplied to hosted Supabase**. No hosted query/write, reset, seed or live activation was performed. No dependency or dev-command change.
+
+Implemented: preserve `cleaning`/`ready`/`occupied`/`maintenance` states; add private immutable start, finish and explicit Ready events associated with the latest checkout, actor, request key, database timestamp and Ready-check confirmation. SQL enforces ordering, active staff, current room/checkout and maintenance checks, and atomically audits/marks Ready. Category-before-block-before-room locking coordinates operations; exact retries return the existing event and competing actions cannot duplicate transitions. Direct room-state updates cannot bypass required Ready evidence or an active turnover block. Existing checkout, reservations, claims, financial and sibling histories remain intact.
+
+Express adds `POST /staff/rooms/:id/housekeeping`; normal registration unconditionally leaves it closed. The existing staff room board shows authoritative physical state, current provisional held/reserved claims, maintenance, availability, turnover-until and cleaning actor/time history; it provides Start cleaning, Finish cleaning and checkbox-confirmed Mark Ready controls. Physical Ready never removes/shortens the protected buffer. Buffer expiry never writes Ready. Before migration application, the existing room-list fallback remains read-only and conservatively reports no immediate availability. Times render in Asia/Manila with AM/PM. No H02 maintenance creation/release UI exists.
+
+Verification: root `npm run build`, `npm run typecheck`, `npm run lint`, `npm test` and `npm run format:check` passed; **123 application tests (84 backend + 39 frontend)** and **19 isolated PostgreSQL 17 tests**, zero failures/skips. The existing ignored portable PostgreSQL tooling ran the complete integration suite on loopback `staytrack_test`, including migration apply/rollback, RLS/client ACLs, T21 expired dirty-room denial and later Ready-only access, exact SQL buffer boundaries, Ready-before-expiry denial, transition/stale-checkout validation, active-staff rejection, duplicate/competing actions, observed-lock concurrent maintenance, immutable events, audit failure rollback and sibling snapshots. A historical fixture uses one precise SQL instant; no protected history was edited to simulate expiry. UI tests cover action sequence, explicit checks, closed/maintenance controls, stable retry keys and clearing the board on session change. The X03 concurrency observer now clears its transaction statistics snapshot per poll; no production assertion or lock protection was weakened.
+
+One independent read-only native review found no critical/major defect; strict action validation and session-switch display fixes address its minor findings. Gitleaks scanned the explicitly staged H01 diff with redaction and reported no leaks; the staged file list excludes credentials, guest/payment data and unrelated Obsidian/editor/nested-vault changes. Semgrep, OSV and the executable full scanloop/greploop milestone gate were not run for this ordinary checkpoint. Existing >500 kB frontend bundle warning remains. Hosted acceptance, real staff/device walkthrough, real room inventory/configuration and P08 operational checks, earlier phase gaps and the full predeployment quality gate remain open. Review the candidate migration separately before any owner-authorized hosted application. Stop after H01; H02 requires a new instruction.
 
 ## Final Analytics scope revision - 2026-11-20
 

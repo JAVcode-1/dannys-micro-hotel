@@ -14,7 +14,7 @@ import {
   registerPaymentRoutes,
   type PaymentRouteOptions,
 } from "./payment-routes.js";
-import { staffRooms } from "./rooms.js";
+import { staffRooms, registerHousekeeping } from "./rooms.js";
 import { registerStayMonitoring } from "./stay-monitoring.js";
 import { registerCheckIn } from "./check-in.js";
 import {
@@ -402,6 +402,7 @@ export function createApp(
   registerWalkInRoutes(app, catalogStaff, walkInOptions);
   registerCheckIn(app, catalogStaff);
   registerStayMonitoring(app, catalogStaff);
+  registerHousekeeping(app, catalogStaff);
   registerCancellations(app, catalogStaff, guestVerifier);
   registerReschedules(app, catalogStaff, guestVerifier);
   registerStayChanges(app, catalogStaff);

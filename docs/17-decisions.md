@@ -5,6 +5,14 @@ status: approved-baseline
 # 17 — Approved Decisions Register
 
 
+## H01 approved implementation boundary - 2026-11-20
+
+Owner explicitly approved the bounded Housekeeping & Ready workflow and implementation, overriding the earlier development pause for H01 only. Reuse existing states and architecture; represent cleaning progress as immutable per-checkout events, never new physical states. Start precedes finish; explicit staff Ready follows finish and records confirmation of applicable checks. This is staff attestation, not an invented hotel inspection checklist or completed P08 acceptance.
+
+Physical readiness and turnover remain separate. Ready may be recorded before turnover ends, but it does not change the protected checkout block or permit check-in during the buffer; expiry alone never writes Ready. SQL uses active staff, server time, shared category-before-block-before-room locks, latest-checkout checks and atomic actor audit. No maintenance-management/release policy, payment rule or new rate is introduced. Express remains authoritative; live gates remain closed. Candidate `20261120001400_housekeeping_ready.sql` remains local, unapplied pending separate owner authorization. Prior 14 migrations remain owner-confirmed synchronized.
+
+Checkpoint evidence: **123 application + 19 isolated PostgreSQL tests passed**, root build/typecheck/lint/format passed; acceptance details in [[phases/08-housekeeping-maintenance-and-reporting]]. Existing X03 concurrency polling now explicitly refreshes the PostgreSQL statistics snapshot, retaining its actual-lock observation assertions. One independent read-only native review is ordinary checkpoint assurance, not the full milestone quality gate. No formal Phase 07/08 completion, hosted acceptance or authorization for H02 follows.
+
 ## Final Analytics scope revision - 2026-11-20
 
 Owner-approved Analytics scope is **only Revenue Analytics, Room Category Performance and Package Popularity**, with date-range filtering, staff authorization and CSV/Excel exports; see [[future-analytics-and-reports]]. This supersedes the earlier six-feature proposal and related historical scope statements. Payment & Outstanding Balance Reports, Room Occupancy Analytics, Booking Analytics and Peak Hours & Demand Analytics are excluded as dedicated analytics/dashboard features and must not return under alternate labels. Existing operational availability, check-in/out, payments, balances, manual refunds, booking management and stay-duration monitoring remain unchanged.

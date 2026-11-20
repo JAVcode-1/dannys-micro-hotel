@@ -19,3 +19,4 @@ export type {
 } from "./cancellation.js";
 export * from "./rescheduling.js";
 export * from "./stay-changes.js";
+export * from "./housekeeping.js";
