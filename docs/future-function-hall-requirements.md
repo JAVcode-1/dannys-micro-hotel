@@ -71,3 +71,14 @@ Also clarify starts before 8:00 AM before supporting them. Confirmed prices and 
 ## Dependencies and future acceptance (not executed)
 
 Implement only after remaining approved core work and Analytics & Reports, with owner decisions resolved and a reviewed module design. Later demonstrate the three approved price examples, exact 5:00 PM boundary, setup-capacity limits, unsupported-rule blocking, competing overlapping bookings, staff authorization, payment reconciliation/auditing and room-inventory/report isolation. These are planned checks, not passing evidence. See [[13-development-roadmap]] and [[phases/09-hardening-pilot-and-release]].
+
+
+## Function Hall development checkpoint - 2026-11-20
+
+The gated staff workflow covers one exclusive hall with Theater Type and Room Type configurations, private staff inquiries, Manila quotes, a calendar, audited settings and verified cash or GCash receipts. The gated public information page describes approved capacities, prices, inclusions and inquiry channels. PostgreSQL excludes overlapping protected intervals across setups. The private global reference registry permits exactly one accommodation or hall source per GCash reference. Paid schedule failures retain receipts and flag manual resolution. Schedule changes use expected claim IDs and immutable revisions.
+
+Event operations enforce verified net funding and physical readiness before start. An outstanding refund approval that would underfund the event must be resolved before starting. Countdown and preparation-conflict alerts and actual completion are separate from reserved schedule time. Rescheduling, extensions, no-show release, cancellations and manual refunds keep attributable history. Hall-only reports separate verified collections, completed refunds, scheduled utilization and actual occupancy.
+
+Candidates 20261120001700 through 20261120001900 are isolated PostgreSQL migrations only. Hosted Supabase, existing transaction and H04 gates, hosted inventory blockers, and UI Refinement assets remain outside this checkpoint. Provisional operating defaults, outside-hours staff access, public inquiry details and a staff/device pilot require owner confirmation before activation. Formal major-milestone and predeployment acceptance remain open.
+
+Build, typecheck, lint and formatting passed. All 152 application tests (108 backend, 44 frontend) and 27 isolated PostgreSQL tests passed with zero failures or skips. The single independent review found five major issues, addressed before these runs. Isolated coverage includes concurrent claims and GCash uniqueness, both cross-module GCash directions, paid conflict recovery, stale schedule rejection, readiness and refund/start checks, refund caps, hall reconciliation and accommodation isolation.

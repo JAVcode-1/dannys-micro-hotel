@@ -1,4 +1,5 @@
 import StaffAnalytics from "./StaffAnalytics";
+import HallDesk from "./HallDesk";
 import StaffReviewDesk from "./StaffReviewDesk";
 import StaffAuditDesk from "./StaffAuditDesk";
 import StayChangesDesk from "./StayChangesDesk";
@@ -20,10 +21,12 @@ export default function StaffLogin({
   authClient = staffAuth,
   apiUrl = apiBase,
   reviewsEnabled = false,
+  hallEnabled = false,
 }: {
   authClient?: typeof staffAuth;
   apiUrl?: string;
   reviewsEnabled?: boolean;
+  hallEnabled?: boolean;
 } = {}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -179,7 +182,7 @@ export default function StaffLogin({
     );
   return (
     <section
-      className={`mx-auto rounded-2xl border border-subtle bg-white p-7 shadow-sm ${identity && ["/staff/analytics", "/staff/audit", "/staff/stay-changes", "/staff/cancellations", "/staff/stays", "/staff/check-ins", "/staff/rooms", "/staff/settings", "/staff/payments", "/staff/walkins"].includes(window.location.pathname) ? "max-w-6xl" : "max-w-md"}`}
+      className={`mx-auto rounded-2xl border border-subtle bg-white p-7 shadow-sm ${identity && ["/staff/hall", "/staff/analytics", "/staff/audit", "/staff/stay-changes", "/staff/cancellations", "/staff/stays", "/staff/check-ins", "/staff/rooms", "/staff/settings", "/staff/payments", "/staff/walkins"].includes(window.location.pathname) ? "max-w-6xl" : "max-w-md"}`}
     >
       <h1 className="text-2xl font-bold text-main">Staff sign-in</h1>
       <p className="mt-2 text-sm text-muted">
@@ -292,11 +295,24 @@ export default function StaffLogin({
               <a href="/staff/feedback">Private feedback</a>
             </nav>
           )}
+          {hallEnabled && (
+            <a
+              className="inline-flex min-h-11 items-center pl-4 text-primary"
+              href="/staff/hall"
+            >
+              Function Hall
+            </a>
+          )}
           {session &&
-            (reviewsEnabled &&
-            ["/staff/reviews", "/staff/feedback"].includes(
-              window.location.pathname,
-            ) ? (
+            (hallEnabled && window.location.pathname === "/staff/hall" ? (
+              <HallDesk
+                key={session.access_token}
+                token={session.access_token}
+              />
+            ) : reviewsEnabled &&
+              ["/staff/reviews", "/staff/feedback"].includes(
+                window.location.pathname,
+              ) ? (
               <StaffReviewDesk
                 key={session.access_token}
                 token={session.access_token}

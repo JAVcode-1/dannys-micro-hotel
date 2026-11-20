@@ -1,3 +1,4 @@
+import { registerHall } from "./hall-routes.js";
 import { registerReviews } from "./review-routes.js";
 import { registerAnalytics } from "./analytics.js";
 import { registerAudit } from "./audit.js";
@@ -413,6 +414,7 @@ export function createApp(
   registerAudit(app, catalogStaff);
   registerAnalytics(app, catalogStaff);
   registerReviews(app, catalogStaff, guestVerifier);
+  registerHall(app, catalogStaff);
   registerCancellations(app, catalogStaff, guestVerifier);
   registerReschedules(app, catalogStaff, guestVerifier);
   registerStayChanges(app, catalogStaff);

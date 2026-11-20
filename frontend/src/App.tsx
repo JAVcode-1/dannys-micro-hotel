@@ -13,10 +13,18 @@ import CheckInDesk from "./CheckInDesk";
 import { staffInviteCallback } from "./staff-auth";
 import GuestReviews from "./GuestReviews";
 import GuestReviewAccess from "./GuestReviewAccess";
+import { HallInformation } from "./HallDesk";
 
 export default function App({
   reviewsEnabled = false,
-}: { reviewsEnabled?: boolean } = {}) {
+  hallEnabled = false,
+}: { reviewsEnabled?: boolean; hallEnabled?: boolean } = {}) {
+  if (
+    hallEnabled &&
+    typeof window !== "undefined" &&
+    window.location.pathname === "/function-hall"
+  )
+    return <HallInformation />;
   if (reviewsEnabled && typeof window !== "undefined") {
     const path = window.location.pathname;
     if (
@@ -60,6 +68,7 @@ export default function App({
       )) ||
       window.location.pathname === "/staff" ||
       window.location.pathname === "/staff/analytics" ||
+      (hallEnabled && window.location.pathname === "/staff/hall") ||
       window.location.pathname === "/staff/rooms" ||
       window.location.pathname === "/staff/settings" ||
       window.location.pathname === "/staff/payments" ||
@@ -73,7 +82,7 @@ export default function App({
   )
     return (
       <main className="min-h-svh bg-canvas px-6 py-16 text-main">
-        <StaffLogin reviewsEnabled={reviewsEnabled} />
+        <StaffLogin reviewsEnabled={reviewsEnabled} hallEnabled={hallEnabled} />
       </main>
     );
   if (
