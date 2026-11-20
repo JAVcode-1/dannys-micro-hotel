@@ -5,6 +5,10 @@ status: in-progress
 # 14 — Milestones & Work Tracker
 
 
+## H02 development checkpoint - 2026-11-20
+
+H02 adds audited maintenance opening, progress and clearance, blocks the room from allocation, exposes affected paid room items, and preserves existing bookings and checkout turnover. Live gates remain closed. Build, typecheck, lint, formatting, 125 application tests and 20 isolated PostgreSQL tests passed. The H02 migration remains local and depends on the unapplied H01 migration. H01 legacy Ready-room compatibility remains a hosted deployment blocker. Formal acceptance remains open. See [[phases/08-housekeeping-maintenance-and-reporting]].
+
 ## H01 verified development checkpoint - 2026-11-20
 
 Staged security check: Gitleaks reported no leaks in the explicit H01 staged diff; unrelated Obsidian/editor/nested-vault changes and sensitive files are excluded. Semgrep/OSV and the full executable milestone gate were not run.

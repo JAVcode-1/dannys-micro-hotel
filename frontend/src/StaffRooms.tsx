@@ -1,3 +1,4 @@
+import RoomMaintenancePanel from "./RoomMaintenancePanel";
 import React from "react";
 import { apiBase } from "./staff-auth";
 import type {
@@ -285,6 +286,14 @@ export default function StaffRooms({ token }: { token: string }) {
                     </button>
                   </div>
                 )}
+              <RoomMaintenancePanel
+                key={token + ":" + (room.maintenance?.activeBlockId ?? "none")}
+                room={room}
+                token={token}
+                refresh={load}
+                time={time}
+                busy={busy}
+              />
               {!room.active && (
                 <p className="mt-4 text-xs font-semibold text-muted">
                   Inactive · unavailable for booking

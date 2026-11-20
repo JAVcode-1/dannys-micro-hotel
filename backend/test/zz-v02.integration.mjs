@@ -1,3 +1,4 @@
+import { h02Postgres } from "./h02-postgres.mjs";
 import { x03Postgres, x03Behavior } from "./x03-postgres.mjs";
 import { h01Postgres } from "./h01-postgres.mjs";
 import { x02Postgres } from "./x02-postgres.mjs";
@@ -392,6 +393,7 @@ test("isolated PostgreSQL serializes thirty capacity contenders and replays idem
     await x03Postgres(t, pool);
     await x03Behavior(t, pool);
     await h01Postgres(t, pool);
+    await h02Postgres(t, pool);
   } finally {
     await pool.end();
   }

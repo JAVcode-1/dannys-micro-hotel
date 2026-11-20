@@ -1,3 +1,5 @@
+import type { RoomMaintenance } from "./maintenance.js";
+
 export type HousekeepingAction = "start" | "finish" | "ready";
 export type HousekeepingInput = {
   checkoutId: string;
@@ -25,4 +27,5 @@ export type StaffRoom = {
   checkout_id: string | null;
   housekeeping: HousekeepingEvent[];
   housekeeping_enabled: boolean;
+  maintenance?: RoomMaintenance;
 };

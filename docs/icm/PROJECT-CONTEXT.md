@@ -1,11 +1,15 @@
 ---
 tags: [icm, project-context]
-status: h01-development-checkpoint-acceptance-pending
+status: h02-development-checkpoint-acceptance-pending
 ---
 # Session Context — StayTrack / Danny's Micro Hotel
 
 
-## Latest H01 checkpoint - 2026-11-20
+## Latest H02 checkpoint - 2026-11-20
+
+H02 implements staff maintenance opening, progress, explicit clearance and affected room-item review. Category-before-block-before-room locking protects existing allocations and rejects occupied rooms. Clearance preserves H01 readiness and turnover. The H02 candidate migration depends on H01. Both remain unapplied to hosted Supabase and live mutation gates remain closed. Build, typecheck, lint, format, 125 application tests and 20 isolated PostgreSQL tests passed. The H01 legacy Ready-room mismatch stays a deployment blocker pending hosted inventory and migration readiness review. Formal acceptance stays open. See [[../phases/08-housekeeping-maintenance-and-reporting]].
+
+## H01 checkpoint - 2026-11-20
 
 Owner approved bounded H01 implementation only. Reused existing checkout/Ready/buffer architecture and room states; added immutable per-checkout start/finish/explicit Ready with authenticated staff, database timestamps, checks attestation, exact retries, transactional state/maintenance protection and atomic audit. Integrated the existing room board with physical readiness, current provisional capacity claims, availability, maintenance, protected turnover and event history/controls. Normal H01 writes and all prior live gates stay disabled. Buffer expiry cannot mark Ready; Ready cannot release a buffer or bypass check-in safeguards. No reservation, payment, booked price or sibling history rewrite.
 

@@ -1,3 +1,4 @@
+import { registerMaintenance } from "./maintenance.js";
 import { registerStayChanges } from "./extensions.js";
 import { registerCancellations } from "./cancellations.js";
 import { registerReschedules } from "./rescheduling.js";
@@ -403,6 +404,7 @@ export function createApp(
   registerCheckIn(app, catalogStaff);
   registerStayMonitoring(app, catalogStaff);
   registerHousekeeping(app, catalogStaff);
+  registerMaintenance(app, catalogStaff);
   registerCancellations(app, catalogStaff, guestVerifier);
   registerReschedules(app, catalogStaff, guestVerifier);
   registerStayChanges(app, catalogStaff);

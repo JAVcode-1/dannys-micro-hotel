@@ -1,3 +1,4 @@
+import { maintenanceBoard } from "./maintenance.js";
 import { databasePool } from "./database.js";
 import { claimTransaction } from "./inventory-claims.js";
 import { BookingError } from "./booking-quote.js";
@@ -44,7 +45,12 @@ export async function staffRooms(pool = databasePool()) {
         : ""
     }
     order by c.id, r.code`);
-  return rows.map((row) => ({ ...row, housekeeping: row.housekeeping ?? [] }));
+  const maintenance = await maintenanceBoard(pool);
+  return rows.map((row) => ({
+    ...row,
+    housekeeping: row.housekeeping ?? [],
+    maintenance: maintenance[row.id],
+  }));
 }
 
 export async function recordHousekeeping(

@@ -1,9 +1,19 @@
 ---
 tags: [phase-08, implementation, operations]
-status: h01-development-checkpoint-acceptance-pending
+status: h02-development-checkpoint-acceptance-pending
 ---
 # Phase 08 — Housekeeping, Maintenance, Incidents & Reporting
 
+
+## H02 development checkpoint - 2026-11-20
+
+The owner approved H02 only. H02 uses existing room states and room blocks. Express checks staff identity and PostgreSQL rechecks active membership, then serializes changes in category, block-table and room order. Opening rejects occupied rooms and open stays. Opening, progress and clearance append immutable events with server timestamps and commit with the staff audit. Exact actor and payload retries return the recorded event.
+
+The board shows maintenance history and overlapping room items, with a staff resolution flag when the reservation has a recorded payment. Opening preserves all existing claims and bookings. It blocks new allocation to the room, and the existing allocator can conservatively reject new availability when it cannot satisfy all protected claims during maintenance. Clearance ends only its own block. Rooms with outstanding H01 requirements return to cleaning, and previously unverified rooms remain unverified. Returning a previously Ready room to service requires explicit staff confirmation, any required H01 event and elapsed turnover protection.
+
+Candidate `20261120001500_room_maintenance.sql` depends on H01 and remains unapplied to hosted Supabase. Normal API registration keeps maintenance writes closed. **Deployment blocker**: H01 can show a legacy Ready room with checkout history as available while refusing check-in because the latest checkout lacks a Ready event. H02 does not change the legacy records or resolve hosted reconciliation. H01 and H02 require separate hosted reviews and authorization. Staff and device acceptance and formal Phase 08 checkboxes remain pending.
+
+Verification: build, typecheck, lint and format checks passed, along with 125 application tests and 20 isolated PostgreSQL tests with H01 and H02 applied locally. Coverage includes T20 allocation against the persisted maintenance block, T22 paid reservation alerts, duplicate actions, check-in contention, active-staff enforcement, rollback, immutable events, explicit clearance, H01 continuation and sibling protection. No Phase 08 formal acceptance or full milestone quality gate is claimed.
 
 ## H01 development checkpoint - 2026-11-20
 

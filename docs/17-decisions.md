@@ -5,6 +5,10 @@ status: approved-baseline
 # 17 — Approved Decisions Register
 
 
+## H02 approved maintenance boundary - 2026-11-20
+
+Open maintenance only for an unoccupied physical room. Reuse the existing room block, preserve affected bookings for explicit staff resolution and retain immutable progress history. Clearance requires an authorized action, and returning a previously Ready room to service requires explicit confirmation, valid H01 history and expired turnover protection. Missing H01 readiness sends the room through existing housekeeping. Live gates stay disabled and no hosted migration is authorized. Legacy Ready rooms with historical checkouts and missing H01 events require hosted reconciliation before deployment.
+
 ## H01 approved implementation boundary - 2026-11-20
 
 Owner explicitly approved the bounded Housekeeping & Ready workflow and implementation, overriding the earlier development pause for H01 only. Reuse existing states and architecture; represent cleaning progress as immutable per-checkout events, never new physical states. Start precedes finish; explicit staff Ready follows finish and records confirmation of applicable checks. This is staff attestation, not an invented hotel inspection checklist or completed P08 acceptance.
