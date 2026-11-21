@@ -119,7 +119,11 @@ function Logo({
   cropped?: boolean;
 }) {
   return (
-    <a className="landing-brand" href="/" aria-label="Danny’s Micro Hotel home">
+    <a
+      className="landing-brand"
+      href="#top"
+      aria-label="Danny’s Micro Hotel, back to top"
+    >
       <img
         src={cropped ? "/hotel/logo.webp" : "/hotel/logo-full.webp"}
         alt=""
@@ -324,6 +328,7 @@ function Header() {
           >
             Contact
           </a>
+          <a href="/verify">Guest access</a>
         </nav>
         <div className="landing-head-actions">
           <button
@@ -623,6 +628,9 @@ export default function LandingPage({
                 <RoomCard key={room.code} room={room} packages={packages} />
               ))}
             </div>
+            <a className="landing-text-link" href="/rooms">
+              View full room rates <span aria-hidden="true">↗</span>
+            </a>
           </section>
         </div>
 

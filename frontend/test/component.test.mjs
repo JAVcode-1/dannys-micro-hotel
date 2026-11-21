@@ -16,6 +16,8 @@ test("guest landing exposes one main landmark, editorial heading and existing gu
     2,
   );
   assert.match(html, /Double Standard/);
+  assert.match(html, /href="\/rooms">View full room rates/);
+  assert.equal((html.match(/href="#top" aria-label=/g) ?? []).length, 2);
   assert.match(html, /Family Executive/);
   assert.match(html, /Function Hall/);
   assert.doesNotMatch(html, /href="\/(function-hall|reviews)"|gcash-qr/);
