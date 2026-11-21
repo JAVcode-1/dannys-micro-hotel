@@ -708,11 +708,6 @@
     width: min(calc(100% - 1.5rem), 20rem);
     padding-inline: 0.625rem;
   }
-  .landing-site-head[data-scrolled]
-    .landing-head-actions
-    :is(.landing-menu-toggle, .landing-button) {
-    border-radius: 999px;
-  }
   .landing-head-inner {
     min-height: 3.5rem;
     flex-wrap: wrap;
@@ -727,12 +722,41 @@
   }
   .landing-head-actions .landing-button {
     flex-wrap: wrap;
-    gap: 0 0.4rem;
     min-width: 0;
+    padding-inline: 0.9rem;
+    border-radius: 999px;
     overflow-wrap: anywhere;
   }
+  .landing-head-actions .landing-button > span {
+    display: none;
+  }
   .landing-menu-toggle {
-    display: inline-block;
+    display: grid;
+    flex: none;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    color: var(--brand-primary);
+    background: var(--surface-selected);
+  }
+  .landing-menu-icon {
+    display: grid;
+    gap: 4px;
+  }
+  .landing-menu-icon::before,
+  .landing-menu-icon::after {
+    content: "";
+    width: 16px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+  }
+  .landing-menu-toggle[aria-expanded="true"] .landing-menu-icon::before {
+    transform: translateY(3px) rotate(45deg);
+  }
+  .landing-menu-toggle[aria-expanded="true"] .landing-menu-icon::after {
+    transform: translateY(-3px) rotate(-45deg);
   }
   .landing-nav {
     display: none;
@@ -808,9 +832,6 @@
 @media (max-width: 23rem) {
   .landing-head-actions {
     gap: 0.35rem;
-  }
-  .landing-head-actions .landing-button {
-    padding-inline: 0.55rem;
   }
 }
 @media (prefers-reduced-motion: reduce) {

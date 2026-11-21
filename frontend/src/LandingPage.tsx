@@ -322,11 +322,12 @@ function Header() {
             type="button"
             ref={trigger}
             className="landing-menu-toggle"
+            aria-label={open ? "Close navigation" : "Open navigation"}
             aria-expanded={open}
             aria-controls="landing-navigation"
             onClick={() => setOpen((current) => !current)}
           >
-            Menu
+            <span className="landing-menu-icon" aria-hidden="true" />
           </button>
           <a className="landing-button landing-button-orange" href="/book">
             Book a room <span aria-hidden="true">↗</span>

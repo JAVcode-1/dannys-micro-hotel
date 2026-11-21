@@ -17,6 +17,7 @@ The owner approved the standalone “Stay on your time” prototype. The integra
 - [x] Reduced the header to 68 px on desktop and tablet and 60 px on mobile at default text size. Retained 44 px booking and menu controls and added 16–28 px of space above the hero. Local Edge checks covered 320, 390, 768 and 1440 px.
 - [x] Tightened the phone layout with a 56 px header, 44 px action targets, and a shorter hero with a 16:9 photo. Verified the mobile menu and pill transition at 320 and 390 px in Edge emulation.
 - [x] Capped the floating phone header at 320 px wide, with side gutters and rounded 44 px controls. Verified at 320 and 393 px in Edge emulation.
+- [x] Restyled the phone header controls with a labeled circular menu icon and a text-only booking pill in both header states. Verified 44 px control height and mobile menu behavior at 320 and 393 px.
 - [ ] Owner inspection of the integrated page. UI-02 requires a separate instruction.
 
 Browser verification used local catalog fixtures. Physical-device and hosted acceptance and the full milestone gate remain pending. The existing frontend bundle-size warning persists.
