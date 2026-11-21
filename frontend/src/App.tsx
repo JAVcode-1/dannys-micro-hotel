@@ -1,33 +1,112 @@
 import { useState } from "react";
-import { BrowserRouter, Route, Routes } from "react-router";
+import {
+  BrowserRouter,
+  Route,
+  Routes,
+  Link,
+  Outlet,
+  useParams,
+} from "react-router";
 import { staffRoutes } from "./StaffRoutes";
-import { StayChangesPreview } from "./StayChangesDesk";
-import CancellationDesk from "./CancellationDesk";
-import { ReschedulePreview } from "./RescheduleDesk";
 import GuestAccess from "./GuestAccess";
 import Catalog from "./Catalog";
 import BookingPlanner from "./BookingPlanner";
-import { PaymentPreview } from "./GuestPayment";
-import { PaymentReviewPreview } from "./StaffPaymentReviews";
-import { WalkInPreview } from "./WalkInDesk";
-import StayMonitor from "./StayMonitor";
-import CheckInDesk from "./CheckInDesk";
 import { staffAuth, staffInviteCallback } from "./staff-auth";
 import GuestReviews from "./GuestReviews";
 import GuestReviewAccess from "./GuestReviewAccess";
 import { HallInformation } from "./HallDesk";
 import LandingPage from "./LandingPage";
+import { GuestSessionProvider, useGuestSession } from "./GuestSession";
+import {
+  GuestReservationsPage,
+  GuestReservationPage,
+} from "./GuestReservations";
+import { PaymentPreview } from "./GuestPayment";
+import { PaymentReviewPreview } from "./StaffPaymentReviews";
+import { WalkInPreview } from "./WalkInDesk";
+import { StayChangesPreview } from "./StayChangesDesk";
+import { ReschedulePreview } from "./RescheduleDesk";
+import CancellationDesk from "./CancellationDesk";
+import CheckInDesk from "./CheckInDesk";
+import StayMonitor from "./StayMonitor";
 
 type AppOptions = {
   reviewsEnabled?: boolean;
   hallEnabled?: boolean;
   staffAuthClient?: typeof staffAuth;
+  guestAuthClient?: typeof staffAuth;
 };
+function GuestLayout() {
+  const session = useGuestSession();
+  const [message, setMessage] = useState("");
+  return (
+    <div className="min-h-svh bg-canvas text-main">
+      <header className="border-b border-subtle bg-white px-4 py-4 print:hidden">
+        <nav
+          aria-label="Guest navigation"
+          className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 text-primary"
+        >
+          <Link to="/" className="font-bold">
+            Danny’s Micro Hotel
+          </Link>
+          <Link to="/rooms">Rooms and rates</Link>
+          <Link to="/function-hall">Function Hall</Link>
+          <Link to="/reviews">Reviews</Link>
+          <Link to="/book">Book a room</Link>
+          <Link to="/reservations">My reservations</Link>
+          {session?.access.status === "authenticated" ? (
+            <button
+              onClick={() =>
+                void session
+                  .signOut()
+                  .catch(() => setMessage("Sign-out failed. Try again."))
+              }
+            >
+              Sign out
+            </button>
+          ) : (
+            <Link to="/verify">Verify email</Link>
+          )}
+        </nav>
+      </header>
+      {message && <p role="alert">{message}</p>}
+      <main className="mx-auto max-w-6xl px-4 py-8">
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+function ReservationRoute({
+  payment = false,
+  reviewsEnabled = false,
+}: {
+  payment?: boolean;
+  reviewsEnabled?: boolean;
+}) {
+  const { id } = useParams();
+  return (
+    <GuestReservationPage
+      reservationId={id ?? ""}
+      payment={payment}
+      reviewsEnabled={reviewsEnabled}
+    />
+  );
+}
+function NotFound() {
+  return (
+    <section>
+      <h1 className="text-2xl font-bold">Page not found</h1>
+      <p>This address does not match an available page.</p>
+      <Link to="/">Return home</Link>
+    </section>
+  );
+}
 
 export default function App({
   reviewsEnabled = false,
   hallEnabled = false,
   staffAuthClient,
+  guestAuthClient,
 }: AppOptions = {}) {
   const [invitePath] = useState(() => {
     if (typeof window === "undefined") return null;
@@ -38,11 +117,10 @@ export default function App({
       ? pathname
       : null;
   });
-  const publicPages = (
-    <PublicPages reviewsEnabled={reviewsEnabled} hallEnabled={hallEnabled} />
-  );
-
-  if (typeof window === "undefined") return publicPages;
+  if (typeof window === "undefined")
+    return (
+      <LandingPage reviewsEnabled={reviewsEnabled} hallEnabled={hallEnabled} />
+    );
   return (
     <BrowserRouter>
       <Routes>
@@ -52,116 +130,127 @@ export default function App({
           hallEnabled,
           invitePath,
         })}
-        <Route path="*" element={publicPages} />
+        <Route
+          element={
+            <GuestSessionProvider authClient={guestAuthClient}>
+              <Outlet />
+            </GuestSessionProvider>
+          }
+        >
+          <Route
+            path="/"
+            element={
+              <LandingPage
+                reviewsEnabled={reviewsEnabled}
+                hallEnabled={hallEnabled}
+              />
+            }
+          />
+          <Route element={<GuestLayout />}>
+            <Route path="/rooms" element={<Catalog />} />
+            <Route path="/book" element={<BookingPlanner />} />
+            {["/verify", "/login", "/register"].map((path) => (
+              <Route
+                key={path}
+                path={path}
+                element={
+                  <GuestAccess
+                    authClient={guestAuthClient}
+                    reviewsEnabled={reviewsEnabled}
+                  />
+                }
+              />
+            ))}
+            <Route
+              path="/reservations"
+              element={
+                <GuestReservationsPage reviewsEnabled={reviewsEnabled} />
+              }
+            />
+            <Route
+              path="/reservations/:id"
+              element={<ReservationRoute reviewsEnabled={reviewsEnabled} />}
+            />
+            <Route
+              path="/reservations/:id/payment"
+              element={
+                <ReservationRoute payment reviewsEnabled={reviewsEnabled} />
+              }
+            />
+            <Route
+              path="/function-hall"
+              element={
+                hallEnabled ? (
+                  <HallInformation />
+                ) : (
+                  <p>Function Hall is unavailable pending activation.</p>
+                )
+              }
+            />
+            <Route
+              path="/reviews"
+              element={
+                reviewsEnabled ? (
+                  <GuestReviews />
+                ) : (
+                  <p>Reviews are unavailable pending activation.</p>
+                )
+              }
+            />
+            <Route
+              path="/reviews/submit"
+              element={
+                reviewsEnabled ? (
+                  <GuestReviewAccess />
+                ) : (
+                  <p>Reviews are unavailable pending activation.</p>
+                )
+              }
+            />
+            <Route
+              path="/feedback/private"
+              element={
+                reviewsEnabled ? (
+                  <GuestReviewAccess initial="feedback" />
+                ) : (
+                  <p>Private feedback is unavailable pending activation.</p>
+                )
+              }
+            />
+            {import.meta.env?.DEV && (
+              <>
+                <Route path="/payment-preview" element={<PaymentPreview />} />
+                <Route
+                  path="/staff/payment-review-preview"
+                  element={<PaymentReviewPreview />}
+                />
+                <Route
+                  path="/staff/walkin-preview"
+                  element={<WalkInPreview />}
+                />
+                <Route
+                  path="/staff/stay-changes-preview"
+                  element={<StayChangesPreview />}
+                />
+                <Route
+                  path="/staff/reschedule-preview"
+                  element={<ReschedulePreview />}
+                />
+                <Route
+                  path="/staff/check-in-preview"
+                  element={<CheckInDesk />}
+                />
+                <Route path="/staff/stay-preview" element={<StayMonitor />} />
+                <Route
+                  path="/staff/cancellation-preview"
+                  element={<CancellationDesk />}
+                />
+              </>
+            )}
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Route>
       </Routes>
     </BrowserRouter>
-  );
-}
-
-function PublicPages({
-  reviewsEnabled,
-  hallEnabled,
-}: Required<Pick<AppOptions, "reviewsEnabled" | "hallEnabled">>) {
-  if (
-    hallEnabled &&
-    typeof window !== "undefined" &&
-    window.location.pathname === "/function-hall"
-  )
-    return <HallInformation />;
-  if (reviewsEnabled && typeof window !== "undefined") {
-    const path = window.location.pathname;
-    if (
-      path === "/reviews" ||
-      path === "/reviews/submit" ||
-      path === "/feedback/private"
-    ) {
-      return (
-        <main className="min-h-svh bg-canvas px-6 py-12 text-main">
-          {path === "/reviews" ? (
-            <GuestReviews />
-          ) : (
-            <GuestReviewAccess
-              initial={path === "/feedback/private" ? "feedback" : "review"}
-            />
-          )}
-        </main>
-      );
-    }
-  }
-  if (
-    typeof window !== "undefined" &&
-    window.location.pathname === "/staff/stay-changes-preview"
-  )
-    return (
-      <main className="min-h-svh bg-canvas p-6 text-main">
-        <StayChangesPreview />
-      </main>
-    );
-  if (
-    typeof window !== "undefined" &&
-    window.location.pathname === "/staff/reschedule-preview"
-  )
-    return (
-      <main className="min-h-svh bg-canvas p-6 text-main">
-        <ReschedulePreview />
-      </main>
-    );
-  if (
-    typeof window !== "undefined" &&
-    ["/verify", "/login", "/register"].includes(window.location.pathname)
-  )
-    return (
-      <main className="min-h-svh bg-canvas px-6 py-16 text-main">
-        <GuestAccess reviewsEnabled={reviewsEnabled} />
-      </main>
-    );
-  if (typeof window !== "undefined" && window.location.pathname === "/rooms")
-    return <Catalog />;
-  if (typeof window !== "undefined" && window.location.pathname === "/book")
-    return <BookingPlanner />;
-  if (
-    typeof window !== "undefined" &&
-    window.location.pathname === "/payment-preview"
-  )
-    return <PaymentPreview />;
-  if (
-    typeof window !== "undefined" &&
-    window.location.pathname === "/staff/payment-review-preview"
-  )
-    return <PaymentReviewPreview />;
-  if (
-    typeof window !== "undefined" &&
-    window.location.pathname === "/staff/walkin-preview"
-  )
-    return <WalkInPreview />;
-  if (
-    typeof window !== "undefined" &&
-    window.location.pathname === "/staff/check-in-preview"
-  )
-    return (
-      <main className="min-h-svh bg-canvas p-6 text-main">
-        <CheckInDesk />
-      </main>
-    );
-  if (
-    typeof window !== "undefined" &&
-    window.location.pathname === "/staff/stay-preview"
-  )
-    return (
-      <main className="min-h-svh bg-canvas p-6 text-main">
-        <StayMonitor />
-      </main>
-    );
-  if (
-    typeof window !== "undefined" &&
-    window.location.pathname === "/staff/cancellation-preview"
-  )
-    return (
-      <main className="min-h-svh bg-canvas p-6 text-main">
-        <CancellationDesk />
-      </main>
-    );
-  return (
-    <LandingPage reviewsEnabled={reviewsEnabled} hallEnabled={hallEnabled} />
   );
 }

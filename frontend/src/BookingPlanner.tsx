@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import type { BookingQuote } from "@staytrack/shared";
 import { apiBase } from "./staff-auth";
+import { useGuestSession } from "./GuestSession";
 
 type Draft = {
   id: number;
@@ -55,13 +56,134 @@ const inputClass =
   "mt-2 min-h-11 w-full rounded-xl border border-subtle bg-white px-3 text-base focus:outline-2 focus:outline-primary";
 const secondary =
   "min-h-11 rounded-xl border border-subtle px-4 font-semibold text-primary disabled:opacity-50";
+const draftKey = "staytrack.booking-selections.v1";
+const commandKey = "staytrack.booking-command.v1";
+export async function bookingRequestKey(
+  identity: string,
+  body: string,
+  storage: Pick<Storage, "getItem" | "setItem">,
+) {
+  const fingerprint = Array.from(
+    new Uint8Array(
+      await globalThis.crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(identity + ":" + body),
+      ),
+    ),
+    (byte) => byte.toString(16).padStart(2, "0"),
+  ).join("");
+  try {
+    const prior = JSON.parse(storage.getItem(commandKey) ?? "null") as {
+      fingerprint?: string;
+      key?: string;
+    } | null;
+    if (
+      prior?.fingerprint === fingerprint &&
+      typeof prior.key === "string" &&
+      /^[A-Za-z0-9_-]{16,100}$/.test(prior.key)
+    )
+      return prior.key;
+  } catch {
+    /* Invalid local retry metadata is replaced. */
+  }
+  const key = globalThis.crypto.randomUUID();
+  try {
+    storage.setItem(commandKey, JSON.stringify({ fingerprint, key }));
+  } catch {
+    /* Current-page retry remains available without storage. */
+  }
+  return key;
+}
+function restoreDraft(): Draft[] {
+  try {
+    const saved: unknown = JSON.parse(
+      window.sessionStorage.getItem(draftKey) ?? "null",
+    );
+    if (
+      Array.isArray(saved) &&
+      saved.length > 0 &&
+      saved.length <= 15 &&
+      saved.every(
+        (x: Draft) =>
+          x &&
+          Number.isInteger(x.id) &&
+          ["double_standard", "family_executive"].includes(x.category) &&
+          typeof x.date === "string" &&
+          typeof x.hour === "string" &&
+          typeof x.minute === "string" &&
+          ["AM", "PM"].includes(x.period) &&
+          Array.isArray(x.blocks) &&
+          x.blocks.length > 0 &&
+          x.blocks.length <= 30 &&
+          x.blocks.every(Number.isInteger) &&
+          Number.isInteger(x.adults) &&
+          Number.isInteger(x.children) &&
+          typeof x.extraBed === "boolean",
+      )
+    )
+      return saved as Draft[];
+  } catch {
+    /* Storage may be unavailable in a private browser. */
+  }
+  return [newRoom(1)];
+}
+const toInputs = (items: Draft[]) =>
+  items.map((item) => ({
+    category: item.category,
+    startAt: `${item.date}T${String((Number(item.hour) % 12) + (item.period === "PM" ? 12 : 0)).padStart(2, "0")}:${item.minute}:00+08:00`,
+    blocks: item.blocks,
+    adults: item.adults,
+    children: item.children,
+    extraBed: item.extraBed,
+  }));
 
 export default function BookingPlanner() {
-  const [items, setItems] = useState<Draft[]>([newRoom(1)]);
+  const guest = useGuestSession();
+  const [items, setItems] = useState<Draft[]>(restoreDraft);
   const [rates, setRates] = useState<Rate[]>([]);
   const [quote, setQuote] = useState<BookingQuote | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [bookingEnabled, setBookingEnabled] = useState(false);
+  const [policy, setPolicy] = useState<{
+    version: string;
+    text: string;
+    pendingOwnerApproval?: boolean;
+  } | null>(null);
+  const [primaryName, setPrimaryName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [acknowledged, setAcknowledged] = useState(false);
+  const [availability, setAvailability] = useState<boolean | null>(null);
+  const [request, setRequest] = useState<{ body: string; key: string } | null>(
+    null,
+  );
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(draftKey, JSON.stringify(items));
+    } catch {
+      /* Continue without draft recovery. */
+    }
+  }, [items]);
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch(`${apiBase}/guest/booking-status`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const status = (await response.json()) as {
+          enabled?: boolean;
+          bookingEnabled?: boolean;
+          policy?: typeof policy;
+        };
+        if (!controller.signal.aborted) {
+          setBookingEnabled(
+            status.enabled === true || status.bookingEnabled === true,
+          );
+          setPolicy(status.policy ?? null);
+        }
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
   useEffect(() => {
     const controller = new AbortController();
     const category = new URLSearchParams(window.location.search).get(
@@ -97,8 +219,17 @@ export default function BookingPlanner() {
             return {
               ...item,
               category: rate.code,
-              blocks: [rate.duration_minutes],
-              extraBed: false,
+              blocks:
+                (!preferredRate || item.category === preferredRate.code) &&
+                item.blocks.every((block) =>
+                  currentRates.some(
+                    (row) =>
+                      row.code === rate.code && row.duration_minutes === block,
+                  ),
+                )
+                  ? item.blocks
+                  : [rate.duration_minutes],
+              extraBed: rate.code === "family_executive" && item.extraBed,
             };
           }),
         );
@@ -116,26 +247,21 @@ export default function BookingPlanner() {
       current.map((item) => (item.id === id ? { ...item, ...patch } : item)),
     );
     setQuote(null);
+    setAvailability(null);
     setMessage("");
   }
   async function submit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
     setQuote(null);
+    setAvailability(null);
     setMessage("");
     try {
       const response = await fetch(`${apiBase}/guest/quote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: items.map((item) => ({
-            category: item.category,
-            startAt: `${item.date}T${String((Number(item.hour) % 12) + (item.period === "PM" ? 12 : 0)).padStart(2, "0")}:${item.minute}:00+08:00`,
-            blocks: item.blocks,
-            adults: item.adults,
-            children: item.children,
-            extraBed: item.extraBed,
-          })),
+          items: toInputs(items),
         }),
       });
       const data = (await response.json()) as BookingQuote & { error?: string };
@@ -148,8 +274,104 @@ export default function BookingPlanner() {
       setBusy(false);
     }
   }
+  async function checkAvailability() {
+    setBusy(true);
+    setMessage("");
+    setAvailability(null);
+    try {
+      const response = await fetch(`${apiBase}/availability`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: toInputs(items) }),
+      });
+      const data = (await response.json()) as {
+        available: boolean;
+        quote: BookingQuote;
+        error?: string;
+      };
+      if (!response.ok)
+        throw new Error(data.error ?? "Availability is unavailable.");
+      setQuote(data.quote);
+      setAvailability(data.available);
+      setMessage(
+        data.available
+          ? "Available now. Capacity is reserved only when your hold succeeds."
+          : "These schedules are unavailable. Choose another time or category.",
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Availability unavailable.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function hold(event: FormEvent) {
+    event.preventDefault();
+    if (
+      !quote ||
+      !policy ||
+      guest?.access.status !== "authenticated" ||
+      !acknowledged ||
+      !bookingEnabled
+    )
+      return;
+    setBusy(true);
+    setMessage("");
+    const body = JSON.stringify({
+      primaryName,
+      items: toInputs(items),
+      contact: {
+        phone,
+        policyVersion: policy.version,
+        policyAcknowledged: true,
+      },
+      expectedTotalCentavos: quote.totalCentavos,
+    });
+    try {
+      const key =
+        request?.body === body
+          ? request.key
+          : await bookingRequestKey(
+              guest.access.id,
+              body,
+              window.sessionStorage,
+            );
+      setRequest({ body, key });
+      const response = await fetch(`${apiBase}/guest/reservations`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${guest.access.token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...(JSON.parse(body) as Record<string, unknown>),
+          requestKey: key,
+        }),
+      });
+      const result = (await response.json()) as { id?: string; error?: string };
+      if (!response.ok || !result.id)
+        throw new Error(
+          result.error ??
+            "Booking unavailable. Retry the same request to recover its result.",
+        );
+      window.sessionStorage.removeItem(draftKey);
+      window.sessionStorage.removeItem(commandKey);
+      window.location.assign(
+        `/reservations/${encodeURIComponent(result.id)}/payment`,
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Booking unavailable. Retry to recover your result.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
-    <main className="min-h-svh bg-canvas px-5 py-8 text-main sm:px-10">
+    <section className="bg-canvas px-5 py-8 text-main sm:px-10">
       <div className="mx-auto max-w-6xl">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-subtle pb-6">
           <a href="/" className="font-bold tracking-tight text-primary">
@@ -173,7 +395,9 @@ export default function BookingPlanner() {
             package blocks. All times are Philippine time (Asia/Manila).
           </p>
           <p className="mt-2 text-sm text-muted">
-            Online booking is currently closed.
+            {bookingEnabled
+              ? "Isolated development booking. Do not send real money."
+              : "Online booking is currently closed."}
           </p>
         </div>
         <div className="grid items-start gap-8 lg:grid-cols-[1fr_320px]">
@@ -433,6 +657,13 @@ export default function BookingPlanner() {
                 <button className="min-h-11 rounded-xl bg-booking px-6 font-bold text-main disabled:opacity-50">
                   {busy ? "Calculating…" : "Calculate server quote"}
                 </button>
+                <button
+                  type="button"
+                  className={secondary}
+                  onClick={() => void checkAvailability()}
+                >
+                  Check availability
+                </button>
               </div>
             </fieldset>
             {message && (
@@ -452,10 +683,13 @@ export default function BookingPlanner() {
               {items.length} {items.length === 1 ? "room" : "rooms"}, one plan.
             </h2>
             <div className="mt-5 rounded-xl bg-lavender p-4 text-sm leading-6">
-              <strong>Planning preview</strong>
+              <strong>
+                {bookingEnabled ? "Booking review" : "Planning preview"}
+              </strong>
               <p>
-                Online booking and payments are not open. A quote does not
-                reserve availability.
+                {bookingEnabled
+                  ? "Review the server price and policies before creating your 30-minute hold."
+                  : "Online booking and payments are not open. A quote does not reserve availability."}
               </p>
             </div>
             {quote ? (
@@ -488,9 +722,7 @@ export default function BookingPlanner() {
                   </div>
                 ))}
                 <div>
-                  <p className="text-sm text-muted">
-                    Full amount due when booking opens
-                  </p>
+                  <p className="text-sm text-muted">Full reservation amount</p>
                   <p className="mt-1 text-3xl font-bold text-primary">
                     {peso(quote.totalCentavos)}
                   </p>
@@ -502,21 +734,105 @@ export default function BookingPlanner() {
                 server prices.
               </p>
             )}
-            <button
-              disabled
-              className="mt-6 min-h-11 w-full rounded-xl bg-primary px-4 font-semibold text-white opacity-50"
-            >
-              Booking not open
-            </button>
-            <a
-              href="/payment-preview"
-              className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-primary"
-            >
-              Preview the payment proof screen
-            </a>
+            {bookingEnabled ? (
+              <div className="mt-6 space-y-4">
+                {guest?.access.status === "authenticated" ? (
+                  <form
+                    onSubmit={(event) => void hold(event)}
+                    className="space-y-4"
+                  >
+                    <label className="block font-medium">
+                      Primary guest name
+                      <input
+                        className={inputClass}
+                        required
+                        maxLength={120}
+                        autoComplete="name"
+                        value={primaryName}
+                        onChange={(event) => setPrimaryName(event.target.value)}
+                      />
+                    </label>
+                    <label className="block font-medium">
+                      Contact number
+                      <input
+                        className={inputClass}
+                        required
+                        type="tel"
+                        autoComplete="tel"
+                        pattern="[+()0-9 -]{7,30}"
+                        maxLength={30}
+                        value={phone}
+                        onChange={(event) => setPhone(event.target.value)}
+                      />
+                    </label>
+                    {policy && (
+                      <>
+                        <p className="text-sm leading-6 text-muted">
+                          {policy.text}
+                        </p>
+                        {policy.pendingOwnerApproval && (
+                          <p className="text-sm text-muted">
+                            Development disclosure; owner and legal policy
+                            approval remains pending.
+                          </p>
+                        )}
+                        <label className="flex items-start gap-3 text-sm">
+                          <input
+                            className="mt-1 size-5 shrink-0"
+                            type="checkbox"
+                            required
+                            checked={acknowledged}
+                            onChange={(event) =>
+                              setAcknowledged(event.target.checked)
+                            }
+                          />
+                          I have read and acknowledge the booking policies.
+                        </label>
+                      </>
+                    )}
+                    <button
+                      disabled={
+                        busy ||
+                        !quote ||
+                        !policy ||
+                        !acknowledged ||
+                        availability === false
+                      }
+                      className="min-h-11 w-full rounded-xl bg-primary px-4 font-semibold text-white disabled:opacity-50"
+                    >
+                      {busy
+                        ? "Creating hold…"
+                        : "Create hold and continue to payment"}
+                    </button>
+                  </form>
+                ) : (
+                  <a
+                    href="/verify?returnTo=%2Fbook"
+                    className="inline-flex min-h-11 items-center font-semibold text-primary"
+                  >
+                    Verify email to continue booking
+                  </a>
+                )}
+              </div>
+            ) : (
+              <button
+                disabled
+                className="mt-6 min-h-11 w-full rounded-xl bg-primary px-4 font-semibold text-white opacity-50"
+              >
+                Booking not open
+              </button>
+            )}
+            {import.meta.env?.DEV && (
+              <a
+                href="/payment-preview"
+                className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-primary"
+              >
+                Preview the payment proof screen
+              </a>
+            )}
           </aside>
         </div>
       </div>
-    </main>
+    </section>
   );
 }

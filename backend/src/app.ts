@@ -1,4 +1,5 @@
 import { registerHall } from "./hall-routes.js";
+import { registerReservationWorkspace } from "./reservation-workspace.js";
 import { registerReviews } from "./review-routes.js";
 import { registerAnalytics } from "./analytics.js";
 import { registerAudit } from "./audit.js";
@@ -15,6 +16,20 @@ import { verifyGuest } from "./guest-auth.js";
 import type { GuestIdentity } from "./guest-auth.js";
 import { BookingError, quoteBooking } from "./booking-quote.js";
 import { guestReservations } from "./guest-booking.js";
+import {
+  createGuestHold,
+  bookingPolicy,
+  parseBookingContact,
+} from "./guest-booking.js";
+import { randomUUID } from "node:crypto";
+import {
+  claimTransaction,
+  createClaimsInTransaction,
+} from "./inventory-claims.js";
+import type { RuntimeComposition } from "./isolated-composition.js";
+import { sharedRequestLimit } from "./request-limits.js";
+import { databasePool } from "./database.js";
+import { assertIsolatedTarget, proxyTrust } from "./runtime-config.js";
 import {
   registerPaymentRoutes,
   type PaymentRouteOptions,
@@ -43,10 +58,19 @@ export function createApp(
   guestVerifier: (token: string) => Promise<GuestIdentity | null> = verifyGuest,
   paymentOptions: PaymentRouteOptions = {},
   walkInOptions: WalkInRouteOptions = {},
+  runtime?: RuntimeComposition,
 ) {
+  if (runtime?.writesEnabled) assertIsolatedTarget(runtime.pool.options);
   const app = express();
+  if (
+    process.env.RATE_LIMIT_MODE &&
+    !["memory", "postgres"].includes(process.env.RATE_LIMIT_MODE)
+  )
+    throw new Error("RATE_LIMIT_MODE must be memory or postgres.");
+  app.set("trust proxy", proxyTrust(process.env.TRUSTED_PROXY_CIDRS));
   app.use(express.json({ limit: "8kb" }));
   app.use((request, response, next) => {
+    response.vary("Origin");
     const allowedOrigin = process.env.STAFF_WEB_ORIGIN;
     if (allowedOrigin && request.header("origin") === allowedOrigin) {
       response.setHeader("Access-Control-Allow-Origin", allowedOrigin);
@@ -54,7 +78,10 @@ export function createApp(
         "Access-Control-Allow-Headers",
         "Authorization, Content-Type, Idempotency-Key, X-GCash-Payee, X-Transaction-Reference",
       );
-      response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+      response.setHeader(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, PATCH, OPTIONS",
+      );
       response.setHeader("Vary", "Origin");
       if (request.method === "OPTIONS") {
         response.status(204).end();
@@ -70,6 +97,9 @@ export function createApp(
 
   app.use(
     [
+      "/availability",
+      "/staff",
+      "/guest",
       "/staff/me",
       "/guest/me",
       "/guest/quote",
@@ -99,8 +129,28 @@ export function createApp(
       "/staff/analytics",
       "/staff/settings",
     ],
-    (request, response, next) => {
+    async (request, response, next) => {
       response.setHeader("Cache-Control", "no-store");
+      if (process.env.RATE_LIMIT_MODE === "postgres") {
+        try {
+          const result = await sharedRequestLimit(
+            runtime?.pool ?? databasePool(),
+            request.ip ?? "unknown",
+          );
+          if (!result.allowed) {
+            response.setHeader("Retry-After", String(result.retryAfter));
+            response.status(429).json({ error: "Too many requests" });
+            return;
+          }
+          next();
+          return;
+        } catch {
+          response
+            .status(503)
+            .json({ error: "Request protection unavailable." });
+          return;
+        }
+      }
       const now = Date.now();
       const address = request.ip ?? "unknown";
       if (attempts.size >= 10000) {
@@ -205,7 +255,7 @@ export function createApp(
   app.get("/catalog", async (_request, response) => {
     try {
       response.setHeader("Cache-Control", "no-store");
-      response.json(await publicCatalog());
+      response.json(await publicCatalog(runtime?.pool));
     } catch {
       response.status(503).json({ error: "Catalog unavailable" });
     }
@@ -213,7 +263,14 @@ export function createApp(
   app.post("/guest/quote", async (request, response) => {
     response.setHeader("Cache-Control", "no-store");
     try {
-      response.json(await quoteBooking(request.body?.items));
+      response.json(
+        runtime?.pool
+          ? await claimTransaction(
+              (db) => quoteBooking(request.body?.items, db),
+              runtime.pool,
+            )
+          : await quoteBooking(request.body?.items),
+      );
     } catch (error) {
       response.status(error instanceof BookingError ? error.status : 503).json({
         error:
@@ -223,12 +280,95 @@ export function createApp(
       });
     }
   });
-  app.post("/guest/reservations", (_request, response) => {
+  app.get("/guest/booking-status", (_request, response) => {
     response.setHeader("Cache-Control", "no-store");
-    response.status(503).json({
-      error:
-        "Online booking is not open. Payment and readiness checks are pending.",
+    response.json({
+      enabled: runtime?.writesEnabled === true,
+      bookingEnabled: runtime?.writesEnabled === true,
+      policy: bookingPolicy,
     });
+  });
+  app.post("/availability", async (request, response) => {
+    response.setHeader("Cache-Control", "no-store");
+    try {
+      const result = await claimTransaction(async (client) => {
+        const quote = await quoteBooking(request.body?.items, client);
+        const settings = await client.query(
+          "select cleaning_buffer_minutes from staytrack.operational_settings where id=true for share",
+        );
+        const buffer = settings.rows[0]?.cleaning_buffer_minutes;
+        if (buffer === null || buffer === undefined)
+          throw new BookingError(
+            "Availability requires configured turnover settings.",
+            503,
+          );
+        const check = await createClaimsInTransaction(
+          randomUUID(),
+          quote.items.map((item) => ({
+            category: item.category,
+            start: Date.parse(item.startAt),
+            end: Date.parse(item.endAt),
+            bufferMinutes: buffer,
+          })),
+          client,
+          true,
+        );
+        return { available: check.status === "created", quote, advisory: true };
+      }, runtime?.pool);
+      response.json(result);
+    } catch (error) {
+      response.status(error instanceof BookingError ? error.status : 503).json({
+        error:
+          error instanceof BookingError
+            ? error.message
+            : "Availability unavailable.",
+      });
+    }
+  });
+  app.post("/guest/reservations", async (request, response) => {
+    response.setHeader("Cache-Control", "no-store");
+    if (!runtime?.writesEnabled) {
+      response.status(503).json({
+        error:
+          "Online booking is not open. Payment and readiness checks are pending.",
+      });
+      return;
+    }
+    const token = /^Bearer ([^\s]+)$/.exec(
+      request.header("authorization") ?? "",
+    )?.[1];
+    if (!token) {
+      response.status(401).json({ error: "Authentication required" });
+      return;
+    }
+    try {
+      const guest = await guestVerifier(token);
+      if (!guest) {
+        response.status(403).json({ error: "Guest access denied" });
+        return;
+      }
+      const body = request.body ?? {};
+      const contact = parseBookingContact(body.contact);
+      response.json(
+        await createGuestHold(
+          guest,
+          body.requestKey,
+          body.primaryName,
+          body.items,
+          runtime.pool,
+          body.chargeDisclosures,
+          contact,
+          body.expectedTotalCentavos,
+        ),
+      );
+    } catch (error) {
+      response.status(error instanceof BookingError ? error.status : 503).json({
+        error:
+          error instanceof BookingError
+            ? error.message
+            : "Booking unavailable.",
+      });
+    }
   });
   app.get("/guest/reservations", async (request, response) => {
     response.setHeader("Cache-Control", "no-store");
@@ -245,10 +385,58 @@ export function createApp(
         response.status(403).json({ error: "Guest access denied" });
         return;
       }
-      response.json(await guestReservations(guest));
+      response.json(
+        await guestReservations(guest, runtime?.pool, {
+          limit:
+            request.query.limit === undefined
+              ? 20
+              : Number(request.query.limit),
+          offset:
+            request.query.offset === undefined
+              ? 0
+              : Number(request.query.offset),
+          reservationId:
+            typeof request.query.reservationId === "string"
+              ? request.query.reservationId
+              : undefined,
+        }),
+      );
     } catch {
       response.status(503).json({
         error: "Reservation lookup is unavailable. Online booking is not open.",
+      });
+    }
+  });
+  app.get("/guest/reservations/:id", async (request, response) => {
+    response.setHeader("Cache-Control", "no-store");
+    const token = /^Bearer ([^\s]+)$/.exec(
+      request.header("authorization") ?? "",
+    )?.[1];
+    if (!token) {
+      response.status(401).json({ error: "Authentication required" });
+      return;
+    }
+    try {
+      const guest = await guestVerifier(token);
+      if (!guest) {
+        response.status(403).json({ error: "Guest access denied" });
+        return;
+      }
+      const rows = await guestReservations(guest, runtime?.pool, {
+        reservationId: String(request.params.id),
+        limit: 1,
+      });
+      if (!rows.length) {
+        response.status(404).json({ error: "Reservation not found." });
+        return;
+      }
+      response.json(rows[0]);
+    } catch (error) {
+      response.status(error instanceof BookingError ? error.status : 503).json({
+        error:
+          error instanceof BookingError
+            ? error.message
+            : "Reservation detail unavailable.",
       });
     }
   });
@@ -274,6 +462,7 @@ export function createApp(
           categoryCode,
           durationMinutes,
           priceCentavos,
+          runtime?.pool,
         ))
       ) {
         response.status(400).json({ error: "Unsupported package or price" });
@@ -311,7 +500,7 @@ export function createApp(
   app.get("/staff/catalog", catalogStaff, async (_request, response) => {
     try {
       response.setHeader("Cache-Control", "no-store");
-      response.json(await staffCatalog());
+      response.json(await staffCatalog(runtime?.pool));
     } catch {
       response.status(503).json({ error: "Catalog unavailable" });
     }
@@ -328,6 +517,7 @@ export function createApp(
             categoryCode,
             durationMinutes,
             active,
+            runtime?.pool,
           ))
         ) {
           response.status(400).json({ error: "Unsupported package state" });
@@ -351,6 +541,7 @@ export function createApp(
             categoryCode,
             name,
             active,
+            runtime?.pool,
           ))
         ) {
           response.status(400).json({ error: "Unsupported category state" });
@@ -365,7 +556,7 @@ export function createApp(
   app.get("/staff/rooms", catalogStaff, async (_request, response) => {
     try {
       response.setHeader("Cache-Control", "no-store");
-      response.json(await staffRooms());
+      response.json(await staffRooms(runtime?.pool, runtime?.writesEnabled));
     } catch {
       response.status(503).json({ error: "Room catalog unavailable" });
     }
@@ -373,7 +564,7 @@ export function createApp(
   app.get("/staff/settings", catalogStaff, async (_request, response) => {
     try {
       response.setHeader("Cache-Control", "no-store");
-      response.json(await getSettings());
+      response.json(await getSettings(runtime?.pool));
     } catch {
       response.status(503).json({ error: "Settings unavailable" });
     }
@@ -381,7 +572,11 @@ export function createApp(
   app.put("/staff/settings", catalogStaff, async (request, response) => {
     try {
       if (
-        !(await saveSettings(response.locals.actorId as string, request.body))
+        !(await saveSettings(
+          response.locals.actorId as string,
+          request.body,
+          runtime?.pool,
+        ))
       ) {
         response.status(400).json({ error: "Invalid settings" });
         return;
@@ -406,18 +601,57 @@ export function createApp(
     response.json(result);
   });
   registerPaymentRoutes(app, catalogStaff, guestVerifier, paymentOptions);
+  registerReservationWorkspace(
+    app,
+    catalogStaff,
+    runtime?.pool,
+    runtime?.writesEnabled,
+  );
   registerWalkInRoutes(app, catalogStaff, walkInOptions);
-  registerCheckIn(app, catalogStaff);
-  registerStayMonitoring(app, catalogStaff);
-  registerHousekeeping(app, catalogStaff);
-  registerMaintenance(app, catalogStaff);
-  registerAudit(app, catalogStaff);
-  registerAnalytics(app, catalogStaff);
-  registerReviews(app, catalogStaff, guestVerifier);
-  registerHall(app, catalogStaff);
-  registerCancellations(app, catalogStaff, guestVerifier);
-  registerReschedules(app, catalogStaff, guestVerifier);
-  registerStayChanges(app, catalogStaff);
+  registerCheckIn(app, catalogStaff, runtime?.writesEnabled, runtime?.pool);
+  registerStayMonitoring(
+    app,
+    catalogStaff,
+    runtime?.writesEnabled,
+    runtime?.pool,
+  );
+  registerHousekeeping(
+    app,
+    catalogStaff,
+    runtime?.writesEnabled,
+    runtime?.pool,
+  );
+  registerMaintenance(app, catalogStaff, runtime?.writesEnabled, runtime?.pool);
+  registerAudit(app, catalogStaff, runtime?.pool);
+  registerAnalytics(app, catalogStaff, runtime?.pool);
+  registerReviews(
+    app,
+    catalogStaff,
+    guestVerifier,
+    runtime?.reviewDelivery
+      ? { pool: runtime.pool, delivery: runtime.reviewDelivery }
+      : undefined,
+  );
+  registerHall(
+    app,
+    catalogStaff,
+    runtime?.writesEnabled ? runtime.pool : undefined,
+  );
+  registerCancellations(
+    app,
+    catalogStaff,
+    guestVerifier,
+    runtime?.writesEnabled,
+    runtime?.pool,
+  );
+  registerReschedules(
+    app,
+    catalogStaff,
+    guestVerifier,
+    runtime?.writesEnabled,
+    runtime?.pool,
+  );
+  registerStayChanges(app, catalogStaff, runtime?.writesEnabled, runtime?.pool);
   return app;
 }
 

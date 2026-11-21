@@ -13,9 +13,13 @@ const status: Record<string, string> = {
   maintenance: "bg-slate-200 text-slate-700",
   unverified: "bg-slate-200 text-slate-700",
 };
+type OperationalRoom = StaffRoom & {
+  physically_ready?: boolean;
+  legacy_inspection_eligible?: boolean;
+};
 
 export default function StaffRooms({ token }: { token: string }) {
-  const [rooms, setRooms] = React.useState<StaffRoom[]>([]);
+  const [rooms, setRooms] = React.useState<OperationalRoom[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
   const [busy, setBusy] = React.useState(false);
@@ -293,7 +297,18 @@ export default function StaffRooms({ token }: { token: string }) {
                 refresh={load}
                 time={time}
                 busy={busy}
+                rooms={rooms}
               />
+              {room.legacy_inspection_eligible !== undefined && (
+                <RoomAdministration
+                  key={
+                    token + ":" + room.id + ":" + room.active + ":" + room.code
+                  }
+                  room={room}
+                  token={token}
+                  refresh={load}
+                />
+              )}
               {!room.active && (
                 <p className="mt-4 text-xs font-semibold text-muted">
                   Inactive · unavailable for booking
@@ -304,5 +319,134 @@ export default function StaffRooms({ token }: { token: string }) {
         })}
       </div>
     </section>
+  );
+}
+
+function RoomAdministration({
+  room,
+  token,
+  refresh,
+}: {
+  room: OperationalRoom;
+  token: string;
+  refresh: () => Promise<void>;
+}) {
+  const [note, setNote] = React.useState("");
+  const [code, setCode] = React.useState(room.code);
+  const [active, setActive] = React.useState(room.active);
+  const [checked, setChecked] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState("");
+  const retry = React.useRef<{ payload: string; key: string } | null>(null);
+  async function submit(inspection: boolean) {
+    const body = inspection
+      ? { note, checksConfirmed: checked }
+      : { note, code, active };
+    const payload = JSON.stringify({ inspection, ...body });
+    if (retry.current?.payload !== payload)
+      retry.current = { payload, key: crypto.randomUUID() };
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch(
+        `${apiBase}/staff/rooms/${room.id}/${inspection ? "inspection" : "admin"}`,
+        {
+          method: inspection ? "POST" : "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ ...body, requestKey: retry.current.key }),
+        },
+      );
+      if (!response.ok) throw new Error((await response.json()).error);
+      retry.current = null;
+      await refresh();
+      setNote("");
+      setChecked(false);
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Room update unavailable.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  const disabled = busy || !room.housekeeping_enabled;
+  return (
+    <details className="mt-4 border-t border-subtle pt-3">
+      <summary className="cursor-pointer font-semibold">
+        Room administration and inspection
+      </summary>
+      <p className="mt-2 text-sm">
+        Use owner-confirmed identifiers only. Current inspection can reconcile
+        missing legacy readiness evidence after any protected turnover expires;
+        it does not invent historical cleaning events.
+      </p>
+      {room.physically_ready === false &&
+        room.operational_state === "ready" && (
+          <p className="text-sm">
+            Ready label requires current inspection or latest housekeeping
+            evidence before guest access.
+          </p>
+        )}
+      <label className="mt-2 grid gap-1">
+        Confirmed room identifier
+        <input
+          maxLength={80}
+          className="rounded border border-subtle p-2"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          disabled={disabled}
+        />
+      </label>
+      <label className="flex gap-2 py-2">
+        <input
+          type="checkbox"
+          checked={active}
+          onChange={(e) => setActive(e.target.checked)}
+          disabled={disabled}
+        />
+        Active for booking
+      </label>
+      <label className="grid gap-1">
+        Administration or inspection reason
+        <textarea
+          maxLength={1000}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          className="rounded border border-subtle p-2"
+          disabled={disabled}
+        />
+      </label>
+      <button
+        className="mt-2 min-h-11 rounded border border-subtle px-3"
+        disabled={disabled || !note.trim() || !code.trim()}
+        onClick={() => void submit(false)}
+      >
+        Save room administration
+      </button>
+      {room.legacy_inspection_eligible && (
+        <>
+          <label className="flex gap-2 py-2">
+            <input
+              type="checkbox"
+              checked={checked}
+              disabled={disabled}
+              onChange={(e) => setChecked(e.target.checked)}
+            />
+            I physically inspected this room now and confirm it is Ready.
+          </label>
+          <button
+            className="min-h-11 rounded border border-subtle px-3"
+            disabled={disabled || !checked || !note.trim()}
+            onClick={() => void submit(true)}
+          >
+            Record current legacy inspection
+          </button>
+        </>
+      )}
+      {error && <p role="alert">{error}</p>}
+    </details>
   );
 }

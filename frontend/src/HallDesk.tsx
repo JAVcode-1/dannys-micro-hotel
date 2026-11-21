@@ -1,6 +1,11 @@
 ﻿import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { apiBase } from "./staff-auth";
+import {
+  pendingHallCommand,
+  hallCentavos,
+  type PendingHallCommand,
+} from "./hall-command-state";
 
 const pesos = (c: string | number) =>
   new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(
@@ -43,6 +48,26 @@ type Report = {
     preparation_minutes: number;
     cleanup_minutes: number;
   };
+};
+type Finances = {
+  id: string;
+  receipts: {
+    id: string;
+    method: string;
+    amount: string;
+    reference: string | null;
+    received_at: string;
+    evidence: string;
+  }[];
+  refunds: {
+    id: string;
+    amount: string;
+    reason: string;
+    pending: boolean;
+    method: string | null;
+    reference: string | null;
+    transferred_at: string | null;
+  }[];
 };
 
 export function HallInformation() {
@@ -87,7 +112,13 @@ function Text({
   return (
     <label className="block">
       {label}
-      <input className={field} name={name} type={type} required={required} />
+      <input
+        className={field}
+        name={name}
+        type={type}
+        required={required}
+        step={name === "amount" ? "0.01" : undefined}
+      />
     </label>
   );
 }
@@ -135,6 +166,35 @@ export default function HallDesk({ token }: { token: string }) {
   const [action, setAction] = useState("receipt");
   const [tab, setTab] = useState("calendar");
   const [retry, setRetry] = useState<{ payload: string; key: string }>();
+  const [pending, setPending] = useState<PendingHallCommand>();
+  const [selected, setSelected] = useState("");
+  const [finances, setFinances] = useState<Finances>();
+  useEffect(() => {
+    setEntries([]);
+    setFinances(undefined);
+    setPending(pendingHallCommand(sessionStorage, token).load());
+    const timer = setInterval(() => setRevision((v) => v + 1), 30000);
+    return () => clearInterval(timer);
+  }, [token]);
+  useEffect(() => {
+    setFinances(undefined);
+    if (!selected) return;
+    const controller = new AbortController();
+    void fetch(apiBase + "/staff/hall/reservations/" + selected + "/finances", {
+      headers: { Authorization: "Bearer " + token },
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Financial history unavailable.");
+        const result = await response.json();
+        if (!controller.signal.aborted) setFinances(result);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted)
+          setMessage("Financial history unavailable.");
+      });
+    return () => controller.abort();
+  }, [selected, token, revision]);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
@@ -167,16 +227,25 @@ export default function HallDesk({ token }: { token: string }) {
   async function send(event: FormEvent<HTMLFormElement>, path: string) {
     event.preventDefault();
     if (busy) return;
+    if (pending && path.startsWith("actions/")) {
+      setMessage("Resolve the saved command before recording another action.");
+      return;
+    }
     const values = Object.fromEntries(new FormData(event.currentTarget));
     const data: Record<string, unknown> = { ...values };
-    if (path === "actions/reschedule" || path === "actions/extend")
+    if (
+      [
+        "actions/reschedule",
+        "actions/extend",
+        "actions/recover_inquiry",
+      ].includes(path)
+    )
       data.expectedClaim = entries.find(
         (entry) => entry.id === data.id,
       )?.claim_id;
     for (const key of [
       "attendees",
       "minutes",
-      "amount",
       "hours",
       ...Object.keys(settingsLabels),
     ])
@@ -185,6 +254,28 @@ export default function HallDesk({ token }: { token: string }) {
     if (typeof data.transferredAt === "string")
       data.transferredAt += ":00+08:00";
     if (data.verified === "on") data.verified = true;
+    if (typeof data.amount === "string") {
+      try {
+        data.amount = hallCentavos(data.amount);
+      } catch (error) {
+        setMessage((error as Error).message);
+        return;
+      }
+    }
+    if (
+      path.startsWith("actions/") &&
+      !globalThis.confirm(
+        "Record " +
+          path.slice(8).replaceAll("_", " ") +
+          (data.id
+            ? " for " +
+              (entries.find((row) => row.id === data.id)?.organizer ?? data.id)
+            : "") +
+          (typeof data.amount === "number" ? " · " + pesos(data.amount) : "") +
+          "?",
+      )
+    )
+      return;
     setBusy(true);
     setMessage("");
     try {
@@ -199,6 +290,11 @@ export default function HallDesk({ token }: { token: string }) {
           ? retry.key
           : globalThis.crypto.randomUUID();
       setRetry({ payload: fingerprint, key });
+      if (path.startsWith("actions/")) {
+        const command = { path, payload, key };
+        pendingHallCommand(sessionStorage, token).save(command);
+        setPending(command);
+      }
       const response = await fetch(
         apiBase +
           "/staff/hall/" +
@@ -215,11 +311,21 @@ export default function HallDesk({ token }: { token: string }) {
       );
       const result = await response.json();
       if (!response.ok) {
-        if (response.status < 500) setRetry(undefined);
+        if (response.status < 500) {
+          setRetry(undefined);
+          if (path.startsWith("actions/")) {
+            pendingHallCommand(sessionStorage, token).clear();
+            setPending(undefined);
+          }
+        }
         if (result.issue) setRevision((v) => v + 1);
         throw new Error(result.error ?? result.issue ?? "Action unavailable.");
       }
       setRetry(undefined);
+      if (path.startsWith("actions/")) {
+        pendingHallCommand(sessionStorage, token).clear();
+        setPending(undefined);
+      }
       if (path === "reports") setReport(result);
       else if (path === "quote")
         setMessage(
@@ -244,9 +350,75 @@ export default function HallDesk({ token }: { token: string }) {
       setBusy(false);
     }
   }
+  async function recoverCommand(replay: boolean) {
+    if (!pending || busy) return;
+    setBusy(true);
+    try {
+      const response = await fetch(
+        apiBase +
+          "/staff/hall/" +
+          (replay ? pending.path : "commands/" + pending.key),
+        {
+          method: replay ? "POST" : "GET",
+          headers: {
+            Authorization: "Bearer " + token,
+            "Content-Type": "application/json",
+            "Idempotency-Key": pending.key,
+          },
+          ...(replay ? { body: pending.payload } : {}),
+        },
+      );
+      const result = await response.json();
+      if (!response.ok && !(response.status === 409 && result.issue))
+        throw new Error(
+          result.error ??
+            "Recovery unavailable. Keep the saved command for retry.",
+        );
+      pendingHallCommand(sessionStorage, token).clear();
+      setPending(undefined);
+      setRetry(undefined);
+      setMessage(
+        result.issue ??
+          result.result?.issue ??
+          "Saved command recovered. Review the updated reservation.",
+      );
+      setRevision((v) => v + 1);
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Recovery unavailable.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <section className="mt-6 space-y-5">
       <h2 className="text-2xl font-semibold">Function Hall</h2>
+      {pending && (
+        <section
+          aria-label="Saved Hall command"
+          className="rounded border border-subtle p-3"
+        >
+          <p>
+            A previous {pending.path.slice(8).replaceAll("_", " ")} may have
+            committed. Recover its result before entering another transaction.
+          </p>
+          <button
+            disabled={busy}
+            className={button}
+            onClick={() => void recoverCommand(false)}
+          >
+            Check saved result
+          </button>{" "}
+          <button
+            disabled={busy}
+            className={button}
+            onClick={() => void recoverCommand(true)}
+          >
+            Retry original command
+          </button>
+        </section>
+      )}
       <nav
         aria-label="Function Hall"
         className="flex flex-wrap gap-4 text-primary"
@@ -369,14 +541,32 @@ export default function HallDesk({ token }: { token: string }) {
                 <h3 className="font-semibold">
                   {row.organizer} · {row.status.replaceAll("_", " ")}
                 </h3>
+                <button
+                  className="min-h-11 text-primary"
+                  onClick={() => {
+                    setSelected(row.id);
+                    setAction(
+                      row.status === "inquiry"
+                        ? row.payment_resolution
+                          ? "recover_inquiry"
+                          : "receipt"
+                        : row.status === "in_progress"
+                          ? "complete"
+                          : "receipt",
+                    );
+                  }}
+                >
+                  Manage this reservation
+                </button>
                 <p>
                   {row.channel.replaceAll("_", " ")} ·{" "}
                   {row.quote
                     ? hotel.format(new Date(row.quote.start)) +
                       " – " +
                       hotel.format(new Date(row.quote.end))
-                    : row.quote_input.start.replace("T", " ") +
-                      " Manila (inquiry)"}
+                    : hotel.format(
+                        new Date(row.quote_input.start + ":00+08:00"),
+                      ) + " (inquiry)"}
                 </p>
                 <p>
                   Price{" "}
@@ -397,7 +587,14 @@ export default function HallDesk({ token }: { token: string }) {
                 {row.payment_resolution && (
                   <p className="font-medium">Payment needs staff resolution.</p>
                 )}
-                {row.preparation_conflict && (
+                {(row.preparation_conflict ||
+                  (row.status === "confirmed" &&
+                    start !== null &&
+                    now >= start - (settings?.preparation ?? 0) * 60000 &&
+                    entries.some(
+                      (entry) =>
+                        entry.status === "in_progress" && entry.id !== row.id,
+                    ))) && (
                   <p role="alert">
                     Preparation is due while the hall is occupied.
                   </p>
@@ -439,11 +636,19 @@ export default function HallDesk({ token }: { token: string }) {
           >
             <label>
               Reservation
-              <select name="id" required className={field}>
+              <select
+                name="id"
+                required
+                className={field}
+                value={selected}
+                onChange={(event) => setSelected(event.target.value)}
+              >
                 <option value="">Choose reservation</option>
                 {entries.map((r) => (
                   <option key={r.id} value={r.id}>
-                    {r.organizer} · {r.quote_input.start} · {r.status}
+                    {r.organizer} ·{" "}
+                    {hotel.format(new Date(r.quote_input.start + ":00+08:00"))}{" "}
+                    · {r.status}
                   </option>
                 ))}
               </select>
@@ -458,6 +663,7 @@ export default function HallDesk({ token }: { token: string }) {
                 {[
                   "receipt",
                   "confirm",
+                  "recover_inquiry",
                   "reschedule",
                   "extend",
                   "start",
@@ -475,9 +681,10 @@ export default function HallDesk({ token }: { token: string }) {
                 ))}
               </select>
             </label>
-            {action === "reschedule" && <Schedule />}
+            {["reschedule", "recover_inquiry"].includes(action) && <Schedule />}
             {[
               "reschedule",
+              "recover_inquiry",
               "extend",
               "no_show",
               "release",
@@ -491,10 +698,22 @@ export default function HallDesk({ token }: { token: string }) {
               <Text name="hours" label="Additional full hours" type="number" />
             )}
             {["receipt", "approve_refund", "overtime"].includes(action) && (
-              <Text name="amount" label="Amount in centavos" type="number" />
+              <Text name="amount" label="Amount (PHP)" type="number" />
             )}
             {action === "complete_refund" && (
-              <Text name="approval" label="Refund approval reference" />
+              <label>
+                Pending refund approval
+                <select name="approval" required className={field}>
+                  <option value="">Choose approved refund</option>
+                  {finances?.refunds
+                    .filter((refund) => refund.pending)
+                    .map((refund) => (
+                      <option key={refund.id} value={refund.id}>
+                        {pesos(refund.amount)} · {refund.reason}
+                      </option>
+                    ))}
+                </select>
+              </label>
             )}
             {["receipt", "complete_refund"].includes(action) && (
               <>
@@ -526,6 +745,36 @@ export default function HallDesk({ token }: { token: string }) {
               Record action
             </button>
           </form>
+          {finances && (
+            <section
+              aria-label="Hall financial history"
+              className="space-y-2 rounded border border-subtle p-4"
+            >
+              <h3 className="font-semibold">
+                Verified payments and refund history
+              </h3>
+              {finances.receipts.length === 0 && <p>No verified payments.</p>}
+              {finances.receipts.map((receipt) => (
+                <p key={receipt.id}>
+                  {hotel.format(new Date(receipt.received_at))} ·{" "}
+                  {receipt.method} · {pesos(receipt.amount)} ·{" "}
+                  {receipt.reference ?? "Cash received"} · {receipt.evidence}
+                </p>
+              ))}
+              {finances.refunds.map((refund) => (
+                <p key={refund.id}>
+                  {pesos(refund.amount)} ·{" "}
+                  {refund.pending
+                    ? "Approved, awaiting manual transfer"
+                    : refund.transferred_at
+                      ? "Transferred " +
+                        hotel.format(new Date(refund.transferred_at))
+                      : "No transfer required"}{" "}
+                  · {refund.reason} {refund.reference}
+                </p>
+              ))}
+            </section>
+          )}
         </>
       )}
       {tab === "reports" && (

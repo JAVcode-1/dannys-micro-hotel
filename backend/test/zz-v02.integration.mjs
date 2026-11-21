@@ -1,4 +1,10 @@
 import { hallOperationsPostgres } from "./hall-operations-postgres.mjs";
+import { guestPostgres } from "./guest-completion-postgres.mjs";
+import { sprintPostgres } from "./sprint-postgres.mjs";
+import { staffOperationalPostgres } from "./staff-operational-postgres.mjs";
+import { walkInContactPostgres } from "./walkin-contact-postgres.mjs";
+import { generateIsolatedTypes } from "../../scripts/generate-isolated-types.mjs";
+import { writeFileSync } from "node:fs";
 import { hallSchedulingPostgres } from "./hall-scheduling-postgres.mjs";
 import { h04ReviewsPostgres } from "./h04-reviews-postgres.mjs";
 import { h03AnalyticsPostgres } from "./h03-analytics-postgres.mjs";
@@ -6,7 +12,7 @@ import { h03AuditPostgres } from "./h03-audit-postgres.mjs";
 import { h02Postgres } from "./h02-postgres.mjs";
 import { x03Postgres, x03Behavior } from "./x03-postgres.mjs";
 import { h01Postgres } from "./h01-postgres.mjs";
-import { x02Postgres } from "./x02-postgres.mjs";
+import { x02Postgres, x02AfterCorrections } from "./x02-postgres.mjs";
 import { x01Postgres } from "./x01-postgres.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -35,7 +41,15 @@ test("isolated PostgreSQL serializes thirty capacity contenders and replays idem
   const target = new URL(connectionString);
   assert.ok(["localhost", "127.0.0.1", "[::1]"].includes(target.hostname));
   assert.equal(target.pathname, "/staytrack_test");
-  const pool = new Pool({ connectionString, max: 32 });
+  const pool = new Pool({
+    host: target.hostname.replace(/^\[|\]$/g, ""),
+    port: Number(target.port || 5432),
+    database: "staytrack_test",
+    user: decodeURIComponent(target.username),
+    password: decodeURIComponent(target.password),
+    ssl: false,
+    max: 32,
+  });
   try {
     await pool.query(`DO $$ BEGIN
       IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN CREATE ROLE anon; END IF;
@@ -404,6 +418,18 @@ test("isolated PostgreSQL serializes thirty capacity contenders and replays idem
     await h04ReviewsPostgres(t, pool);
     await hallSchedulingPostgres(t, pool);
     await hallOperationsPostgres(t, pool);
+    await guestPostgres(t, pool);
+    await sprintPostgres(t, pool);
+    await staffOperationalPostgres(t, pool);
+    await walkInContactPostgres(t, pool);
+    await t.test(
+      "X02 reschedule/check-in races preserve item isolation after early approval corrections",
+      x02AfterCorrections,
+    );
+    writeFileSync(
+      new URL("../../.quality/database.types.sprint.ts", import.meta.url),
+      await generateIsolatedTypes(pool),
+    );
   } finally {
     await pool.end();
   }

@@ -41,12 +41,12 @@ export async function hallReport(
       from staytrack.hall_reservations,bounds
       where actual_start<hi and coalesce(actual_end,statement_timestamp())>lo
     ), usage as (
-      select count(*)::int bookings,
-      coalesce(sum(extract(epoch from least(c.event_end,hi)-greatest(c.event_start,lo)))/60,0)::int scheduled_minutes,
+      select count(*) filter(where c.event_start<hi and c.event_end>lo)::int bookings,
+      coalesce(sum(greatest(0,extract(epoch from least(c.event_end,hi)-greatest(c.event_start,lo))))/60,0)::int scheduled_minutes,
       coalesce(sum(greatest(0,extract(epoch from least(c.event_start,hi)-greatest(c.preparation_start,lo))))/60,0)::int preparation_minutes,
       coalesce(sum(greatest(0,extract(epoch from least(c.cleanup_end,hi)-greatest(c.event_end,lo))))/60,0)::int cleanup_minutes
       from staytrack.hall_reservations r join staytrack.hall_claims c on c.id=r.claim_id
-      cross join bounds where c.released_at is null and r.status<>'cancelled' and c.event_start<hi and c.event_end>lo
+      cross join bounds where c.released_at is null and r.status<>'cancelled' and c.preparation_start<hi and c.cleanup_end>lo
     )
     select coalesce(sum(gross),0)::text gross,coalesce(sum(refund),0)::text refunds,
       (coalesce(sum(gross),0)-coalesce(sum(refund),0))::text net,

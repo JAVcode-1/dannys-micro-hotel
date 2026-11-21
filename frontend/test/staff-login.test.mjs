@@ -157,7 +157,7 @@ test("staff feature routes require both their feature gate and verified staff ac
   for (const path of ["/staff/hall", "/staff/reviews", "/staff/feedback"]) {
     window.history.replaceState(null, "", path);
     const disabled = render(createElement(App, { staffAuthClient: client() }));
-    assert.ok(screen.getByRole("heading", { name: "Stay on your time." }));
+    assert.ok(await screen.findByRole("heading", { name: "Staff sign-in" }));
     disabled.unmount();
 
     const enabled = render(

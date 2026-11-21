@@ -1,8 +1,9 @@
 import { databasePool } from "./database.js";
+import { requireTransactionStaff } from "./transaction-staff.js";
 
-export async function publicCatalog() {
-  const result = await databasePool()
-    .query(`select c.code, c.name, c.standard_occupancy_note,
+export async function publicCatalog(pool = databasePool()) {
+  const result =
+    await pool.query(`select c.code, c.name, c.standard_occupancy_note,
     p.duration_minutes, p.price_centavos
     from staytrack.room_categories c join staytrack.packages p
       on p.category_id = c.id and p.category_code = c.code
@@ -29,6 +30,7 @@ export async function changePackagePrice(
   const client = await (pool ?? databasePool()).connect();
   try {
     await client.query("begin");
+    await requireTransactionStaff(client, actorId);
     const current = await client.query(
       `select p.id, p.category_id, p.version from staytrack.packages p
       join staytrack.room_categories c on c.id = p.category_id
@@ -91,6 +93,7 @@ export async function setPackageActive(
   const client = await (pool ?? databasePool()).connect();
   try {
     await client.query("begin");
+    await requireTransactionStaff(client, actorId);
     const category = await client.query(
       "select id from staytrack.room_categories where code = $1 and active for update",
       [code],
@@ -148,6 +151,7 @@ export async function updateCategory(
   const client = await (pool ?? databasePool()).connect();
   try {
     await client.query("begin");
+    await requireTransactionStaff(client, actorId);
     const result = await client.query(
       `update staytrack.room_categories
       set name = $1, active = $2 where code = $3`,

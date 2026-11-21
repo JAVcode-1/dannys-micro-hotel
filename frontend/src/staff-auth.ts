@@ -1,4 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
+import {
+  createDevelopmentAuth,
+  developmentAuthAllowed,
+} from "./development-auth";
 
 const url = import.meta.env?.VITE_SUPABASE_URL;
 const key = import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -9,5 +13,14 @@ export const staffInviteCallback =
     "invite" ||
     new URLSearchParams(window.location.search).get("type") === "invite");
 
-export const staffAuth = url && key ? createClient(url, key) : null;
 export const apiBase = import.meta.env?.VITE_API_URL || "/api";
+export const isolatedDevelopment = developmentAuthAllowed({
+  development: import.meta.env?.DEV === true,
+  enabled: import.meta.env?.VITE_ISOLATED_DEVELOPMENT === "true",
+  hostname: typeof window === "undefined" ? "" : window.location.hostname,
+});
+export const staffAuth = isolatedDevelopment
+  ? createDevelopmentAuth(apiBase, window.sessionStorage)
+  : url && key
+    ? createClient(url, key)
+    : null;

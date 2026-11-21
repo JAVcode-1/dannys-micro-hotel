@@ -12,6 +12,7 @@ type Item = {
   checkout_at?: string;
   assigned_room?: string;
   rooms: { id: string; code: string }[];
+  no_show_review?: { decision: string; note: string };
 };
 const time = (value: string) =>
   new Intl.DateTimeFormat("en-PH", {
@@ -63,6 +64,8 @@ export default function CheckInDesk({ token }: { token?: string }) {
     }
   });
   const [selected, setSelected] = useState<Record<string, string>>({});
+  const [earlyReasons, setEarlyReasons] = useState<Record<string, string>>({});
+  const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
   const [enabled, setEnabled] = useState(!token);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -112,7 +115,11 @@ export default function CheckInDesk({ token }: { token?: string }) {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ roomId: room.id, requestKey: key }),
+          body: JSON.stringify({
+            roomId: room.id,
+            requestKey: key,
+            earlyApproval: earlyReasons[item.id],
+          }),
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error);
@@ -135,6 +142,49 @@ export default function CheckInDesk({ token }: { token?: string }) {
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Check-in unavailable.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function reviewNoShow(item: Item, decision: string) {
+    if (!token || !reviewNotes[item.id]?.trim()) return;
+    setBusy(true);
+    setMessage("");
+    const attempt = `${item.id}:no-show:${decision}:${reviewNotes[item.id]}`;
+    const key = keys.get(attempt) ?? crypto.randomUUID();
+    keys.set(attempt, key);
+    try {
+      const response = await fetch(
+        `${apiBase}/staff/check-ins/${item.id}/no-show`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            decision,
+            note: reviewNotes[item.id],
+            requestKey: key,
+          }),
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      setItems((current) =>
+        current.map((row) =>
+          row.id === item.id
+            ? {
+                ...row,
+                no_show_review: { decision, note: reviewNotes[item.id] },
+              }
+            : row,
+        ),
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "No-show review unavailable.",
       );
     } finally {
       setBusy(false);
@@ -172,6 +222,53 @@ export default function CheckInDesk({ token }: { token?: string }) {
               Past the one-hour arrival grace period. Review with staff.
             </p>
           )}
+          {item.no_show_review && (
+            <p>
+              Last arrival review:{" "}
+              {item.no_show_review.decision === "no_show"
+                ? "No-show"
+                : "Guest expected"}{" "}
+              · {item.no_show_review.note}. Capacity remains protected.
+            </p>
+          )}
+          {token && item.late && !item.checked_in_at && (
+            <div className="space-y-2">
+              <label className="grid gap-1">
+                Arrival review note
+                <input
+                  maxLength={1000}
+                  value={reviewNotes[item.id] ?? ""}
+                  onChange={(e) =>
+                    setReviewNotes({
+                      ...reviewNotes,
+                      [item.id]: e.target.value,
+                    })
+                  }
+                  className="rounded-lg border border-subtle p-2"
+                />
+              </label>
+              <button
+                className={button}
+                disabled={!enabled || busy || !reviewNotes[item.id]?.trim()}
+                onClick={() =>
+                  void reviewNoShow(
+                    item,
+                    item.no_show_review?.decision === "no_show"
+                      ? "expected"
+                      : "no_show",
+                  )
+                }
+              >
+                {item.no_show_review?.decision === "no_show"
+                  ? "Reopen as expected"
+                  : "Record reviewed no-show"}
+              </button>
+              <p className="text-sm">
+                This records the review only. It does not release capacity,
+                charge a penalty or issue a refund.
+              </p>
+            </div>
+          )}
           {item.checked_in_at && item.checkout_at ? (
             <p>
               {item.assigned_room} occupied · In {time(item.checked_in_at)} ·
@@ -201,12 +298,34 @@ export default function CheckInDesk({ token }: { token?: string }) {
                 disabled={
                   !enabled ||
                   busy ||
+                  item.no_show_review?.decision === "no_show" ||
+                  (item.channel === "online" &&
+                    Date.parse(item.start_at) > Date.now() &&
+                    !earlyReasons[item.id]?.trim()) ||
                   !item.rooms.some(({ id }) => id === selected[item.id])
                 }
                 onClick={() => void submit(item)}
               >
                 Check in
               </button>
+              {item.channel === "online" &&
+                Date.parse(item.start_at) > Date.now() && (
+                  <label className="grid gap-1">
+                    Early check-in approval reason · purchased duration stays
+                    unchanged; checkout moves earlier
+                    <input
+                      maxLength={1000}
+                      value={earlyReasons[item.id] ?? ""}
+                      onChange={(e) =>
+                        setEarlyReasons({
+                          ...earlyReasons,
+                          [item.id]: e.target.value,
+                        })
+                      }
+                      className="rounded-lg border border-subtle p-2"
+                    />
+                  </label>
+                )}
             </div>
           )}
         </article>

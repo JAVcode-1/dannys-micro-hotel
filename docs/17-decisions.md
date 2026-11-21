@@ -4,6 +4,12 @@ status: approved-baseline
 ---
 # 17 — Approved Decisions Register
 
+## Functional sprint implementation constraints — 2026-11-21
+
+Owner authorization covers all C01–C20 corrections without routine handoff approvals; it does not authorize hosted migration application or production activation. Reuse existing transactional operations and OTP identity. Explicit isolated composition requires loopback `staytrack_test` in development/test mode. Fixture authentication/delivery/storage are local only. Optional PostgreSQL shared throttling supports multiple API instances; trusted proxy addresses must be explicit.
+
+Current physical inspection is recorded as current evidence, never invented historical housekeeping. No-show decisions preserve capacity pending actual staff review. Early arrival requires staff reason and preserves purchased duration. Verified payment history survives independent room cancellation/checkout. Internal printed statements make no fiscal-receipt claim. No new business cancellation/refund formula, inventory identifier, permission tier, ID-photo retention or Hall self-service rule is approved. See [[functional-completion-tracker]] for verification limits.
+
 ## UI-01 guest landing direction · 2026-11-21
 
 The owner approved “Stay on your time” as the UI-01 landing design. The prototype provides the visual reference for the React homepage. Rates and durations come from the Express catalog. Room choices preselect the corresponding active category in the existing planner. Guest access stays available in the footer. Function Hall links to contact while the hall feature is disabled, and published reviews retain their existing gate. The placeholder email and two phone numbers live in `frontend/src/hotel-contact.ts`.

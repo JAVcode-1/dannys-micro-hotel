@@ -16,6 +16,13 @@ type Rate = {
   price_centavos: number;
 };
 type Arrival = { date: string; hour: string; minute: string; period: string };
+type Contact = {
+  phone: string;
+  email: string;
+  policyVersion: string;
+  policyAcknowledged: boolean;
+  minorIdStatus: string;
+};
 type Draft = Arrival & {
   category: BookingItemInput["category"];
   blocks: number[];
@@ -116,6 +123,7 @@ function WalkInPlanner({
   preview,
   onQuote,
   onCreate,
+  policy,
 }: {
   rates: Rate[];
   enabled: boolean;
@@ -125,10 +133,16 @@ function WalkInPlanner({
     name: string,
     items: BookingItemInput[],
     key: string,
+    contact?: Contact,
   ) => Promise<void>;
+  policy?: { version: string; text: string; pendingOwnerApproval: boolean };
 }) {
   const [items, setItems] = useState<Draft[]>([draft(rates)]);
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [acknowledged, setAcknowledged] = useState(false);
+  const [minorIdChecked, setMinorIdChecked] = useState(false);
   const [quote, setQuote] = useState<BookingQuote | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -163,12 +177,35 @@ function WalkInPlanner({
       setMessage("Enter a primary guest name and calculate a current quote.");
       return;
     }
-    const body = JSON.stringify({ name: name.trim(), items: payload() });
+    if (!preview && (!phone.trim() || !acknowledged || !policy)) {
+      setMessage(
+        "Enter contact details and acknowledge the disclosed booking policy.",
+      );
+      return;
+    }
+    const contact: Contact | undefined = preview
+      ? undefined
+      : {
+          phone: phone.trim(),
+          email: email.trim(),
+          policyVersion: policy!.version,
+          policyAcknowledged: acknowledged,
+          minorIdStatus: items.some((item) => item.children > 0)
+            ? minorIdChecked
+              ? "checked"
+              : "not_checked"
+            : "no_minors",
+        };
+    const body = JSON.stringify({
+      name: name.trim(),
+      items: payload(),
+      contact,
+    });
     if (attempt.current?.body !== body)
       attempt.current = { body, key: crypto.randomUUID() };
     setBusy(true);
     try {
-      await onCreate(name.trim(), payload(), attempt.current!.key);
+      await onCreate(name.trim(), payload(), attempt.current!.key, contact);
       attempt.current = null;
       setQuote(null);
       setMessage(
@@ -203,6 +240,62 @@ function WalkInPlanner({
               autoComplete="off"
             />
           </label>
+          {!preview && (
+            <div className="space-y-3 rounded border border-subtle p-4">
+              <label className="block">
+                Primary contact phone
+                <input
+                  type="tel"
+                  autoComplete="tel"
+                  maxLength={30}
+                  className={inputClass}
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                />
+              </label>
+              <label className="block">
+                Contact email (optional, unverified)
+                <input
+                  type="email"
+                  autoComplete="email"
+                  maxLength={254}
+                  className={inputClass}
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                />
+              </label>
+              <p className="text-sm">
+                {policy?.text ??
+                  "Booking policy is unavailable. Creation remains blocked."}
+              </p>
+              {policy?.pendingOwnerApproval && (
+                <p className="text-sm text-muted">
+                  Development disclosure; owner/legal approval remains pending.
+                </p>
+              )}
+              <label className="flex gap-2">
+                <input
+                  type="checkbox"
+                  checked={acknowledged}
+                  onChange={(event) => setAcknowledged(event.target.checked)}
+                />
+                Guest has acknowledged the disclosed booking policy
+              </label>
+              <label className="flex gap-2">
+                <input
+                  type="checkbox"
+                  checked={minorIdChecked}
+                  onChange={(event) => setMinorIdChecked(event.target.checked)}
+                />
+                Staff checked minor ID where applicable (metadata only)
+              </label>
+              <p className="text-sm text-muted">
+                No ID photographs, ID numbers or birth dates are stored.
+                Checking an ID does not establish legal eligibility. Unchecked
+                minors remain pending staff review.
+              </p>
+            </div>
+          )}
           {items.map((item, index) => (
             <fieldset
               key={index}
@@ -695,6 +788,11 @@ export default function WalkInDesk({
   const [message, setMessage] = useState("");
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
+  const [policy, setPolicy] = useState<{
+    version: string;
+    text: string;
+    pendingOwnerApproval: boolean;
+  }>();
   const usedRefs = useRef(new Set(["SYNTHETICONLINEUSED"]));
   const headers = { Authorization: `Bearer ${token}` };
   async function api(path: string, body?: unknown) {
@@ -740,6 +838,7 @@ export default function WalkInDesk({
         setList(data.bookings);
         setHasMore(data.hasMore);
         setEnabled(data.writesEnabled);
+        setPolicy(data.policy);
         setMessage("");
       })
       .catch((error) => {
@@ -785,12 +884,18 @@ export default function WalkInDesk({
       totalCentavos: quoted.reduce((n, item) => n + item.totalCentavos, 0),
     };
   }
-  async function create(name: string, items: BookingItemInput[], key: string) {
+  async function create(
+    name: string,
+    items: BookingItemInput[],
+    key: string,
+    contact?: Contact,
+  ) {
     if (!preview) {
       const result = await api("", {
         primaryName: name,
         items,
         requestKey: key,
+        contact,
       });
       setBooking(result.booking);
       setList([
@@ -927,6 +1032,7 @@ export default function WalkInDesk({
             preview={preview}
             onQuote={quoteItems}
             onCreate={create}
+            policy={policy}
           />
         )}
         {booking ? (

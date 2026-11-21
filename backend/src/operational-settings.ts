@@ -1,4 +1,5 @@
 import { databasePool } from "./database.js";
+import { requireTransactionStaff } from "./transaction-staff.js";
 
 export type SettingsUpdate = {
   cleaningBufferMinutes: number | null;
@@ -40,9 +41,9 @@ export function validSettings(value: SettingsUpdate) {
   );
 }
 
-export async function getSettings() {
-  const { rows } = await databasePool()
-    .query(`select cleaning_buffer_minutes as "cleaningBufferMinutes",
+export async function getSettings(pool = databasePool()) {
+  const { rows } =
+    await pool.query(`select cleaning_buffer_minutes as "cleaningBufferMinutes",
     checkout_alert_minutes as "checkoutAlertMinutes",
     to_jsonb(operational_settings)->'checkout_warning_minutes' as "checkoutWarningMinutes",
     to_jsonb(operational_settings) ? 'checkout_warning_minutes' as "supportsWarnings", gcash_qr_object_key as "gcashQrObjectKey",
@@ -64,6 +65,7 @@ export async function saveSettings(
   const client = await (pool ?? databasePool()).connect();
   try {
     await client.query("begin");
+    await requireTransactionStaff(client, actorId);
     const result = await client.query(
       `update staytrack.operational_settings set
       cleaning_buffer_minutes = $1, checkout_alert_minutes = $2, gcash_qr_object_key = $3,

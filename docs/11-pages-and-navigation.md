@@ -4,6 +4,14 @@ status: planned
 ---
 # 11 — Pages and Navigation
 
+## Implemented correction-sprint routes — 2026-11-21
+
+This section supersedes the suggested routes below. Guest routes: `/`, `/rooms`, `/function-hall`, `/reviews`, `/book`, `/verify`, `/reservations`, `/reservations/:id`, `/reservations/:id/payment`, `/reviews/submit`, `/feedback/private`. `/login` and `/register` remain OTP compatibility routes. Reviews enforce completed-stay eligibility and verified ownership/grants. Hall booking is staff-assisted only. Disabled modules have unavailable states, unknown routes have not-found, and synthetic previews are development-only.
+
+Staff routes: `/staff/sign-in`, `/staff`, `/staff/reservations`, `/staff/reservations/:id`, `/staff/walkins`, `/staff/check-ins`, `/staff/stays`, `/staff/payments`, `/staff/cancellations`, `/staff/reschedules`, `/staff/stay-changes`, `/staff/rooms`, `/staff/hall`, `/staff/analytics`, `/staff/reviews`, `/staff/feedback`, `/staff/audit`, `/staff/settings`, `/staff/settings/catalog`. `/staff/catalog` redirects to settings/catalog. Navigation groups: Today, Reservations, Active Stays, Payments, Rooms, Function Hall, Management. Sessions remain mounted during protected navigation.
+
+Staff detail includes per-room schedules, contextual actions, contact/policy evidence, verified payment/refund history and a printable statement explicitly labelled **not an official fiscal receipt**. The dashboard uses operational queues, not excluded analytics. See [[functional-completion-tracker]] for actual verification status.
+
 ## Guest pages
 
 | Route (suggested) | Purpose |

@@ -91,6 +91,9 @@ export default function StaffAuditDesk({ token }: { token: string }) {
             <option value="room">Physical room</option>
             <option value="room_item">Room item</option>
             <option value="payment_submission">Payment submission</option>
+            <option value="hall_reservation">Function Hall reservation</option>
+            <option value="review">Guest review</option>
+            <option value="feedback">Private feedback</option>
           </select>
         </label>
         <label>

@@ -105,3 +105,20 @@ test("unconfigured real QR keeps proof submission disabled", () => {
     screen.getByText("Payment QR is not configured. Do not send payment."),
   );
 });
+
+test("confirmed payment never shows an expired proof warning or payment form", () => {
+  render(
+    createElement(PaymentPanel, {
+      session: {
+        ...session,
+        status: "confirmed",
+        proofDeadlineAt: new Date(now - 60000).toISOString(),
+      },
+      onSubmit: async () => {},
+    }),
+  );
+  assert.ok(screen.getByText("Payment verified"));
+  assert.ok(screen.getByText(/each room.*current status/));
+  assert.equal(screen.queryByText(/contact staff for reconciliation/), null);
+  assert.equal(screen.queryByLabelText("Transaction reference"), null);
+});

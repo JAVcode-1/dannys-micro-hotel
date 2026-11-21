@@ -87,6 +87,48 @@ export function registerHall(app: Express, staff: RequestHandler, pool?: Pool) {
     }),
   );
   app.get(
+    "/staff/hall/reservations/:id/finances",
+    staff,
+    handle(async (req, res) => {
+      const id = String(req.params.id);
+      if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))
+        throw new BookingError("Invalid reservation.");
+      const { rows } = await pool.query(
+        `
+        select r.id,
+        coalesce((select json_agg(p order by p.received_at,p.id) from
+          (select id,actor,method,amount_centavos::text amount,normalized_reference reference,evidence,received_at
+           from staytrack.hall_receipts where reservation_id=r.id) p),'[]') receipts,
+        coalesce((select json_agg(f order by f.id) from
+          (select a.id,a.amount_centavos::text amount,a.reason,t.method,t.reference,t.transferred_at,t.evidence,
+            (t.approval_id is null and a.amount_centavos>0) pending
+           from staytrack.hall_refund_approvals a left join staytrack.hall_refund_transfers t on t.approval_id=a.id
+           where a.reservation_id=r.id) f),'[]') refunds
+        from staytrack.hall_reservations r where r.id=$1`,
+        [id],
+      );
+      if (!rows[0]) throw new BookingError("Reservation unavailable.", 404);
+      res.json(rows[0]);
+    }),
+  );
+  app.get(
+    "/staff/hall/commands/:key",
+    staff,
+    handle(async (req, res) => {
+      const { rows } = await pool.query(
+        "select action,result,recorded_at from staytrack.hall_actions where actor=$1 and request_key=$2",
+        [res.locals.actorId, String(req.params.key)],
+      );
+      if (!rows[0]) {
+        res.status(404).json({
+          error: "No committed command found. Retry the original command.",
+        });
+        return;
+      }
+      res.json(rows[0]);
+    }),
+  );
+  app.get(
     "/staff/hall/reports",
     staff,
     handle(async (req, res) => {

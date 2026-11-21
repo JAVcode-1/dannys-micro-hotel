@@ -118,6 +118,19 @@ export async function redeemReviewInvitation(
 }
 
 export type ReviewDelivery = {
+  queueInvitation?(
+    db: PoolClient,
+    email: string,
+    token: string,
+    reservationId: string,
+  ): Promise<void>;
+  queueOtp?(
+    db: PoolClient,
+    email: string,
+    code: string,
+    challengeDigest: string,
+    reservationId: string,
+  ): Promise<void>;
   invitation(email: string, token: string): Promise<void>;
   generateOtp(email: string): Promise<string>;
   sendOtp(email: string, code: string): Promise<void>;
@@ -178,6 +191,10 @@ export async function issueReviewInvitation(
   delivery: ReviewDelivery,
   reservation: string,
 ) {
+  if (delivery.queueInvitation)
+    return withReviewTransaction(pool, (client) =>
+      queueReviewInvitation(client, delivery, reservation),
+    );
   const token = randomBytes(32).toString("base64url");
   const email = await withReviewTransaction(pool, async (client) => {
     await lockReviewReservation(client, reservation);
@@ -197,6 +214,71 @@ export async function issueReviewInvitation(
   });
   if (email)
     await sendCredential(pool, token, () => delivery.invitation(email, token));
+}
+
+async function queueReviewInvitation(
+  client: PoolClient,
+  delivery: ReviewDelivery,
+  reservation: string,
+) {
+  if (!delivery.queueInvitation) return false;
+  await lockReviewReservation(client, reservation);
+  if (!(await loadReviewEligibility(client, reservation)).public_open)
+    return false;
+  const contact = await reviewContact(client, reservation);
+  if (!contact?.invitation_allowed) return false;
+  const token = randomBytes(32).toString("base64url");
+  if (
+    !(await issueCredential(
+      client,
+      reservation,
+      contact.email,
+      "invitation",
+      token,
+    ))
+  )
+    return false;
+  await delivery.queueInvitation(client, contact.email, token, reservation);
+  return true;
+}
+
+// One automatic invitation per consented completed reservation; explicit reissues keep their quota.
+export async function processReviewInvitations(
+  pool: ReviewPool,
+  delivery: ReviewDelivery,
+  limit = 20,
+) {
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
+    throw new Error("Invalid invitation batch.");
+  if (!delivery.queueInvitation) return 0;
+  return withReviewTransaction(pool, async (client) => {
+    const candidates = await client.query<{ id: string }>(
+      `select r.id from staytrack.reservations r
+       join staytrack.review_contacts c on c.reservation_id=r.id
+       where c.invitation_consent_at is not null
+       and not exists(select 1 from staytrack.review_invitation_jobs j where j.reservation_id=r.id)
+       and not exists(select 1 from staytrack.guest_reviews gr where gr.reservation_id=r.id)
+       and not exists(select 1 from staytrack.review_credentials rc where rc.reservation_id=r.id and rc.purpose='invitation')
+       and (select min(o.checked_out_at) from staytrack.room_bookings b
+         join staytrack.room_check_ins ci on ci.room_booking_id=b.id
+         join staytrack.room_checkouts o on o.room_booking_id=b.id
+         where b.reservation_id=r.id and o.checked_out_at>ci.checked_in_at and o.checked_out_at<=clock_timestamp()) > clock_timestamp()-interval '720 hours'
+       order by r.created_at,r.id limit $1 for update of r skip locked`,
+      [limit],
+    );
+    let queued = 0;
+    for (const row of candidates.rows) {
+      const claimed = await client.query(
+        "insert into staytrack.review_invitation_jobs(reservation_id) values($1) on conflict do nothing returning reservation_id",
+        [row.id],
+      );
+      if (!claimed.rowCount) continue;
+      if (await queueReviewInvitation(client, delivery, row.id)) {
+        queued++;
+      }
+    }
+    return queued;
+  });
 }
 
 async function sendCredential(
@@ -275,9 +357,30 @@ export async function startReviewOtp(
       )
         return false;
     }
-    return issueCredential(client, reservation, email, purpose, token);
+    const created = await issueCredential(
+      client,
+      reservation,
+      email,
+      purpose,
+      token,
+    );
+    if (created && delivery.queueOtp) {
+      const code = await delivery.generateOtp(email);
+      await client.query(
+        "update staytrack.review_credentials set otp_digest=$2 where digest=$1",
+        [reviewDigest(token), reviewDigest(token + ":" + code)],
+      );
+      await delivery.queueOtp(
+        client,
+        email,
+        code,
+        reviewDigest(token),
+        reservation,
+      );
+    }
+    return created;
   });
-  if (issued) {
+  if (issued && !delivery.queueOtp) {
     const send = () =>
       sendCredential(pool, token, async () => {
         const code = await delivery.generateOtp(email);
@@ -316,7 +419,7 @@ export async function finishReviewOtp(
       `update staytrack.review_credentials set attempts=attempts+1 where digest=$1
         and purpose in ('enrollment','feedback_otp','withdrawal_otp')
         and consumed_at is null and revoked_at is null and expires_at>clock_timestamp()
-        and delivery_state='sent' and attempts<5 returning reservation_id,email,purpose,otp_digest`,
+        and delivery_state in ('pending','sent') and attempts<5 returning reservation_id,email,purpose,otp_digest`,
       [digest],
     );
     return rows[0];

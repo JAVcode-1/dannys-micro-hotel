@@ -16,12 +16,194 @@ globalThis.HTMLElement = dom.window.HTMLElement;
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const { render, screen, fireEvent, waitFor, cleanup } =
   await import("@testing-library/react");
-const { default: BookingPlanner, hotelTime } =
-  await import("../src/BookingPlanner.tsx");
+const {
+  default: BookingPlanner,
+  hotelTime,
+  bookingRequestKey,
+} = await import("../src/BookingPlanner.tsx");
 const originalFetch = globalThis.fetch;
+const { GuestSessionProvider } = await import("../src/GuestSession.tsx");
 afterEach(() => {
   cleanup();
   globalThis.fetch = originalFetch;
+  dom.window.sessionStorage.clear();
+});
+test("lost booking responses recover the same command across reload without storing contact data", async () => {
+  const body = JSON.stringify({
+    primaryName: "Private Name",
+    contact: { phone: "09170000000" },
+    expectedTotalCentavos: 20000,
+  });
+  const first = await bookingRequestKey(
+    "guest-one",
+    body,
+    dom.window.sessionStorage,
+  );
+  const recovered = await bookingRequestKey(
+    "guest-one",
+    body,
+    dom.window.sessionStorage,
+  );
+  assert.equal(first, recovered);
+  assert.doesNotMatch(
+    dom.window.sessionStorage.getItem("staytrack.booking-command.v1"),
+    /Private Name|09170000000|guest-one/,
+  );
+  assert.notEqual(
+    await bookingRequestKey("guest-two", body, dom.window.sessionStorage),
+    first,
+  );
+  assert.notEqual(
+    await bookingRequestKey(
+      "guest-one",
+      body.replace("20000", "30000"),
+      dom.window.sessionStorage,
+    ),
+    first,
+  );
+});
+test("verified guest submits reviewed server price, contact, acknowledgement and retries the same hold", async () => {
+  const holds = [];
+  const client = {
+    auth: {
+      getSession: async () => ({
+        data: { session: { access_token: "guest-token" } },
+        error: null,
+      }),
+      onAuthStateChange: () => ({
+        data: { subscription: { unsubscribe() {} } },
+      }),
+    },
+  };
+  globalThis.fetch = async (url, options) => {
+    if (url.endsWith("/guest/me"))
+      return {
+        ok: true,
+        json: async () => ({
+          id: "verified-guest",
+          email: "guest@example.test",
+        }),
+      };
+    if (url.endsWith("/guest/booking-status"))
+      return {
+        ok: true,
+        json: async () => ({
+          enabled: true,
+          policy: { version: "booking-v1", text: "Synthetic disclosed policy" },
+        }),
+      };
+    if (url.endsWith("/catalog"))
+      return {
+        ok: true,
+        json: async () => [
+          {
+            code: "double_standard",
+            name: "Double Standard",
+            duration_minutes: 180,
+            price_centavos: 20000,
+          },
+        ],
+      };
+    const body = JSON.parse(options.body);
+    if (url.endsWith("/guest/quote"))
+      return {
+        ok: true,
+        json: async () => ({
+          items: body.items.map((item) => ({
+            ...item,
+            endAt: "2027-01-01T09:00:00Z",
+            baseCentavos: 20000,
+            extraBedCentavos: 0,
+            totalCentavos: 20000,
+          })),
+          totalCentavos: 20000,
+        }),
+      };
+    if (url.endsWith("/guest/reservations")) {
+      holds.push({ body, authorization: options.headers.Authorization });
+      throw new Error("Lost response: retry to recover");
+    }
+    throw new Error("Unexpected request " + url);
+  };
+  render(
+    createElement(
+      GuestSessionProvider,
+      { authClient: client },
+      createElement(BookingPlanner),
+    ),
+  );
+  await waitFor(() => assert.ok(screen.getByLabelText("Primary guest name")));
+  fireEvent.change(screen.getByLabelText("Arrival date — room 1"), {
+    target: { value: "2027-01-01" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Calculate server quote" }),
+  );
+  await waitFor(() =>
+    assert.ok(screen.getByText("₱200.00", { selector: "p.text-3xl" })),
+  );
+  fireEvent.change(screen.getByLabelText("Primary guest name"), {
+    target: { value: "Synthetic Guest" },
+  });
+  fireEvent.change(screen.getByLabelText("Contact number"), {
+    target: { value: "09170000000" },
+  });
+  fireEvent.click(
+    screen.getByLabelText("I have read and acknowledge the booking policies."),
+  );
+  const submit = screen.getByRole("button", {
+    name: "Create hold and continue to payment",
+  });
+  fireEvent.submit(submit.closest("form"));
+  await waitFor(() => assert.equal(holds.length, 1));
+  await waitFor(() => assert.equal(submit.disabled, false));
+  fireEvent.submit(submit.closest("form"));
+  await waitFor(() => assert.equal(holds.length, 2));
+  assert.equal(holds[0].authorization, "Bearer guest-token");
+  assert.equal(holds[0].body.expectedTotalCentavos, 20000);
+  assert.deepEqual(holds[0].body.contact, {
+    phone: "09170000000",
+    policyVersion: "booking-v1",
+    policyAcknowledged: true,
+  });
+  assert.equal(holds[0].body.requestKey, holds[1].body.requestKey);
+});
+
+test("booking selections survive verification navigation and reload without trusting a saved quote", async () => {
+  globalThis.fetch = async (url) => ({
+    ok: true,
+    json: async () =>
+      url.endsWith("/catalog")
+        ? [
+            {
+              code: "double_standard",
+              name: "Double Standard",
+              duration_minutes: 180,
+              price_centavos: 20000,
+            },
+          ]
+        : { enabled: false },
+  });
+  const view = render(createElement(BookingPlanner));
+  await waitFor(() =>
+    assert.equal(screen.getByLabelText("Package 1 — room 1").value, "180"),
+  );
+  fireEvent.change(screen.getByLabelText("Arrival date — room 1"), {
+    target: { value: "2027-02-01" },
+  });
+  fireEvent.change(screen.getByLabelText("Adults — room 1"), {
+    target: { value: "4" },
+  });
+  view.unmount();
+  render(createElement(BookingPlanner));
+  await waitFor(() =>
+    assert.equal(
+      screen.getByLabelText("Arrival date — room 1").value,
+      "2027-02-01",
+    ),
+  );
+  assert.equal(screen.getByLabelText("Adults — room 1").value, "4");
+  assert.equal(screen.queryByText("₱200.00"), null);
 });
 
 test("new rooms use an active package when Standard is unavailable", async () => {

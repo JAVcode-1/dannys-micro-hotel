@@ -16,6 +16,7 @@ import {
   decideCancellation,
 } from "../dist/cancellations.js";
 import { checkIn } from "../dist/check-in.js";
+export let x02AfterCorrections;
 export async function x02Postgres(t, pool) {
   await t.test(
     "X02 PostgreSQL T20/T28: atomic schedules, policy, authorization, races and rollback",
@@ -316,7 +317,7 @@ export async function x02Postgres(t, pool) {
           "44444444-4444-4444-8444-444444444444",
           q.id,
           {
-            requestKey: "x02-synthetic-same-decision",
+            requestKey: "x02-synthetic-same-decision", // gitleaks:allow -- synthetic retry identifier, not a credential.
             expectedRevision: 0,
             approved: true,
             reason: "Synthetic guest consent checked",
@@ -392,7 +393,7 @@ export async function x02Postgres(t, pool) {
           { ...guest, email: "wrong@example.test" },
           peer.id,
           {
-            requestKey: "x02-wrong-owner-synthetic",
+            requestKey: "x02-wrong-owner-synthetic", // gitleaks:allow -- synthetic retry identifier, not a credential.
             expectedRevision: 0,
             startAt: new Date(+peer.start_at + 86400000).toISOString(),
             endAt: new Date(+peer.end_at + 86400000).toISOString(),
@@ -697,76 +698,105 @@ export async function x02Postgres(t, pool) {
         );
       }
       // Fresh labelled disposable rooms isolate W02 early check-in from old suite stays.
-      for (const checkinFirst of [true, false]) {
-        const c = await make();
-        const rq = await request(c.items[0]);
-        const ready = (
+      // Run these concurrency checks after the forward early-approval/readiness migration.
+      x02AfterCorrections = async () => {
+        await pool.query(
+          "update staytrack.payment_qr set payee_label='TEST PAYEE ONLY'",
+        );
+        for (const checkinFirst of [true, false]) {
+          const c = await make();
+          const rq = await request(c.items[0]);
+          const ready = (
+            await pool.query(
+              "insert into staytrack.rooms(category_id,code,operational_state,active) select category_id,$2,'ready',true from staytrack.inventory_claims where id=$1 returning id",
+              [c.items[0].claim_id, `X02-SYNTHETIC-CHECKIN-${checkinFirst}`],
+            )
+          ).rows[0].id;
           await pool.query(
-            "insert into staytrack.rooms(category_id,code,operational_state,active) select category_id,$2,'ready',true from staytrack.inventory_claims where id=$1 returning id",
-            [c.items[0].claim_id, `X02-SYNTHETIC-CHECKIN-${checkinFirst}`],
+            "select staytrack.inspect_legacy_room($1,$2,$3,$4)",
+            [
+              actor,
+              ready,
+              `x02-inspection-${checkinFirst}-001`,
+              "Synthetic current inspection",
+            ],
+          );
+          const enter = () =>
+            checkIn(
+              actor,
+              c.items[0].id,
+              ready,
+              `x02-synthetic-checkin-${++sequence}`,
+              pool,
+              "Synthetic explicit approval for early fixture arrival",
+            );
+          const [one, two] = await contend(
+            "select id from staytrack.reservations where id=$1 for update",
+            [c.id],
+            checkinFirst ? enter : () => decision(rq),
+            checkinFirst ? () => decision(rq) : enter,
+          );
+          assert.equal(one.status, "fulfilled");
+          assert.equal(two.status, checkinFirst ? "rejected" : "fulfilled");
+          const live = (await rescheduleRows({ staffId: actor }, pool)).find(
+            (r) => r.id === rq.id,
+          );
+          if (checkinFirst) {
+            assert.equal(live.canApprove, false);
+            assert.match(live.blocker, /checked in/);
+          }
+          assert.ok(live.reason);
+          assert.deepEqual(live.blocks, [180]);
+          if (!checkinFirst)
+            assert.equal(
+              +two.value.checkout_at - +two.value.checked_in_at,
+              Date.parse(rq.requestedEndAt) - Date.parse(rq.requestedStartAt),
+            );
+        }
+        // T28 also preserves a sibling that is already checked in and counting down.
+        const occupiedPeer = await make();
+        const peerRoom = (
+          await pool.query(
+            "insert into staytrack.rooms(category_id,code,operational_state,active) select category_id,'X02-SYNTHETIC-SIBLING','ready',true from staytrack.inventory_claims where id=$1 returning id",
+            [occupiedPeer.items[1].claim_id],
           )
         ).rows[0].id;
-        const enter = () =>
-          checkIn(
-            actor,
-            c.items[0].id,
-            ready,
-            `x02-synthetic-checkin-${++sequence}`,
-            pool,
-          );
-        const [one, two] = await contend(
-          "select id from staytrack.reservations where id=$1 for update",
-          [c.id],
-          checkinFirst ? enter : () => decision(rq),
-          checkinFirst ? () => decision(rq) : enter,
+        await pool.query("select staytrack.inspect_legacy_room($1,$2,$3,$4)", [
+          actor,
+          peerRoom,
+          "x02-inspection-sibling-001",
+          "Synthetic current inspection",
+        ]);
+        await checkIn(
+          actor,
+          occupiedPeer.items[1].id,
+          peerRoom,
+          `x02-synthetic-peer-checkin-${++sequence}`,
+          pool,
+          "Synthetic explicitly approved early sibling check-in",
         );
-        assert.equal(one.status, "fulfilled");
-        assert.equal(two.status, checkinFirst ? "rejected" : "fulfilled");
-        const live = (await rescheduleRows({ staffId: actor }, pool)).find(
-          (r) => r.id === rq.id,
-        );
-        if (checkinFirst) {
-          assert.equal(live.canApprove, false);
-          assert.match(live.blocker, /checked in/);
-        }
-        assert.ok(live.reason);
-        assert.deepEqual(live.blocks, [180]);
-        if (!checkinFirst)
-          assert.equal(+two.value.checkout_at, Date.parse(rq.requestedEndAt));
-      }
-      // T28 also preserves a sibling that is already checked in and counting down.
-      const occupiedPeer = await make();
-      const peerRoom = (
-        await pool.query(
-          "insert into staytrack.rooms(category_id,code,operational_state,active) select category_id,'X02-SYNTHETIC-SIBLING','ready',true from staytrack.inventory_claims where id=$1 returning id",
-          [occupiedPeer.items[1].claim_id],
-        )
-      ).rows[0].id;
-      await checkIn(
-        actor,
-        occupiedPeer.items[1].id,
-        peerRoom,
-        `x02-synthetic-peer-checkin-${++sequence}`,
-        pool,
-      );
-      const siblingBefore = await snapshot(occupiedPeer.items[1].id);
-      const checkinBefore = (
-        await pool.query(
-          "select * from staytrack.room_check_ins where room_booking_id=$1",
-          [occupiedPeer.items[1].id],
-        )
-      ).rows[0];
-      await decision(await request(occupiedPeer.items[0]));
-      assert.deepEqual(await snapshot(occupiedPeer.items[1].id), siblingBefore);
-      assert.deepEqual(
-        (
+        const siblingBefore = await snapshot(occupiedPeer.items[1].id);
+        const checkinBefore = (
           await pool.query(
             "select * from staytrack.room_check_ins where room_booking_id=$1",
             [occupiedPeer.items[1].id],
           )
-        ).rows[0],
-        checkinBefore,
-      );
+        ).rows[0];
+        await decision(await request(occupiedPeer.items[0]));
+        assert.deepEqual(
+          await snapshot(occupiedPeer.items[1].id),
+          siblingBefore,
+        );
+        assert.deepEqual(
+          (
+            await pool.query(
+              "select * from staytrack.room_check_ins where room_booking_id=$1",
+              [occupiedPeer.items[1].id],
+            )
+          ).rows[0],
+          checkinBefore,
+        );
+      };
       // Rescheduling twice never restarts the immutable cancellation clock.
       const timed = await make(true, false, 61);
       for (const timedItem of timed.items) {

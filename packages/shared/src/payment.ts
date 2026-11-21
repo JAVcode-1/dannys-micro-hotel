@@ -3,7 +3,12 @@ export type PaymentSession = {
   amountDueCentavos: number;
   serverNow: string;
   proofDeadlineAt: string;
-  status: "awaiting_proof" | "pending_review" | "expired" | "unavailable";
+  status:
+    | "awaiting_proof"
+    | "pending_review"
+    | "confirmed"
+    | "expired"
+    | "unavailable";
   payeeLabel: string | null;
   qrUrl: string | null;
   emailReminderAt: string[];

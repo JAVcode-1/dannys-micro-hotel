@@ -36,7 +36,14 @@ export function parseAuditFilters(query: Record<string, unknown>) {
     (actor && !uuid.test(actor)) ||
     (action && !actionName.test(action)) ||
     (subjectType &&
-      !["room", "room_item", "payment_submission"].includes(subjectType)) ||
+      ![
+        "room",
+        "room_item",
+        "payment_submission",
+        "hall_reservation",
+        "review",
+        "feedback",
+      ].includes(subjectType)) ||
     (subjectId && !(subjectType === "room" ? roomId : uuid).test(subjectId)) ||
     (from && !auditDate(from)) ||
     (to && !auditDate(to)) ||
@@ -82,6 +89,33 @@ export function parseAuditFilters(query: Record<string, unknown>) {
 
 // Each projection exposes only known operational fields. Generic audit rows have no subject.
 const sources = [
+  [
+    "hall_actions",
+    "md5(actor::text || request_key)",
+    "recorded_at",
+    "'hall.' || action",
+    "hall_reservation",
+    "reservation_id",
+    [],
+  ],
+  [
+    "review_events",
+    "id",
+    "recorded_at",
+    "'review.' || action",
+    "review",
+    "review_id",
+    [],
+  ],
+  [
+    "review_events",
+    "id",
+    "recorded_at",
+    "'feedback.' || action",
+    "feedback",
+    "feedback_id",
+    [],
+  ],
   [
     "stay_receipts",
     "id",
@@ -247,9 +281,9 @@ export async function staffAudit(
   const available = sources.filter(([table]) => present.has(table));
   const projections = available.map(
     ([table, id, time, action, subjectType, subjectId]) => `
-    select '${table}:' || ${id}::text, actor_auth_user_id, ${action}, ${time},
+    select '${table}:' || ${id}::text, ${table === "hall_actions" ? "actor" : "actor_auth_user_id"}, ${action}, ${time},
       '${subjectType}', ${subjectId}::text
-    from staytrack.${table}${table === "maintenance_events" ? " e join staytrack.room_blocks b on b.id=e.block_id" : ""}
+    from staytrack.${table}${table === "maintenance_events" ? " e join staytrack.room_blocks b on b.id=e.block_id" : ""}${table === "review_events" ? ` where actor_auth_user_id is not null and ${subjectId} is not null` : ""}
   `,
   );
   const { rows } = await pool.query<StaffAuditPage["entries"][number]>(
@@ -299,10 +333,14 @@ export async function staffAudit(
   };
 }
 
-export function registerAudit(app: Express, staff: RequestHandler) {
+export function registerAudit(
+  app: Express,
+  staff: RequestHandler,
+  pool?: ReturnType<typeof databasePool>,
+) {
   app.get("/staff/audit", staff, async (req, res) => {
     try {
-      res.json(await staffAudit(parseAuditFilters(req.query)));
+      res.json(await staffAudit(parseAuditFilters(req.query), pool));
     } catch (error) {
       res.status(error instanceof BookingError ? error.status : 503).json({
         error:

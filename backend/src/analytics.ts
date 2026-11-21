@@ -18,7 +18,11 @@ function date(value: unknown) {
   return +parsed;
 }
 
-export function registerAnalytics(app: Express, staff: RequestHandler) {
+export function registerAnalytics(
+  app: Express,
+  staff: RequestHandler,
+  pool?: ReturnType<typeof databasePool>,
+) {
   for (const exporting of [false, true]) {
     app.get(
       exporting ? "/staff/analytics/export" : "/staff/analytics",
@@ -45,7 +49,7 @@ export function registerAnalytics(app: Express, staff: RequestHandler) {
             new Date(ms - 8 * 3600000).toISOString().replace("Z", "000Z");
           const start = timestamp(first);
           const end = timestamp(last + 86400000);
-          const client = await databasePool().connect();
+          const client = await (pool ?? databasePool()).connect();
           let rows;
           try {
             await client.query(

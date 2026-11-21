@@ -1,8 +1,9 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { apiBase, staffAuth } from "./staff-auth";
+import { apiBase, staffAuth, isolatedDevelopment } from "./staff-auth";
 import GuestReservations from "./GuestReservations";
+import { safeGuestReturnTo, useGuestSession } from "./GuestSession";
 
 export default function GuestAccess({
   authClient = staffAuth,
@@ -17,6 +18,13 @@ export default function GuestAccess({
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [token, setToken] = useState("");
+  const session = useGuestSession();
+  const verified =
+    session?.access.status === "authenticated" || step === "verified";
+  const returnTo =
+    typeof window === "undefined"
+      ? null
+      : new URLSearchParams(window.location.search).get("returnTo");
 
   async function send(event: FormEvent) {
     event.preventDefault();
@@ -77,6 +85,7 @@ export default function GuestAccess({
       setMessage(
         "Email verified. Reservation lookup uses your verified identity.",
       );
+      if (returnTo) window.location.assign(safeGuestReturnTo(returnTo));
     } catch {
       setMessage("Verification is unavailable. Please try again.");
     } finally {
@@ -93,14 +102,20 @@ export default function GuestAccess({
         Your stay, kept private.
       </h1>
       <p className="mt-3 text-muted">
-        Verify your email before accessing reservation details. Online booking
-        is not open yet.
+        Verify your email to continue your booking or access your private
+        reservations.
       </p>
+      {isolatedDevelopment && (
+        <p className="mt-4 rounded-xl bg-lavender p-4 text-sm">
+          Isolated synthetic access only: guest@example.test · OTP 123456. No
+          email is sent.
+        </p>
+      )}
       {!authClient ? (
         <p className="mt-8 text-muted">
           Guest verification is not configured for this preview.
         </p>
-      ) : step === "verified" ? (
+      ) : verified ? (
         <p className="mt-8 rounded-xl bg-selected p-4 text-primary">
           Email verified.
         </p>
@@ -175,7 +190,15 @@ export default function GuestAccess({
           {message}
         </p>
       )}
-      {step === "verified" && token && (
+      {verified && (
+        <a
+          href={safeGuestReturnTo(returnTo)}
+          className="mt-4 inline-flex min-h-11 items-center font-semibold text-primary"
+        >
+          {returnTo ? "Continue to your booking" : "Open your reservations"}
+        </a>
+      )}
+      {!session && step === "verified" && token && (
         <GuestReservations token={token} reviewsEnabled={reviewsEnabled} />
       )}
     </section>

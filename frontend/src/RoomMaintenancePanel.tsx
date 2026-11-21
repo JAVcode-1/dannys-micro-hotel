@@ -8,17 +8,20 @@ export default function RoomMaintenancePanel({
   refresh,
   time,
   busy,
+  rooms = [],
 }: {
   room: StaffRoom;
   token: string;
   refresh: () => Promise<void>;
   time: (instant: string) => string;
   busy: boolean;
+  rooms?: StaffRoom[];
 }) {
   const [note, setNote] = React.useState("");
   const [ready, setReady] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [targets, setTargets] = React.useState<Record<string, string>>({});
   const retry = React.useRef<{ payload: string; key: string } | null>(null);
   const maintenance = room.maintenance;
   if (!maintenance) return null;
@@ -65,6 +68,36 @@ export default function RoomMaintenancePanel({
       setSaving(false);
     }
   }
+  async function reassign(itemId: string) {
+    const data = { itemId, targetRoomId: targets[itemId], note: note.trim() };
+    const payload = JSON.stringify(data);
+    if (retry.current?.payload !== payload)
+      retry.current = { payload, key: crypto.randomUUID() };
+    setSaving(true);
+    setError("");
+    try {
+      const response = await fetch(
+        `${apiBase}/staff/rooms/${room.id}/reassign`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ ...data, requestKey: retry.current.key }),
+        },
+      );
+      if (!response.ok) throw new Error((await response.json()).error);
+      retry.current = null;
+      await refresh();
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Reassignment unavailable.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
   const disabled = !maintenance.enabled || busy || saving;
   const actions: [MaintenanceAction, string][] = blockId
     ? [
@@ -93,6 +126,43 @@ export default function RoomMaintenancePanel({
                 {item.state.replaceAll("_", " ")}).
                 <br />
                 Room item {item.itemId}
+                <label className="mt-2 grid gap-1">
+                  Replacement Ready room
+                  <select
+                    className="rounded border border-subtle bg-white p-2"
+                    value={targets[item.itemId] ?? ""}
+                    disabled={disabled}
+                    onChange={(e) =>
+                      setTargets({ ...targets, [item.itemId]: e.target.value })
+                    }
+                  >
+                    <option value="">Select a room</option>
+                    {rooms
+                      .filter(
+                        (target) =>
+                          target.id !== room.id &&
+                          target.category_code === room.category_code &&
+                          target.active &&
+                          target.operational_state === "ready",
+                      )
+                      .map((target) => (
+                        <option key={target.id} value={target.id}>
+                          {target.code}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <button
+                  className="mt-2 min-h-11 rounded border border-subtle px-3"
+                  disabled={disabled || !note.trim() || !targets[item.itemId]}
+                  onClick={() => void reassign(item.itemId)}
+                >
+                  Reassign room item
+                </button>
+                <p className="text-xs">
+                  Uses the maintenance note below; preserves schedule, price and
+                  verified payments. Server rechecks capacity.
+                </p>
               </li>
             ))}
           </ul>

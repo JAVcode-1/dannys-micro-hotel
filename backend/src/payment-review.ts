@@ -213,13 +213,23 @@ async function checkConfirmationCapacity(
      where r.active and c.active and c.id=any($1::bigint[]) order by r.id for share of r,c`,
     [categories.rows.map((row) => row.id)],
   );
+  const firstStart = new Date(
+    Math.min(...cart.rows.map((row) => row.start_at.getTime())),
+  );
+  const lastEnd = new Date(
+    Math.max(
+      ...cart.rows.map(
+        (row) => row.end_at.getTime() + row.buffer_minutes * 60000,
+      ),
+    ),
+  );
   const blocks = await client.query<{
     room_id: string;
     start_at: Date;
     end_at: Date | null;
   }>(
-    "select room_id,start_at,end_at from staytrack.room_blocks where room_id=any($1::bigint[])",
-    [rooms.rows.map((row) => row.id)],
+    "select room_id,start_at,end_at from staytrack.room_blocks where room_id=any($1::bigint[]) and start_at<$3 and (end_at is null or end_at>$2)",
+    [rooms.rows.map((row) => row.id), firstStart, lastEnd],
   );
   const others = await client.query<{
     id: string;
@@ -230,8 +240,13 @@ async function checkConfirmationCapacity(
     buffer_minutes: number;
   }>(
     `select i.*,c.code as category from staytrack.inventory_claims i join staytrack.room_categories c on c.id=i.category_id
-     where i.category_id=any($1::bigint[]) and i.state not in ('released','expired') and not (i.id=any($2::bigint[]))`,
-    [categories.rows.map((row) => row.id), cart.rows.map((row) => row.id)],
+     where i.category_id=any($1::bigint[]) and i.state not in ('released','expired') and not (i.id=any($2::bigint[])) and i.start_at<$4 and i.buffered_end_at>$3`,
+    [
+      categories.rows.map((row) => row.id),
+      cart.rows.map((row) => row.id),
+      firstStart,
+      lastEnd,
+    ],
   );
   const occupancy = (row: (typeof others.rows)[number]) => ({
     id: row.id,

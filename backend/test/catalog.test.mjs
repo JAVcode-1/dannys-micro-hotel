@@ -1,7 +1,11 @@
 /* global fetch */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { changePackagePrice, setPackageActive } from "../dist/catalog.js";
+import {
+  changePackagePrice,
+  setPackageActive,
+  updateCategory,
+} from "../dist/catalog.js";
 import { createApp } from "../dist/app.js";
 
 test("unsupported Family 3-hour and unsafe prices are rejected before database access", async () => {
@@ -15,6 +19,30 @@ test("unsupported Family 3-hour and unsafe prices are rejected before database a
       await changePackagePrice("staff", code, duration, price),
       false,
     );
+});
+
+test("retired staff cannot mutate catalog through a stale verified request", async () => {
+  const statements = [];
+  const pool = {
+    connect: async () => ({
+      query: async (sql) => {
+        statements.push(sql);
+        return { rows: [], rowCount: 0 };
+      },
+      release() {},
+    }),
+  };
+  for (const operation of [
+    () => changePackagePrice("retired", "double_standard", 180, 20000, pool),
+    () => setPackageActive("retired", "double_standard", 180, true, pool),
+    () => updateCategory("retired", "double_standard", "Standard", true, pool),
+  ]) {
+    await assert.rejects(operation(), /Staff access denied/);
+  }
+  assert.equal(
+    statements.some((sql) => /^\s*(update|insert)/i.test(sql)),
+    false,
+  );
 });
 
 test("price revision retains old version and commits audit in one transaction", async () => {
@@ -38,10 +66,19 @@ test("price revision retains old version and commits audit in one transaction", 
   );
   assert.deepEqual(
     calls.map(([sql]) => sql.trim().split(/\s+/)[0].toLowerCase()),
-    ["begin", "select", "update", "insert", "insert", "commit", "release"],
+    [
+      "begin",
+      "select",
+      "select",
+      "update",
+      "insert",
+      "insert",
+      "commit",
+      "release",
+    ],
   );
-  assert.deepEqual(calls[3][1], [2, "family_executive", 360, 65000, 4]);
-  assert.deepEqual(calls[4][1], ["actor"]);
+  assert.deepEqual(calls[4][1], [2, "family_executive", 360, 65000, 4]);
+  assert.deepEqual(calls[5][1], ["actor"]);
 });
 
 test("audit failure rolls back price revision", async () => {

@@ -15,7 +15,8 @@ globalThis.HTMLElement = dom.window.HTMLElement;
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const { render, screen, cleanup, fireEvent, waitFor } =
   await import("@testing-library/react");
-const { default: App } = await import("../src/App.tsx");
+const { PaymentReviewPreview: App } =
+  await import("../src/StaffPaymentReviews.tsx");
 const { PaymentReviewPanel } = await import("../src/StaffPaymentReviews.tsx");
 afterEach(cleanup);
 test("O03 staff preview is explicitly synthetic and cannot submit live confirmation", () => {

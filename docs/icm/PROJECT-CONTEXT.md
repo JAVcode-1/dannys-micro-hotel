@@ -4,6 +4,10 @@ status: h03-a-development-checkpoint-acceptance-pending
 ---
 # Session Context — StayTrack / Danny's Micro Hotel
 
+## Functional correction sprint — 2026-11-21
+
+C01–C20 is owner-authorized as one sprint; UI refinement is paused. Read [[../functional-completion-tracker]] for implemented surfaces, actual evidence and outstanding checks, and [[../isolated-development]] for local fixture composition. Application tests pass (123 backend + 72 frontend); 39 isolated PostgreSQL tests pass and generated schema types are synchronized. Browser acceptance was blocked by Windows URL-confidence enforcement. No hosted Supabase, real email/money, hosted migrations or production gates were activated. Preserve unrelated Obsidian/editor/prototype/nested-folder files. Do not claim functional freeze or phase completion from this note. Markdown remains canonical; no working Graphify/ICM executable integration was used.
+
 ## UI-01 guest landing checkpoint · 2026-11-21
 
 UI-01 integrates the owner-approved “Stay on your time” prototype as the guest homepage. It uses the Express catalog for rates and durations, existing booking and guest access routes, and the existing hall and review gates. Vite serves curated WebP variants, including the uncropped logo and the third Double Standard photo. Contact placeholders live in `frontend/src/hotel-contact.ts`. The original GCash QR remains outside the frontend for UI-05. Local desktop and mobile captures are ready for the owner’s inspection. UI-02 requires a separate instruction. See [[../14-milestones]].

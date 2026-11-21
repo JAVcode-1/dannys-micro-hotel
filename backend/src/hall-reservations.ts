@@ -22,6 +22,7 @@ export const hallCommands = [
   "inquiry",
   "receipt",
   "confirm",
+  "recover_inquiry",
   "reschedule",
   "extend",
   "start",
@@ -293,12 +294,16 @@ async function applyCommand(
       return result;
     }
     case "confirm":
+    case "recover_inquiry":
     case "reschedule":
     case "extend": {
       if (action !== "confirm") str(input.reason);
       if (action !== "confirm" && input.expectedClaim !== r.claim_id)
         fail("The hall schedule changed. Refresh before retrying.");
-      if (action === "confirm" && r.status !== "inquiry")
+      if (
+        ["confirm", "recover_inquiry"].includes(action) &&
+        r.status !== "inquiry"
+      )
         fail("Only an inquiry may be confirmed.");
       if (
         action === "reschedule" &&
@@ -404,6 +409,11 @@ async function applyCommand(
             net > BigInt(quote.total),
           ],
         );
+        if (action === "recover_inquiry")
+          await c.query(
+            "update staytrack.hall_reservations set quote_input=$2 where id=$1",
+            [r.id, quoteInput(input)],
+          );
       } catch (error) {
         if ((error as { code?: string }).code !== "23P01") throw error;
         await c.query("rollback to savepoint hall_claim");

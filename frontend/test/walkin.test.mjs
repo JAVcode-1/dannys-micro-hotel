@@ -15,7 +15,7 @@ globalThis.HTMLElement = dom.window.HTMLElement;
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const { render, screen, cleanup, fireEvent, waitFor } =
   await import("@testing-library/react");
-const { default: App } = await import("../src/App.tsx");
+const { WalkInPreview: App } = await import("../src/WalkInDesk.tsx");
 afterEach(cleanup);
 test("W01 synthetic planner is distinct from W02 and cannot check a guest in", () => {
   render(createElement(App));

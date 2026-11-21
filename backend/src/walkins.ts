@@ -18,6 +18,67 @@ import {
 import { insertBookedItems } from "./booked-items.js";
 import { normalizePaymentReference } from "./payment-review.js";
 import { hasControlCharacters } from "./payment-media.js";
+import { bookingPolicy } from "./guest-booking.js";
+export const walkInPolicy = {
+  ...bookingPolicy,
+  text:
+    bookingPolicy.text +
+    " Walk-ins may pay cash, staff-verified GCash or mixed installments; at least 50% is required before normal room access. The purchased stay starts at recorded staff check-in. Outstanding balances normally require settlement before checkout; staff must document any unpaid departure exception. Countdown zero does not check a guest out.",
+};
+
+export type WalkInContact = {
+  phone: string;
+  email: string | null;
+  policyVersion: string;
+  policyAcknowledged: true;
+  minorIdStatus: "not_checked" | "checked" | "no_minors";
+};
+export function parseWalkInContact(value: unknown): WalkInContact {
+  const v = value as Record<string, unknown> | null;
+  if (
+    !v ||
+    typeof v !== "object" ||
+    Array.isArray(v) ||
+    Object.keys(v).some(
+      (key) =>
+        ![
+          "phone",
+          "email",
+          "policyVersion",
+          "policyAcknowledged",
+          "minorIdStatus",
+        ].includes(key),
+    ) ||
+    typeof v.phone !== "string" ||
+    !/^[+()\d -]{7,30}$/.test(v.phone.trim()) ||
+    !/[0-9]{3}/.test(v.phone) ||
+    v.policyVersion !== bookingPolicy.version ||
+    v.policyAcknowledged !== true ||
+    !["not_checked", "checked", "no_minors"].includes(String(v.minorIdStatus))
+  )
+    throw new BookingError(
+      "Enter the guest contact number, current policy acknowledgement and minor ID review status. Do not upload or enter ID details.",
+    );
+  const email =
+    v.email === undefined || v.email === null || v.email === ""
+      ? null
+      : typeof v.email === "string"
+        ? v.email.trim().toLowerCase()
+        : undefined;
+  if (
+    email === undefined ||
+    (email !== null &&
+      (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))
+  )
+    throw new BookingError("Enter a valid optional contact email.");
+  return {
+    phone: v.phone.trim(),
+    email,
+    policyVersion: bookingPolicy.version,
+    policyAcknowledged: true,
+    minorIdStatus: v.minorIdStatus as WalkInContact["minorIdStatus"],
+  };
+}
 
 const hash = (value: unknown) =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -199,6 +260,7 @@ export async function createWalkInBooking(
   value: unknown,
   pool = databasePool(),
   chargeDisclosures: unknown = [],
+  contactValue?: unknown,
 ) {
   checkKey(key);
   if (
@@ -212,12 +274,25 @@ export async function createWalkInBooking(
     );
   // Structural validation is time-independent so retries can replay after planned arrival.
   const disclosures = parseChargeDisclosures(chargeDisclosures);
+  const contact =
+    contactValue === undefined ? undefined : parseWalkInContact(contactValue);
   const items = parseBookingItems(value, 0);
+  if (
+    contact &&
+    ((items.some((item) => item.children > 0) &&
+      contact.minorIdStatus === "no_minors") ||
+      (!items.some((item) => item.children > 0) &&
+        contact.minorIdStatus !== "no_minors"))
+  )
+    throw new BookingError(
+      "Minor ID review status must match the recorded child occupants. ID checking does not determine legal eligibility.",
+    );
   const name = primaryName.trim();
   const requestHash = hash({
     items,
     name,
     ...(disclosures.length ? { disclosures } : {}),
+    ...(contact ? { contact } : {}),
   });
   const claimKey = hash(`walk_in:${actorId}:${key}`);
   return claimTransaction(async (client) => {
@@ -301,6 +376,20 @@ export async function createWalkInBooking(
       [actorId],
     );
     await captureChargeDisclosures(client, id, disclosures);
+    if (contact)
+      await client.query(
+        `insert into staytrack.walkin_guest_contacts(reservation_id,phone,email,policy_version,policy_text,acknowledged_by,minor_id_status,minor_id_checked_by,minor_id_checked_at)
+      values($1,$2,$3,$4,$5,$6,$7,case when $7='checked' then $6::uuid else null end,case when $7='checked' then clock_timestamp() else null end)`,
+        [
+          id,
+          contact.phone,
+          contact.email,
+          bookingPolicy.version,
+          walkInPolicy.text,
+          actorId,
+          contact.minorIdStatus,
+        ],
+      );
     return { booking: await readWalkIn(id, client), replayed: false };
   }, pool);
 }

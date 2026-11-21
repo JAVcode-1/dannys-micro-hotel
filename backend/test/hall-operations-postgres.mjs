@@ -112,6 +112,24 @@ export async function hallOperationsPostgres(t, pool) {
         [loser],
       );
       assert.deepEqual(lost, { claim_id: null, payment_resolution: true });
+      const recovery = await command("recover_inquiry", {
+        ...schedule,
+        id: loser,
+        expectedClaim: null,
+        start: date.event_day + "T08:00",
+        reason: "Guest agreed to an alternative schedule",
+      });
+      assert.equal(recovery.issue, undefined);
+      assert.equal(recovery.status, "confirmed");
+      assert.equal(
+        (
+          await pool.query(
+            "select quote_input->>'start' start from staytrack.hall_reservations where id=$1",
+            [loser],
+          )
+        ).rows[0].start,
+        date.event_day + "T08:00",
+      );
       assert.equal(
         (
           await pool.query(
@@ -128,6 +146,28 @@ export async function hallOperationsPostgres(t, pool) {
         })
       ).id;
       await command("receipt", receipt(other, 250000));
+      const replayPayload = receipt(other, 100, {
+        evidence: "Synthetic retry receipt",
+      });
+      const replayKey = "hall-durable-retry-0001";
+      const replayFirst = await command("receipt", replayPayload, replayKey);
+      assert.deepEqual(
+        await command("receipt", replayPayload, replayKey),
+        replayFirst,
+      );
+      assert.equal(
+        (
+          await pool.query(
+            "select count(*)::int n from staytrack.hall_receipts where id=$1",
+            [replayFirst.receiptId],
+          )
+        ).rows[0].n,
+        1,
+      );
+      await assert.rejects(
+        command("receipt", { ...replayPayload, amount: 101 }, replayKey),
+        /Request key already used/,
+      );
       assert.equal((await command("confirm", { id: other })).issue, undefined);
       await command("receipt", receipt(winner, 250000));
       const original = (
@@ -191,8 +231,26 @@ export async function hallOperationsPostgres(t, pool) {
       const report = await hallReport(pool, date.today, date.today);
       assert.deepEqual(
         [report.gross, report.refunds, report.net],
-        ["801000", "100000", "701000"],
+        ["801100", "100000", "701100"],
       );
+      const bufferOnly = await pool.query(
+        `insert into staytrack.hall_claims(setup,attendees,event_start,event_end,preparation_start,cleanup_end)
+        select 'theater',10,(($1::date+1)::timestamp at time zone 'Asia/Manila') + interval '30 minutes',
+        (($1::date+1)::timestamp at time zone 'Asia/Manila') + interval '210 minutes',
+        (($1::date+1)::timestamp at time zone 'Asia/Manila') - interval '30 minutes',
+        (($1::date+1)::timestamp at time zone 'Asia/Manila') + interval '240 minutes' returning id`,
+        [date.today],
+      );
+      await pool.query(
+        `insert into staytrack.hall_reservations(channel,organizer,quote_input,claim_id,status)
+        values('walk_in','Synthetic buffer boundary','{}',$1,'confirmed')`,
+        [bufferOnly.rows[0].id],
+      );
+      const bufferReport = await hallReport(pool, date.today, date.today);
+      assert.equal(bufferReport.utilization.bookings, 0);
+      assert.equal(bufferReport.utilization.scheduled_minutes, 0);
+      assert.equal(bufferReport.utilization.preparation_minutes, 30);
+      assert.equal(bufferReport.utilization.cleanup_minutes, 0);
       const accommodation = await pool.query(
         "select id from staytrack.reservations where channel='walk_in' limit 1",
       );

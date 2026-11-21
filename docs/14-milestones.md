@@ -4,6 +4,12 @@ status: in-progress
 ---
 # 14 — Milestones & Work Tracker
 
+## Functional correction sprint — 2026-11-21
+
+The owner authorized C01–C20 together and paused UI/UX refinement. Guest OTP sessions, booking/availability/hold/payment integration, reservation workspaces, staff readiness/no-show/reassignment/administration, Hall recovery/retry/financial history, transactional notifications, shared throttling and internal statements have code and targeted regressions. See [[functional-completion-tracker]] and [[isolated-development]]. Production gates remain closed; six forward candidate migrations are local only. No hosted services, real emails, money or inventory reconciliation occurred.
+
+Latest application suite: 123 backend and 72 frontend tests pass; 39 isolated PostgreSQL tests pass, with zero failures/skips. Schema types were synchronized from the migrated local catalog. Typecheck, lint, build and formatting pass. Windows Computer Use could not establish the browser URL securely, so browser acceptance is unverified. This entry is a verified development checkpoint, not a phase exit or UI/UX-only readiness claim. Earlier phase acceptance debt and owner/provider/legal dependencies remain open.
+
 ## UI-01 guest landing checkpoint · 2026-11-21
 
 The owner approved the standalone “Stay on your time” prototype. The integrated React homepage now uses its layout, typography, Royal Horizon colors, approved photo crops, and reduced-motion-aware interactions. It reads active rates and durations from the existing Express catalog. Booking links enter the existing planner with a room category where applicable. Guest access remains in the footer, and the hall and review features keep their existing gates. Hotel contact details are centralized placeholders.

@@ -19,6 +19,59 @@ export default function StaffCatalog({ token }: { token: string }) {
   const [message, setMessage] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [history, setHistory] = React.useState<Package[]>([]);
+  const [categoryNames, setCategoryNames] = React.useState<
+    Record<string, string>
+  >({});
+  async function saveCategory(item: Package) {
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch(`${apiBase}/staff/catalog/categories`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          categoryCode: item.code,
+          name: categoryNames[item.code] ?? item.name,
+          active: item.category_active,
+        }),
+      });
+      if (!response.ok) throw new Error();
+      await load();
+      setMessage("Category name updated and audited.");
+    } catch {
+      setMessage("Category update failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function toggleCategory(item: Package) {
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch(`${apiBase}/staff/catalog/categories`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          categoryCode: item.code,
+          name: item.name,
+          active: !item.category_active,
+        }),
+      });
+      if (!response.ok) throw new Error();
+      await load();
+      setMessage("Category availability updated and audited.");
+    } catch {
+      setMessage("Category update failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
   async function load(signal?: AbortSignal) {
     const response = await fetch(`${apiBase}/staff/catalog`, {
       signal,
@@ -99,6 +152,53 @@ export default function StaffCatalog({ token }: { token: string }) {
   return (
     <section className="mt-8 border-t border-subtle pt-6">
       <h2 className="text-lg font-bold">Package rates</h2>
+      <div className="my-5 space-y-3">
+        <h3 className="font-semibold">Room categories</h3>
+        {history
+          .filter(
+            (item, index, rows) =>
+              rows.findIndex((row) => row.code === item.code) === index,
+          )
+          .map((item) => (
+            <form
+              key={item.code}
+              className="flex flex-wrap items-end gap-3 rounded border border-subtle p-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void saveCategory(item);
+              }}
+            >
+              <label className="min-w-0 flex-1">
+                Category name
+                <input
+                  className="block min-h-11 w-full rounded border px-3 text-base"
+                  required
+                  maxLength={80}
+                  value={categoryNames[item.code] ?? item.name}
+                  onChange={(event) =>
+                    setCategoryNames((names) => ({
+                      ...names,
+                      [item.code]: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <button disabled={busy} className="min-h-11 rounded border px-3">
+                Save category name
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                className="min-h-11 rounded border px-3"
+                onClick={() => void toggleCategory(item)}
+              >
+                {item.category_active
+                  ? "Deactivate category"
+                  : "Activate category"}
+              </button>
+            </form>
+          ))}
+      </div>
       <p className="mt-1 text-sm text-muted">
         Changes create a new price version. Earlier versions remain stored.
       </p>

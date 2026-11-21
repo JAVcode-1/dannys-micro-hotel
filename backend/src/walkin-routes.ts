@@ -5,8 +5,11 @@ import {
   recordWalkInPayment,
   walkInBooking,
   walkInBookings,
+  parseWalkInContact,
+  walkInPolicy,
 } from "./walkins.js";
 import type { databasePool } from "./database.js";
+import { claimTransaction } from "./inventory-claims.js";
 export type WalkInRouteOptions = {
   pool?: ReturnType<typeof databasePool>;
   writesEnabled?: boolean;
@@ -45,6 +48,7 @@ export function registerWalkInRoutes(
           req.query.page === undefined ? 0 : Number(req.query.page),
         )),
         writesEnabled: options.writesEnabled === true,
+        policy: walkInPolicy,
       });
     } catch (error) {
       fail(res, error);
@@ -52,7 +56,14 @@ export function registerWalkInRoutes(
   });
   app.post("/staff/walkins/quote", staff, async (req, res) => {
     try {
-      res.json(await quoteBooking(req.body?.items));
+      res.json(
+        options.pool
+          ? await claimTransaction(
+              (db) => quoteBooking(req.body?.items, db),
+              options.pool,
+            )
+          : await quoteBooking(req.body?.items),
+      );
     } catch (error) {
       fail(res, error);
     }
@@ -66,6 +77,7 @@ export function registerWalkInRoutes(
   });
   app.post("/staff/walkins", staff, closed, async (req, res) => {
     try {
+      const contact = parseWalkInContact(req.body?.contact);
       res.json(
         await createWalkInBooking(
           res.locals.actorId as string,
@@ -73,6 +85,8 @@ export function registerWalkInRoutes(
           req.body?.primaryName,
           req.body?.items,
           options.pool,
+          req.body?.chargeDisclosures ?? [],
+          contact,
         ),
       );
     } catch (error) {

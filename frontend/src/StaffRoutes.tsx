@@ -22,6 +22,10 @@ import StaffLogin from "./StaffLogin";
 import StaffPaymentReviews from "./StaffPaymentReviews";
 import StaffReviewDesk from "./StaffReviewDesk";
 import StaffRooms from "./StaffRooms";
+import StaffReservations, {
+  StaffDashboard,
+  StaffReservationDetail,
+} from "./StaffReservations";
 import { StaffSessionProvider, useStaffSession } from "./StaffSession";
 import StayChangesDesk from "./StayChangesDesk";
 import StayMonitor from "./StayMonitor";
@@ -68,7 +72,19 @@ const primaryPages: Page[] = [
     component: StaffPaymentReviews,
     wide: true,
   },
-  { path: "/staff", label: "Catalog", component: StaffCatalog },
+  { path: "/staff", label: "Today", component: StaffDashboard, wide: true },
+  {
+    path: "/staff/reservations",
+    label: "Reservations",
+    component: StaffReservations,
+    wide: true,
+  },
+  {
+    path: "/staff/settings/catalog",
+    label: "Catalog",
+    component: StaffCatalog,
+    wide: true,
+  },
   { path: "/staff/rooms", label: "Rooms", component: StaffRooms, wide: true },
   {
     path: "/staff/settings",
@@ -148,6 +164,32 @@ function StaffLayout({
   const { pathname } = useLocation();
   const [message, setMessage] = useState("");
   const wide = pages.some((page) => page.wide && page.path === pathname);
+  const groups = [
+    ["Today", ["/staff", "/staff/check-ins"]],
+    [
+      "Reservations",
+      [
+        "/staff/reservations",
+        "/staff/walkins",
+        "/staff/cancellations",
+        "/staff/reschedules",
+      ],
+    ],
+    ["Active Stays", ["/staff/stays", "/staff/stay-changes"]],
+    ["Payments", ["/staff/payments"]],
+    ["Rooms", ["/staff/rooms"]],
+    ["Function Hall", hallEnabled ? ["/staff/hall"] : []],
+    [
+      "Management",
+      [
+        "/staff/analytics",
+        "/staff/audit",
+        "/staff/settings",
+        "/staff/settings/catalog",
+        ...(reviewsEnabled ? ["/staff/reviews", "/staff/feedback"] : []),
+      ],
+    ],
+  ] as const;
 
   async function signOut() {
     setMessage("");
@@ -161,58 +203,51 @@ function StaffLayout({
 
   return (
     <section
-      className={`mx-auto rounded-2xl border border-subtle bg-white p-7 shadow-sm ${wide ? "max-w-6xl" : "max-w-md"}`}
+      className={`mx-auto min-w-0 rounded-2xl border border-subtle bg-white p-4 sm:p-7 shadow-sm ${wide || pathname.startsWith("/staff/reservations/") ? "max-w-6xl" : "max-w-3xl"}`}
     >
       <h1 className="text-2xl font-bold text-main">Staff workspace</h1>
-      <div className="mt-6">
-        <p>Signed in as {identity}</p>
-        <nav className="mt-5 flex flex-wrap gap-2 text-sm font-semibold">
-          {primaryPages.map(({ path, label }) => (
-            <NavLink
-              key={path}
-              to={path}
-              end
-              className="rounded-lg bg-selected px-3 py-2 text-primary"
-            >
-              {label}
-            </NavLink>
-          ))}
-        </nav>
-        <nav className="flex flex-wrap gap-4 text-primary">
-          {additionalPages.map(({ path, label }) => (
-            <NavLink
-              key={path}
-              to={path}
-              className="inline-flex min-h-11 items-center"
-            >
-              {label}
-            </NavLink>
-          ))}
-        </nav>
-        {reviewsEnabled && (
-          <nav className="flex flex-wrap gap-4 py-2 text-primary">
-            {reviewPages.map(({ path, label }) => (
-              <NavLink key={path} to={path}>
-                {label}
-              </NavLink>
-            ))}
-          </nav>
-        )}
-        {hallEnabled && (
-          <NavLink
-            to={hallPage.path}
-            className="inline-flex min-h-11 items-center pl-4 text-primary"
+      <p className="mt-3 [overflow-wrap:anywhere]">Signed in as {identity}</p>
+      <div className="mt-6 grid gap-6 md:grid-cols-[14rem_minmax(0,1fr)]">
+        <aside className="border-subtle md:border-r md:pr-4 print:hidden">
+          <nav
+            aria-label="Staff navigation"
+            className="grid gap-5 sm:grid-cols-2 md:grid-cols-1"
           >
-            {hallPage.label}
-          </NavLink>
-        )}
-        <Outlet context={token} />
-        <button
-          className="mt-4 rounded-lg bg-primary px-4 py-2 text-white"
-          onClick={() => void signOut()}
-        >
-          Sign out
-        </button>
+            {groups
+              .filter(([, paths]) => paths.length)
+              .map(([group, paths]) => (
+                <div key={group}>
+                  <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted">
+                    {group}
+                  </p>
+                  {paths.map((path) => {
+                    const page = pages.find((p) => p.path === path);
+                    return page ? (
+                      <NavLink
+                        key={path}
+                        to={path}
+                        end
+                        className={({ isActive }) =>
+                          `flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold text-primary ${isActive ? "bg-selected" : ""}`
+                        }
+                      >
+                        {page.label}
+                      </NavLink>
+                    ) : null;
+                  })}
+                </div>
+              ))}
+          </nav>
+        </aside>
+        <div className="min-w-0">
+          <Outlet context={token} />
+          <button
+            className="mt-4 rounded-lg bg-primary px-4 py-2 text-white"
+            onClick={() => void signOut()}
+          >
+            Sign out
+          </button>
+        </div>
       </div>
       {(message || notice) && (
         <p role="status" className="mt-4 text-sm text-muted">
@@ -340,6 +375,32 @@ export function staffRoutes(options: StaffOptions) {
           element={<StaffPage component={component} />}
         />
       ))}
+      <Route
+        path="/staff/reservations/:id"
+        element={<StaffPage component={StaffReservationDetail} />}
+      />
+      <Route
+        path="/staff/catalog"
+        element={<Navigate to="/staff/settings/catalog" replace />}
+      />
+      {!options.hallEnabled && (
+        <Route
+          path="/staff/hall"
+          element={<p>Function Hall is unavailable pending activation.</p>}
+        />
+      )}
+      {!options.reviewsEnabled && (
+        <Route
+          path="/staff/reviews"
+          element={<p>Reviews are unavailable pending activation.</p>}
+        />
+      )}
+      {!options.reviewsEnabled && (
+        <Route
+          path="/staff/feedback"
+          element={<p>Private feedback is unavailable pending activation.</p>}
+        />
+      )}
       <Route path={signInPath} element={null} />
       {options.invitePath && <Route path={options.invitePath} element={null} />}
     </Route>

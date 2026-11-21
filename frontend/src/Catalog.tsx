@@ -27,7 +27,7 @@ export default function Catalog() {
     return () => controller.abort();
   }, []);
   return (
-    <main className="min-h-svh bg-canvas px-6 py-10 text-main sm:px-10">
+    <section className="bg-canvas py-6 text-main">
       <div className="mx-auto max-w-5xl">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-subtle pb-6">
           <a href="/" className="font-bold text-primary">
@@ -99,6 +99,6 @@ export default function Catalog() {
         </div>
         <OccupancyGuide />
       </div>
-    </main>
+    </section>
   );
 }

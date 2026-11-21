@@ -29,9 +29,13 @@ export type GuestReservation = {
   primaryName: string;
   createdAt: string;
   totalCentavos: number;
+  reviewEligible?: boolean;
   financials?: import("./stay-changes.js").StayFinancials;
   items: {
     id: string;
+    status?: string;
+    checkedInAt?: string | null;
+    checkedOutAt?: string | null;
     category: string;
     startAt: string;
     endAt: string;

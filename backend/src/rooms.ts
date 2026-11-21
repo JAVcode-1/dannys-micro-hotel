@@ -1,10 +1,16 @@
-import { maintenanceBoard } from "./maintenance.js";
+﻿import { maintenanceBoard } from "./maintenance.js";
 import { databasePool } from "./database.js";
 import { claimTransaction } from "./inventory-claims.js";
 import { BookingError } from "./booking-quote.js";
+import { hasControlCharacters } from "./payment-media.js";
 import type { Express, RequestHandler } from "express";
 
-export async function staffRooms(pool = databasePool()) {
+export async function staffRooms(pool = databasePool(), enabled = false) {
+  const corrections = (
+    await pool.query(
+      "select to_regclass('staytrack.room_inspections') is not null as installed",
+    )
+  ).rows[0].installed;
   const installed = (
     await pool.query(
       "select to_regclass('staytrack.housekeeping_events') is not null as installed",
@@ -24,18 +30,20 @@ export async function staffRooms(pool = databasePool()) {
       and tstzrange(b.start_at,b.end_at,'[)') @> statement_timestamp()
       and not exists(select 1 from staytrack.room_checkouts x where x.cleaning_block_id=b.id)) as maintenance_now,
     (select count(*)::int from staytrack.inventory_claims i where i.room_id=r.id
-      and i.state in ('held','pending_review') and i.start_at<=statement_timestamp()
+      and i.state in ('held','proof_pending_review') and i.start_at<=statement_timestamp()
       and i.buffered_end_at>statement_timestamp()) as held_now,
     (select count(*)::int from staytrack.inventory_claims i where i.room_id=r.id
       and i.state in ('confirmed','walkin_reserved') and i.start_at<=statement_timestamp()
       and i.buffered_end_at>statement_timestamp()) as reserved_now,
-    (r.active and c.active and r.operational_state='ready'
+    (r.active and c.active and r.operational_state='ready' ${corrections ? "and staytrack.room_is_physically_ready(r.id)" : ""}
       and not exists(select 1 from staytrack.room_blocks b where b.room_id=r.id and tstzrange(b.start_at,b.end_at,'[)') @> statement_timestamp())
       and not exists(select 1 from staytrack.inventory_claims i where i.room_id=r.id and i.state not in ('released','expired')
         and i.start_at<=statement_timestamp() and i.buffered_end_at>statement_timestamp())) as available_now,`
         : "null as checkout_id,'[]'::json as housekeeping,null as turnover_until,false as maintenance_now,0 as held_now,0 as reserved_now,false as available_now,"
     }
-    false as housekeeping_enabled
+    ${corrections ? "staytrack.room_is_physically_ready(r.id)" : "false"} as physically_ready,
+    ${corrections ? "(r.operational_state in ('unverified','ready','cleaning') and not exists(select 1 from staytrack.room_check_ins s where s.room_id=r.id and not exists(select 1 from staytrack.room_checkouts o where o.room_booking_id=s.room_booking_id)) and not exists(select 1 from staytrack.room_blocks b where b.room_id=r.id and tstzrange(b.start_at,b.end_at,'[)') @> statement_timestamp()))" : "false"} as legacy_inspection_eligible,
+    ${enabled ? "true" : "false"} as housekeeping_enabled
     from staytrack.rooms r join staytrack.room_categories c on c.id = r.category_id
     ${
       installed
@@ -45,7 +53,7 @@ export async function staffRooms(pool = databasePool()) {
         : ""
     }
     order by c.id, r.code`);
-  const maintenance = await maintenanceBoard(pool);
+  const maintenance = await maintenanceBoard(pool, enabled);
   return rows.map((row) => ({
     ...row,
     housekeeping: row.housekeeping ?? [],
@@ -154,6 +162,58 @@ export function registerHousekeeping(
   enabled = false,
   pool?: ReturnType<typeof databasePool>,
 ) {
+  app.patch("/staff/rooms/:id/admin", staff, async (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    if (!enabled) {
+      res.status(503).json({
+        error: "Live room administration is closed pending acceptance.",
+      });
+      return;
+    }
+    try {
+      res.json(
+        await administerRoom(
+          res.locals.actorId,
+          String(req.params.id),
+          req.body,
+          pool,
+        ),
+      );
+    } catch (error) {
+      res.status(error instanceof BookingError ? error.status : 503).json({
+        error:
+          error instanceof BookingError
+            ? error.message
+            : "Room administration unavailable.",
+      });
+    }
+  });
+  app.post("/staff/rooms/:id/inspection", staff, async (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    if (!enabled) {
+      res
+        .status(503)
+        .json({ error: "Live inspections are closed pending acceptance." });
+      return;
+    }
+    try {
+      res.json(
+        await inspectLegacyRoom(
+          res.locals.actorId,
+          String(req.params.id),
+          req.body,
+          pool,
+        ),
+      );
+    } catch (error) {
+      res.status(error instanceof BookingError ? error.status : 503).json({
+        error:
+          error instanceof BookingError
+            ? error.message
+            : "Inspection unavailable.",
+      });
+    }
+  });
   app.post("/staff/rooms/:id/housekeeping", staff, async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
     if (!enabled) {
@@ -180,4 +240,185 @@ export function registerHousekeeping(
       });
     }
   });
+}
+
+export async function inspectLegacyRoom(
+  actor: string,
+  roomId: string,
+  value: unknown,
+  pool = databasePool(),
+) {
+  const body = value as {
+    note?: unknown;
+    requestKey?: unknown;
+    checksConfirmed?: unknown;
+  } | null;
+  if (
+    !/^[1-9]\d{0,14}$/.test(roomId) ||
+    body?.checksConfirmed !== true ||
+    typeof body.note !== "string" ||
+    !body.note.trim() ||
+    body.note.length > 1000 ||
+    typeof body.requestKey !== "string" ||
+    !/^[A-Za-z0-9_-]{16,100}$/.test(body.requestKey)
+  )
+    throw new BookingError(
+      "Confirm current physical checks with a note and retry key.",
+    );
+  try {
+    return await claimTransaction(
+      async (db) =>
+        (
+          await db.query(
+            "select * from staytrack.inspect_legacy_room($1,$2,$3,$4)",
+            [actor, roomId, body.requestKey, String(body.note).trim()],
+          )
+        ).rows[0],
+      pool,
+    );
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    if (code === "42501") throw new BookingError("Staff access denied.", 403);
+    if (["P0001", "23505"].includes(code ?? ""))
+      throw new BookingError(
+        "Legacy inspection conflicts with stay history, maintenance or retry data. Use normal housekeeping for checked-out rooms.",
+        409,
+      );
+    throw error;
+  }
+}
+
+export async function administerRoom(
+  actor: string,
+  roomId: string,
+  value: unknown,
+  pool = databasePool(),
+) {
+  const body = value as {
+    code?: unknown;
+    active?: unknown;
+    note?: unknown;
+    requestKey?: unknown;
+  } | null;
+  if (
+    !/^[1-9]\d{0,14}$/.test(roomId) ||
+    !body ||
+    typeof body.code !== "string" ||
+    !body.code.trim() ||
+    body.code.length > 80 ||
+    hasControlCharacters(body.code) ||
+    typeof body.active !== "boolean" ||
+    typeof body.note !== "string" ||
+    !body.note.trim() ||
+    body.note.length > 1000 ||
+    typeof body.requestKey !== "string" ||
+    !/^[A-Za-z0-9_-]{16,100}$/.test(body.requestKey)
+  )
+    throw new BookingError(
+      "Confirmed room identifier, active state, reason and retry key required.",
+    );
+  try {
+    return await claimTransaction(async (db) => {
+      if (
+        !(
+          await db.query(
+            "select 1 from staytrack.staff_accounts where auth_user_id=$1 and active for share",
+            [actor],
+          )
+        ).rowCount
+      )
+        throw new BookingError("Staff access denied.", 403);
+      await db.query("select pg_advisory_xact_lock(hashtextextended($1,0))", [
+        actor + ":" + body.requestKey,
+      ]);
+      const category = (
+        await db.query("select category_id from staytrack.rooms where id=$1", [
+          roomId,
+        ])
+      ).rows[0];
+      if (!category) throw new BookingError("Room not found.", 404);
+      await db.query("select pg_advisory_xact_lock($1::bigint)", [
+        category.category_id,
+      ]);
+      const room = (
+        await db.query("select * from staytrack.rooms where id=$1 for update", [
+          roomId,
+        ])
+      ).rows[0];
+      const prior = (
+        await db.query(
+          "select * from staytrack.room_administration_events where actor_auth_user_id=$1 and request_key=$2",
+          [actor, body.requestKey],
+        )
+      ).rows[0];
+      if (prior) {
+        if (
+          String(prior.room_id) !== roomId ||
+          prior.new_code !== String(body.code).trim() ||
+          prior.new_active !== body.active ||
+          prior.note !== String(body.note).trim()
+        )
+          throw new BookingError("Retry key conflict.", 409);
+        return prior;
+      }
+      if (
+        !(body.active as boolean) &&
+        (
+          await db.query(
+            "select 1 from staytrack.inventory_claims where room_id=$1 and state not in ('released','expired') and buffered_end_at>clock_timestamp() union all select 1 from staytrack.room_check_ins s where room_id=$1 and not exists(select 1 from staytrack.room_checkouts o where o.room_booking_id=s.room_booking_id)",
+            [roomId],
+          )
+        ).rowCount
+      )
+        throw new BookingError(
+          "Resolve active bookings and stays before deactivating a room.",
+          409,
+        );
+      if (
+        body.active &&
+        !room.active &&
+        !(
+          await db.query(
+            "select 1 from staytrack.rooms r where r.id=$1 and r.operational_state='ready' and exists(select 1 from staytrack.room_inspections e where e.room_id=r.id and not exists(select 1 from staytrack.room_checkouts o join staytrack.room_check_ins ci on ci.room_booking_id=o.room_booking_id where ci.room_id=r.id and o.checked_out_at>=e.occurred_at)) and not exists(select 1 from staytrack.room_check_ins s where s.room_id=r.id and not exists(select 1 from staytrack.room_checkouts o where o.room_booking_id=s.room_booking_id)) and not exists(select 1 from staytrack.room_blocks b where b.room_id=r.id and tstzrange(b.start_at,b.end_at,'[)') @> clock_timestamp())",
+            [roomId],
+          )
+        ).rowCount
+      )
+        throw new BookingError(
+          "Inspect and mark the room Ready before activation.",
+          409,
+        );
+      await db.query(
+        "update staytrack.rooms set code=$2,active=$3 where id=$1",
+        [roomId, String(body.code).trim(), body.active],
+      );
+      const event = (
+        await db.query(
+          "insert into staytrack.room_administration_events(room_id,actor_auth_user_id,request_key,old_code,new_code,old_active,new_active,note) values($1,$2,$3,$4,$5,$6,$7,$8) returning *",
+          [
+            roomId,
+            actor,
+            body.requestKey,
+            room.code,
+            String(body.code).trim(),
+            room.active,
+            body.active,
+            String(body.note).trim(),
+          ],
+        )
+      ).rows[0];
+      await db.query(
+        "insert into staytrack.staff_audit(actor_auth_user_id,action) values($1,'room.admin_updated')",
+        [actor],
+      );
+      return event;
+    }, pool);
+  } catch (error) {
+    if ((error as { code?: string }).code === "23505")
+      throw new BookingError(
+        "Room identifier or retry key already exists.",
+        409,
+      );
+    throw error;
+  }
 }

@@ -324,9 +324,12 @@ export async function cancellationRows(
   actor: { staffId: string } | GuestIdentity,
   pool = databasePool(),
   page = 0,
+  reservationId?: string,
 ): Promise<CancellationRow[]> {
   if (!Number.isSafeInteger(page) || page < 0 || page > 1000000)
     throw new BookingError("Invalid cancellation page.");
+  if (reservationId !== undefined && !uuid(reservationId))
+    throw new BookingError("Invalid reservation filter.");
   const staff = "staffId" in actor;
   const result = await pool.query(
     `select b.id,b.reservation_id as "reservationId",r.channel,b.category_code as category,b.start_at as "startAt",b.end_at as "endAt",
@@ -341,8 +344,14 @@ export async function cancellationRows(
  join staytrack.reservations r on r.id=b.reservation_id join staytrack.reservation_financials a on a.reservation_id=r.id
  left join staytrack.cancellation_decisions d using(room_booking_id) left join staytrack.refund_claims c using(room_booking_id) left join staytrack.refund_transfers f using(room_booking_id)
  ${staff ? "" : `where r.owner_auth_user_id=$1 and lower(r.verified_email)=$2 and r.channel='online'`}
+ ${reservationId ? `${staff ? "where" : "and"} r.id=${staff ? "$2" : "$4"}::uuid` : ""}
  order by (f.room_booking_id is not null or d.approved=false),q.requested_at desc,b.id limit 100 offset ${staff ? "$1" : "$3"}`,
-    staff ? [page * 100] : [actor.id, actor.email.toLowerCase(), page * 100],
+    [
+      ...(staff
+        ? [page * 100]
+        : [actor.id, actor.email.toLowerCase(), page * 100]),
+      ...(reservationId ? [reservationId] : []),
+    ],
   );
   return result.rows;
 }
@@ -422,6 +431,9 @@ export function registerCancellations(
           res.locals.guest,
           pool,
           Number(req.query.page ?? 0),
+          req.query.reservationId === undefined
+            ? undefined
+            : String(req.query.reservationId),
         ),
         enabled,
       });

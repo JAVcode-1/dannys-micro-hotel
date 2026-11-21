@@ -91,6 +91,14 @@ export async function o02Postgres(t, pool) {
         },
       };
       const actor = "33333333-3333-4333-8333-333333333333";
+      await pool.query(
+        "insert into auth.users(id) values($1) on conflict do nothing",
+        [actor],
+      );
+      await pool.query(
+        "insert into staytrack.staff_accounts(auth_user_id,active) values($1,true) on conflict(auth_user_id) do update set active=true",
+        [actor],
+      );
       await configurePaymentQr(
         actor,
         "TEST PAYEE ONLY",

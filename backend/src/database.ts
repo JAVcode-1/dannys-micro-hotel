@@ -89,6 +89,40 @@ export async function probeDatabase(): Promise<void> {
   }
 }
 
+export async function probeWorkflowSchema(client: Pick<Pool, "query">) {
+  const tables = [
+    "reservations",
+    "room_bookings",
+    "inventory_claims",
+    "payment_qr",
+    "payment_submissions",
+    "verified_online_payments",
+    "walkin_ledger",
+    "room_check_ins",
+    "room_checkouts",
+    "stay_item_terms",
+    "housekeeping_events",
+    "maintenance_events",
+    "room_reassignments",
+    "room_inspections",
+    "early_check_in_approvals",
+    "accommodation_no_show_reviews",
+    "room_administration_events",
+    "reservation_booking_contacts",
+    "notification_outbox",
+    "review_invitation_jobs",
+    "request_limits",
+    "hall_reservations",
+    "hall_actions",
+  ];
+  const result = await client.query<{ ready: boolean }>(
+    `select bool_and(to_regclass('staytrack.'||name) is not null) and to_regprocedure('staytrack.room_is_physically_ready(bigint)') is not null as ready from unnest($1::text[]) names(name)`,
+    [tables],
+  );
+  if (!result.rows[0]?.ready)
+    throw new Error("Required workflow schema is not ready.");
+}
+
 export async function closeDatabase(): Promise<void> {
   if (pool) {
     const current = pool;

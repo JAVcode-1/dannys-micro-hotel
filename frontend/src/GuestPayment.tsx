@@ -34,6 +34,7 @@ export function PaymentPanel({
       elapsed,
   );
   const expired = session.status === "expired" || remaining === 0;
+  const confirmed = session.status === "confirmed";
   const canSubmit =
     !pending &&
     !expired &&
@@ -79,9 +80,11 @@ export function PaymentPanel({
         {preview ? "O02 development preview" : "GCash payment proof"}
       </p>
       <h2 className="mt-3 text-2xl font-bold">
-        {pending
-          ? "Payment submitted — awaiting staff verification"
-          : "Your payment details"}
+        {confirmed
+          ? "Payment verified"
+          : pending
+            ? "Payment submitted — awaiting staff verification"
+            : "Your payment details"}
       </h2>
       {preview && (
         <p className="mt-3 rounded-xl bg-lavender p-4 text-sm">
@@ -93,7 +96,17 @@ export function PaymentPanel({
       <p className="text-3xl font-bold text-primary">
         {peso(session.amountDueCentavos)}
       </p>
-      {pending ? (
+      {confirmed ? (
+        <p role="status" className="mt-5 rounded-xl bg-selected p-4">
+          Staff verified receipt of your payment. See your reservation for each
+          room's current status, schedule, refund details and available actions.
+        </p>
+      ) : session.status === "unavailable" ? (
+        <p role="status" className="mt-5 rounded-xl bg-lavender p-4">
+          Payment is unavailable for this reservation state. Contact staff for
+          reconciliation before sending money.
+        </p>
+      ) : pending ? (
         <p role="status" className="mt-5 rounded-xl bg-selected p-4">
           Staff must check the actual GCash transaction. Your room capacity
           remains protected while review is pending. This submission does not
@@ -197,7 +210,10 @@ export function PaymentPanel({
           <p className="mt-5 text-sm text-muted">
             Email reminder schedule:{" "}
             {session.emailReminderAt.map(hotelTime).join(" and ")}. Email
-            delivery is not enabled in this checkpoint.
+            delivery is{" "}
+            {session.emailDeliveryEnabled
+              ? "enabled."
+              : "not enabled in this environment."}
           </p>
         </>
       )}
@@ -234,7 +250,7 @@ export default function GuestPayment({
         };
         if (!response.ok)
           throw new Error(data.error || "Payment details unavailable.");
-        setSession(data);
+        if (!controller.signal.aborted) setSession(data);
       })
       .catch((error) => {
         if (!controller.signal.aborted)

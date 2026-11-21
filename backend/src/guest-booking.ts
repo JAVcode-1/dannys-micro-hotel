@@ -17,6 +17,33 @@ import {
 } from "./inventory-claims.js";
 import { databasePool } from "./database.js";
 import { insertBookedItems } from "./booked-items.js";
+import { hasControlCharacters } from "./payment-media.js";
+
+export const bookingPolicy = {
+  version: "booking-v1",
+  text: "No smoking. Online reservations require full payment to the configured hotel GCash account and actual staff verification. Upload both payment proof and reference within 30 minutes; timely submitted proof protects capacity while staff review is pending. An upload does not confirm a reservation. Free cancellation is within one hour after staff confirmation, before that room checks in; rescheduling does not restart the window. Online late arrival does not move checkout. No-shows require staff review and are generally nonrefundable under the disclosed policy and applicable law. Refunds are processed manually. Occupancy guidance is advisory; minor eligibility and legal limits require staff review.",
+  pendingOwnerApproval: true,
+};
+export function parseBookingContact(value: unknown) {
+  const contact = value as Record<string, unknown> | null;
+  if (
+    !contact ||
+    typeof contact.phone !== "string" ||
+    !/^[+()\d -]{7,30}$/.test(contact.phone.trim()) ||
+    (contact.phone.match(/\d/g)?.length ?? 0) < 7 ||
+    hasControlCharacters(contact.phone) ||
+    contact.policyVersion !== bookingPolicy.version ||
+    contact.policyAcknowledged !== true
+  )
+    throw new BookingError(
+      "Enter a contact number and acknowledge the current booking policy.",
+    );
+  return {
+    phone: contact.phone.trim(),
+    policyVersion: bookingPolicy.version,
+    policyAcknowledged: true as const,
+  };
+}
 
 // Internal only until inventory, channel, Auth and payment readiness gates pass.
 // HTTP creation remains unconditionally disabled in app.ts.
@@ -27,7 +54,14 @@ export async function createGuestHold(
   value: unknown,
   pool = databasePool(),
   chargeDisclosures: unknown = [],
+  contactValue?: unknown,
+  expectedTotalCentavos?: number,
 ) {
+  if (
+    expectedTotalCentavos !== undefined &&
+    (!Number.isSafeInteger(expectedTotalCentavos) || expectedTotalCentavos < 0)
+  )
+    throw new BookingError("Review the current server price before booking.");
   if (
     !/^[A-Za-z0-9_-]{16,100}$/.test(key) ||
     !/^[0-9a-f-]{36}$/i.test(guest.id) ||
@@ -38,6 +72,8 @@ export async function createGuestHold(
   )
     throw new BookingError("Invalid booking contact or request key.");
   const disclosures = parseChargeDisclosures(chargeDisclosures);
+  const contact =
+    contactValue === undefined ? undefined : parseBookingContact(contactValue);
   const items = parseBookingItems(value);
   const name = primaryName.trim();
   const email = guest.email.toLowerCase();
@@ -48,6 +84,10 @@ export async function createGuestHold(
         name,
         email,
         ...(disclosures.length ? { disclosures } : {}),
+        ...(contact ? { contact } : {}),
+        ...(expectedTotalCentavos === undefined
+          ? {}
+          : { expectedTotalCentavos }),
       }),
     )
     .digest("hex");
@@ -73,6 +113,14 @@ export async function createGuestHold(
       return { id: prior.rows[0].id, replayed: true };
     }
     const quote = await quoteBooking(items, client);
+    if (
+      expectedTotalCentavos !== undefined &&
+      quote.totalCentavos !== expectedTotalCentavos
+    )
+      throw new BookingError(
+        "Prices changed. Review a fresh quote before booking.",
+        409,
+      );
     const settings = await client.query<{
       cleaning_buffer_minutes: number | null;
     }>(
@@ -107,6 +155,19 @@ export async function createGuestHold(
     const id = reservation.rows[0].id;
     await insertBookedItems(client, id, quote, claims.ids);
     await captureChargeDisclosures(client, id, disclosures);
+    if (contact)
+      await client.query(
+        `insert into staytrack.reservation_booking_contacts
+       (reservation_id,phone,policy_version,policy_text,acknowledged_by)
+       values($1,$2,$3,$4,$5)`,
+        [
+          id,
+          contact.phone,
+          contact.policyVersion,
+          bookingPolicy.text,
+          guest.id,
+        ],
+      );
     return { id, replayed: false };
   }, pool);
 }
@@ -114,16 +175,35 @@ export async function createGuestHold(
 export async function guestReservations(
   guest: GuestIdentity,
   pool = databasePool(),
+  options: { limit?: number; offset?: number; reservationId?: string } = {},
 ): Promise<GuestReservation[]> {
-  const x03 = (
+  const { limit = 20, offset = 0, reservationId } = options;
+  if (
+    !Number.isInteger(limit) ||
+    limit < 1 ||
+    limit > 50 ||
+    !Number.isInteger(offset) ||
+    offset < 0 ||
+    offset > 100000
+  )
+    throw new BookingError("Invalid reservation pagination.");
+  if (
+    reservationId &&
+    !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(reservationId)
+  )
+    throw new BookingError("Reservation not found.", 404);
+  const schema = (
     await pool.query(
-      "select to_regclass('staytrack.stay_item_terms') is not null as installed",
+      "select to_regclass('staytrack.stay_item_terms') is not null as installed, to_regclass('staytrack.guest_reviews') is not null as reviews_installed",
     )
-  ).rows[0].installed;
+  ).rows[0];
+  const x03 = schema.installed;
   const { rows } = await pool.query<GuestReservation>(
     `select r.id, r.primary_name as "primaryName",
     r.created_at as "createdAt", r.total_centavos::float8 as "totalCentavos",
+    ${schema.reviews_installed ? `(select min(o.checked_out_at) > clock_timestamp()-interval '30 days' and not exists(select 1 from staytrack.guest_reviews gr where gr.reservation_id=r.id) from staytrack.room_bookings rb join staytrack.room_check_ins ci on ci.room_booking_id=rb.id join staytrack.room_checkouts o on o.room_booking_id=rb.id where rb.reservation_id=r.id) as "reviewEligible",` : ""}
     (select json_agg(json_build_object('id', b.id, 'category', b.category_code,
+      'status',b.status,${x03 ? "'checkedInAt',(select checked_in_at from staytrack.room_check_ins where room_booking_id=b.id),'checkedOutAt',(select checked_out_at from staytrack.room_checkouts where room_booking_id=b.id)," : ""}
       'startAt', b.start_at, 'endAt', b.end_at, ${x03 ? "'originalCheckoutAt',(select original_checkout_at from staytrack.stay_item_terms where room_booking_id=b.id),'effectiveCheckoutAt',(select effective_checkout_at from staytrack.stay_item_terms where room_booking_id=b.id)," : ""} 'adults', b.adult_count, 'children', b.child_count,
       'totalCentavos', b.total_centavos, 'state', i.state, 'proofDeadlineAt', i.proof_deadline_at,
       'scheduleRevision', coalesce((to_jsonb(b)->>'schedule_revision')::bigint,0),
@@ -133,8 +213,9 @@ export async function guestReservations(
       order by b.item_index) from staytrack.room_bookings b
       join staytrack.inventory_claims i on i.id = b.claim_id where b.reservation_id = r.id) as items
     from staytrack.reservations r where r.owner_auth_user_id = $1 and r.verified_email = $2
-    order by r.created_at desc limit 50`,
-    [guest.id, guest.email.toLowerCase()],
+    and ($5::uuid is null or r.id=$5::uuid)
+    order by r.created_at desc,r.id desc limit $3 offset $4`,
+    [guest.id, guest.email.toLowerCase(), limit, offset, reservationId ?? null],
   );
   if (x03)
     for (const r of rows) {

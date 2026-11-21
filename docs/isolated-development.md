@@ -1,0 +1,19 @@
+# Isolated functional development
+
+Normal Express startup keeps booking/payment/operational mutations and optional modules closed. No environment flag opens production transactions. `createIsolatedApp` requires development/test mode and an explicitly configured loopback `staytrack_test` pool. Its readiness probe checks workflow tables and the physical-readiness function.
+
+Run `npm run dev:isolated` from the repository root. The launcher does not read `backend/.env`; it clears hosted Supabase/database configuration for its child processes, creates a fresh disposable loopback PostgreSQL database, applies local migrations there, and starts the fixture API on127.0.0.1:3001 and frontend on127.0.0.1:5173. All rooms are labelled SYNTHETIC and require a current staff inspection before Ready. The synthetic15-minute buffer is fixture configuration, not owner approval.
+
+The launcher uses the already-installed embedded PostgreSQL module at `.quality/x02/postgres-tools/node_modules/embedded-postgres/dist/index.js`. `EMBEDDED_POSTGRES_MODULE` may identify an existing local installation. It never downloads this dependency. Missing tooling is an actionable startup error, not permission to use a hosted database. This tooling location is local and ignored; provision it separately where absent.
+
+Fixture credentials: guest@example.test uses OTP123456; staff@example.test uses password `development-only`. These are exclusively local fixture identities. Tokens are randomly generated per startup and accepted by exact match; JWT-shaped subjects only support subject-scoped UI retries. The frontend fixture adapter is selected only under Vite development mode, the explicit isolated flag and a loopback browser hostname. Real provider integrations remain closed.
+
+Configure/upload a synthetic GCash QR through staff Settings before exercising guest payment. Browser flow: rooms → booking selections → email verification → server quote and policy/contact review → atomic hold → owned payment/proof → staff actual-ledger checks using synthetic evidence → confirmed item. The API integration regression exercises this flow and rejects foreign ownership. Uploading a screenshot alone never confirms anything.
+
+`/development/mailbox` exposes only this disposable fixture mailbox; no real email is sent. The local scheduler runs every30seconds. `/development/jobs` also runs a bounded job batch. Review delivery is queued atomically with credentials and scoped consent; stale/revoked credential messages are cancelled. Private payment images use the fixture in-memory store and disappear on restart. This is not production Storage acceptance.
+
+For multi-instance deployment, apply/review candidate025 separately and configure `RATE_LIMIT_MODE=postgres`; the default memory limiter is for single-process operation. Configure `TRUSTED_PROXY_CIDRS` with exact proxy addresses/CIDRs, never arbitrary forwarding trust. Shared counters store address digests and expire through jobs. The real email adapter must honor the message ID as a durable provider idempotency key before activation.
+
+Database verification uses the existing disposable runner `.quality/h01/run-db.mjs` and `TEST_DATABASE_URL` restricted by tests to loopback/staytrack_test. The suite generates `.quality/database.types.sprint.ts` from the actual catalog through `scripts/generate-isolated-types.mjs`; copy/review that artifact into shared types only after the full migration suite passes. No hosted type-generation command is required or authorized by this sprint.
+
+Production blockers remain: real inventory identifiers/readiness reconciliation, hotel QR/payee verification, official email/provider setup, owner/legal/privacy policy acceptance, real staff/device checks, hosted migrations and formal production quality gate. No automated refunds, fiscal receipt claim, ID photographs, new permission tiers, or guest self-service Hall booking are introduced.

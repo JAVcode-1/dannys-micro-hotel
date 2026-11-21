@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { isolatedDevelopment } from "./staff-auth";
 import "./styles.css";
 import "./landing.css";
 
@@ -31,6 +32,9 @@ if (
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <App
+      hallEnabled={isolatedDevelopment}
+      reviewsEnabled={isolatedDevelopment}
+    />
   </StrictMode>,
 );

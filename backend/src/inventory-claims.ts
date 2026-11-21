@@ -30,6 +30,7 @@ export async function createClaimsInTransaction(
   key: string,
   items: ClaimItem[],
   client: PoolClient,
+  availabilityOnly = false,
 ): Promise<ClaimResult> {
   if (
     !/^[A-Za-z0-9_-]{16,128}$/.test(key) ||
@@ -102,6 +103,10 @@ export async function createClaimsInTransaction(
     category: row.category,
     ready: row.operational_state === "ready",
   }));
+  const firstStart = instant(Math.min(...items.map((item) => item.start)));
+  const lastEnd = instant(
+    Math.max(...items.map((item) => item.end + item.bufferMinutes * 60000)),
+  );
   const priorClaims = await client.query<{
     id: string;
     category: string;
@@ -112,8 +117,9 @@ export async function createClaimsInTransaction(
   }>(
     `select i.id, c.code as category, i.room_id, i.start_at, i.end_at, i.buffer_minutes
        from staytrack.inventory_claims i join staytrack.room_categories c on c.id = i.category_id
-       where i.state not in ('released', 'expired') and c.code = any($1::text[])`,
-    [categories.rows.map((row) => row.code)],
+       where i.state not in ('released', 'expired') and c.code = any($1::text[])
+       and i.start_at<$3 and i.buffered_end_at>$2`,
+    [categories.rows.map((row) => row.code), firstStart, lastEnd],
   );
   const existing: Occupancy[] = priorClaims.rows.map((row) => ({
     id: String(row.id),
@@ -130,8 +136,8 @@ export async function createClaimsInTransaction(
   }>(
     `select b.room_id, b.start_at, b.end_at from staytrack.room_blocks b
        join staytrack.rooms r on r.id = b.room_id join staytrack.room_categories c on c.id = r.category_id
-       where r.active and c.code = any($1::text[])`,
-    [categories.rows.map((row) => row.code)],
+       where r.active and c.code = any($1::text[]) and b.start_at<$3 and (b.end_at is null or b.end_at>$2)`,
+    [categories.rows.map((row) => row.code), firstStart, lastEnd],
   );
   const blocks: RoomBlock[] = blockRows.rows.map((row) => ({
     roomId: safeId(row.room_id),
@@ -147,6 +153,8 @@ export async function createClaimsInTransaction(
   if (!assignment) {
     return { status: "unavailable", ids: [] };
   }
+
+  if (availabilityOnly) return { status: "created", ids: [] };
 
   await client.query(
     "insert into staytrack.claim_requests(idempotency_key, request_hash) values ($1, $2)",

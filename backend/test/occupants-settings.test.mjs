@@ -86,10 +86,10 @@ test("operational settings and actor audit commit together", async () => {
   );
   assert.deepEqual(
     calls.map(([sql]) => sql.trim().split(/\s+/)[0].toLowerCase()),
-    ["begin", "update", "insert", "commit"],
+    ["begin", "select", "update", "insert", "commit"],
   );
-  assert.deepEqual(calls[1][1].at(-1), "staff-1");
-  assert.deepEqual(calls[2][1], ["staff-1"]);
+  assert.deepEqual(calls[2][1].at(-1), "staff-1");
+  assert.deepEqual(calls[3][1], ["staff-1"]);
 });
 
 test("operational settings API denies guest and anonymous callers", async () => {

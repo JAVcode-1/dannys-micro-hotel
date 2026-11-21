@@ -4,6 +4,7 @@ import type { GuestIdentity } from "./guest-auth.js";
 import { BookingError } from "./booking-quote.js";
 import { databasePool } from "./database.js";
 import { claimTransaction } from "./inventory-claims.js";
+import { requireTransactionStaff } from "./transaction-staff.js";
 import {
   paymentMediaStore,
   PROOF_BUCKET,
@@ -65,6 +66,7 @@ export async function configurePaymentQr(
   await store.upload(QR_BUCKET, key, bytes, mime);
   try {
     await claimTransaction(async (client) => {
+      await requireTransactionStaff(client, actorId);
       await client.query(
         `insert into staytrack.payment_qr(id, object_key, payee_label, updated_by)
         values (true, $1, $2, $3) on conflict (id) do update set object_key = excluded.object_key,
@@ -108,8 +110,11 @@ async function ownedReservation(
   pool: ReturnType<typeof databasePool>,
 ) {
   checkId(reservationId);
-  const { rows } = await pool.query<{ total_centavos: string }>(
-    "select total_centavos from staytrack.reservations where id = $1 and owner_auth_user_id = $2 and verified_email = $3",
+  const { rows } = await pool.query<{
+    total_centavos: string;
+    confirmation_at?: string | null;
+  }>(
+    "select total_centavos, to_jsonb(reservations)->>'online_confirmation_at' as confirmation_at from staytrack.reservations where id = $1 and owner_auth_user_id = $2 and verified_email = $3",
     [reservationId, guest.id, guest.email.toLowerCase()],
   );
   if (!rows[0]) throw new BookingError("Reservation not found.", 404);
@@ -137,17 +142,30 @@ export async function guestPaymentSession(
     ...rows.map((row) => row.proof_deadline_at.getTime()),
   );
   const now = rows[0].now.getTime();
-  const status = rows.every((row) => row.state === "proof_pending_review")
-    ? "pending_review"
-    : rows.some(
-          (row) =>
-            row.state === "expired" ||
-            (row.state === "held" && row.proof_deadline_at.getTime() <= now),
+  const verified = reservation.confirmation_at
+    ? (
+        await pool.query<{ verified: boolean }>(
+          `select exists(select 1 from staytrack.verified_online_payments v
+        join staytrack.payment_submissions p on p.id=v.submission_id
+        where p.reservation_id=$1 and p.status='confirmed') as verified`,
+          [reservationId],
         )
-      ? "expired"
-      : rows.every((row) => row.state === "held")
-        ? "awaiting_proof"
-        : "unavailable";
+      ).rows[0]?.verified === true
+    : false;
+  // Payment history survives room-item checkout, cancellation and capacity release.
+  const status = verified
+    ? "confirmed"
+    : rows.every((row) => row.state === "proof_pending_review")
+      ? "pending_review"
+      : rows.some(
+            (row) =>
+              row.state === "expired" ||
+              (row.state === "held" && row.proof_deadline_at.getTime() <= now),
+          )
+        ? "expired"
+        : rows.every((row) => row.state === "held")
+          ? "awaiting_proof"
+          : "unavailable";
   const qr = status === "awaiting_proof" ? await paymentQr(pool, store) : null;
   return {
     reservationId,
