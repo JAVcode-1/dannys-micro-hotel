@@ -6,6 +6,8 @@ status: approved-baseline
 
 ## UI-01 guest landing direction · 2026-11-21
 
+The scroll-experience pass starts with the hero. The courtyard image gains responsive parallax while readable text and controls stay in normal flow. The prior clip-path entrance gives way to a shorter transform-and-opacity intro.
+
 The owner approved “Stay on your time” as the UI-01 landing design. The prototype provides the visual reference for the React homepage. Rates and durations come from the Express catalog. Room choices preselect the corresponding active category in the existing planner. Guest access stays available in the footer. Function Hall links to contact while the hall feature is disabled, and published reviews retain their existing gate. The placeholder email and two phone numbers live in `frontend/src/hotel-contact.ts`.
 
 The room cards share aligned rows in the two-column layout and stack in one column on mobile. Both galleries retain their existing photo crops.

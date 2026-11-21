@@ -6,6 +6,8 @@ status: in-progress
 
 ## UI-01 guest landing checkpoint · 2026-11-21
 
+The scroll-experience hero uses the visible viewport height, a transform-and-opacity intro, and Framer Motion for photo-only parallax. Touch widths receive less movement. Local Edge checks passed at 360, 390, 768, 1024, and 1440 px, including reduced motion and the no-script hero. Mobile Lighthouse on the local static production build scored 81 with 5.2 s LCP, 40 ms TBT, and zero CLS. Review of this section is pending before work continues.
+
 The owner approved the standalone “Stay on your time” prototype. The integrated React homepage now uses its layout, typography, Royal Horizon colors, approved photo crops, and reduced-motion-aware interactions. It reads active rates and durations from the existing Express catalog. Booking links enter the existing planner with a room category where applicable. Guest access remains in the footer, and the hall and review features keep their existing gates. Hotel contact details are centralized placeholders.
 
 - [x] Owner approved the standalone prototype for integration.
