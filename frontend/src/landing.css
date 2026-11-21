@@ -701,17 +701,20 @@
   }
 }
 @media (max-width: 42rem) {
+  .landing {
+    --landing-header-offset: calc(3.5rem + env(safe-area-inset-top));
+  }
   .landing-site-head[data-scrolled] .landing-head-inner {
     padding-inline: max(0.5rem, calc(var(--gutter) - 0.5rem));
   }
   .landing-head-inner {
-    min-height: 3.75rem;
+    min-height: 3.5rem;
     flex-wrap: wrap;
     row-gap: 0.35rem;
     padding-block: 0.35rem;
   }
   .landing-site-head .landing-brand {
-    width: 3rem;
+    width: 2.75rem;
   }
   .landing-head-actions {
     min-width: 0;
@@ -761,11 +764,29 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .landing-hero-copy {
-    padding-block: 2.65rem;
+    padding-block: clamp(1.5rem, 6vw, 2rem);
+  }
+  .landing-hero {
+    margin-block-start: 0.75rem;
+  }
+  .landing-hero-copy h1 {
+    font-size: clamp(2.5rem, 10vw, 3.5rem);
+    margin-block: 0.8rem 0.85rem;
+  }
+  .landing-hero-copy p {
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+  .landing-hero-actions {
+    margin-top: 1.25rem;
+  }
+  .landing-hero-actions .landing-button {
+    min-height: 2.75rem;
+    padding-block: 0.5rem;
   }
   .landing-hero-media {
     min-height: 0;
-    aspect-ratio: 1.41;
+    aspect-ratio: 16 / 9;
   }
   .landing-hero-media figcaption {
     bottom: 0.7rem;
