@@ -169,6 +169,7 @@ function Photograph({
 
 function Header() {
   const [open, setOpen] = useState(false);
+  const [mobile, setMobile] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState("");
   const header = useRef<HTMLElement>(null);
@@ -262,10 +263,15 @@ function Header() {
   }, []);
 
   useEffect(() => {
-    const mobile = window.matchMedia?.("(max-width: 42rem)");
-    const closeMenu = () => setOpen(false);
-    mobile?.addEventListener("change", closeMenu);
-    return () => mobile?.removeEventListener("change", closeMenu);
+    const viewport = window.matchMedia?.("(max-width: 42rem)");
+    if (!viewport) return;
+    const syncMenu = () => {
+      setMobile(viewport.matches);
+      setOpen(false);
+    };
+    syncMenu();
+    viewport.addEventListener("change", syncMenu);
+    return () => viewport.removeEventListener("change", syncMenu);
   }, []);
 
   useEffect(() => {
@@ -294,6 +300,7 @@ function Header() {
           id="landing-navigation"
           aria-label="Main"
           data-open={open || undefined}
+          inert={mobile && !open}
         >
           <a
             href="/rooms"

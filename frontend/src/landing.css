@@ -751,6 +751,7 @@
     height: 2px;
     border-radius: 2px;
     background: currentColor;
+    transition: transform 180ms var(--ease);
   }
   .landing-menu-toggle[aria-expanded="true"] .landing-menu-icon::before {
     transform: translateY(3px) rotate(45deg);
@@ -759,7 +760,8 @@
     transform: translateY(-3px) rotate(-45deg);
   }
   .landing-nav {
-    display: none;
+    display: grid;
+    gap: 0;
     position: absolute;
     top: 100%;
     inset-inline: 0;
@@ -769,10 +771,24 @@
     padding: 0.5rem var(--gutter) max(0.5rem, env(safe-area-inset-bottom));
     max-height: calc(100dvh - var(--landing-header-offset));
     overflow: auto;
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(-0.375rem);
+    pointer-events: none;
+    transition:
+      opacity 150ms var(--ease),
+      transform 150ms var(--ease),
+      visibility 0s 150ms;
   }
   .landing-nav[data-open] {
-    display: grid;
-    gap: 0;
+    visibility: visible;
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+    transition:
+      opacity 200ms var(--ease),
+      transform 200ms var(--ease),
+      visibility 0s;
   }
   .landing-nav a {
     display: flex;
