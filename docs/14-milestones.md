@@ -4,6 +4,22 @@ status: in-progress
 ---
 # 14 — Milestones & Work Tracker
 
+## UI-01 compact navigation and booking guide checkpoint — 2026-11-21
+
+**Dependency:** existing UI-01 landing page, booking planner and owner-approved portfolio sizing reference. No package dependency or migration added.
+
+**Changed files:** `frontend/src/LandingPage.tsx`, `frontend/src/landing.css`, `frontend/test/component.test.mjs`, this milestone note, [[09-ui-ux-design-system]], [[17-decisions]] and [[icm/PROJECT-CONTEXT]]. The header now has a rounded centered surface with 56 px minimum inner height and 13 px links. Landing CTAs share rounded 36 px desktop sizing; mobile/coarse-pointer CTAs keep 44 px targets. Guest access was removed from the main navigation and remains in the footer. Book a room still opens `/book`. A linked, responsive five-step guide explains verification, the 30-minute hold, full GCash payment and proof/reference submission, actual staff confirmation, and timely-proof capacity protection.
+
+- [x] Approved sizing, navigation removal and booking guide implemented with existing Royal Horizon tokens.
+- [x] Regression test demonstrated failure before implementation, then passed for navigation destinations and confirmation/hold guidance.
+- [x] `npm run build`, `npm run typecheck`, `npm run lint` and `npm test` passed: 123 backend + 73 frontend tests, zero failures/skips. Final accessibility/CSS cleanup was additionally verified with `npm test -w frontend` (build + all 73 tests), `npm run lint -w frontend` and targeted Prettier checks. Sandbox process restrictions required elevated build/test execution; those reruns passed.
+- [ ] Browser comparison at desktop/mobile widths, keyboard/menu/anchor inspection and physical-device acceptance. Browser inventory reported its access host unavailable; native Chrome selection returned “Computer Use was not approved to use Google Chrome.” No updated screenshots or visual acceptance are claimed.
+- [ ] Owner visual inspection of this follow-up. This checkpoint does not complete UI-01, a phase or a release gate.
+
+**Risks/deferred checks:** existing Vite chunk-size warning remains. No hosted acceptance, database integration rerun, full scanloop/greploop milestone gate, deployment or production activation was performed. Only this task's source/test/docs are intended for the checkpoint; unrelated local files remain excluded. Git delivery evidence is the checkpoint commit and confirmed remote branch state reported with this task.
+
+**Next task:** visually inspect this landing follow-up when browser access is available; proceed to UI-02 only on separate instruction.
+
 ## Functional correction sprint — 2026-11-21
 
 The owner authorized C01–C20 together and paused UI/UX refinement. Guest OTP sessions, booking/availability/hold/payment integration, reservation workspaces, staff readiness/no-show/reassignment/administration, Hall recovery/retry/financial history, transactional notifications, shared throttling and internal statements have code and targeted regressions. See [[functional-completion-tracker]] and [[isolated-development]]. Production gates remain closed; six forward candidate migrations are local only. No hosted services, real emails, money or inventory reconciliation occurred.

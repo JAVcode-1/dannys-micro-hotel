@@ -4,6 +4,12 @@ status: approved-baseline
 ---
 # 17 — Approved Decisions Register
 
+## UI-01 compact navigation and booking guide — 2026-11-21
+
+The owner approved the short in-chat design using the supplied John Aldrin Villa portfolio navigation as a sizing reference: approximately 56 px inner navigation height, 13 px links and rounded 36 px desktop CTA buttons, retaining 44 px mobile/coarse-pointer targets and Royal Horizon colors. Apply shared CTA sizing only within the landing page. Remove Guest access from the main navigation while retaining footer access; Book a room continues to `/book`.
+
+Add a linked five-step How to book section covering room/schedule selection, email verification, quote/policy review and hold creation, full GCash payment/reference/screenshot submission, and staff verification with availability-safe confirmation. Explicitly distinguish proof submission from confirmation and preserve timely proof during slow staff review. The existing booking page remains authoritative for whether online booking is open. This authorizes this bounded UI-01 follow-up despite the earlier UI refinement pause; it does not authorize UI-02, deployment, migrations or production activation.
+
 ## Functional sprint implementation constraints — 2026-11-21
 
 Owner authorization covers all C01–C20 corrections without routine handoff approvals; it does not authorize hosted migration application or production activation. Reuse existing transactional operations and OTP identity. Explicit isolated composition requires loopback `staytrack_test` in development/test mode. Fixture authentication/delivery/storage are local only. Optional PostgreSQL shared throttling supports multiple API instances; trusted proxy addresses must be explicit.

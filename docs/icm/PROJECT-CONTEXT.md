@@ -4,6 +4,12 @@ status: h03-a-development-checkpoint-acceptance-pending
 ---
 # Session Context — StayTrack / Danny's Micro Hotel
 
+## UI-01 compact landing follow-up — 2026-11-21
+
+The owner approved a bounded landing follow-up based on the John Aldrin Villa portfolio screenshot. `LandingPage.tsx` and `landing.css` now provide a centered rounded 56 px minimum inner header, 13 px links and 36 px minimum desktop CTA buttons. Mobile/coarse-pointer CTAs remain at least 44 px. Royal Horizon tokens are reused. Guest access is footer-only; Book a room still opens `/book`. How to book is linked from navigation and footer, with five numbered steps, the 30-minute hold, reference/screenshot submission and actual staff verification before confirmation. Timely proof protection is explained; booking-open status stays on the existing planner.
+
+This follow-up adds no dependencies or migrations and changes no backend/payment/authentication behavior. Current verification and remaining browser checks are recorded in [[../14-milestones]]. The earlier UI refinement pause is superseded only for this owner-approved follow-up. UI-02 and phase/release gates remain pending; no external ICM/Graphify synchronization is claimed.
+
 ## Functional correction sprint — 2026-11-21
 
 C01–C20 is owner-authorized as one sprint; UI refinement is paused. Read [[../functional-completion-tracker]] for implemented surfaces, actual evidence and outstanding checks, and [[../isolated-development]] for local fixture composition. Application tests pass (123 backend + 72 frontend); 39 isolated PostgreSQL tests pass and generated schema types are synchronized. Browser acceptance was blocked by Windows URL-confidence enforcement. No hosted Supabase, real email/money, hosted migrations or production gates were activated. Preserve unrelated Obsidian/editor/prototype/nested-folder files. Do not claim functional freeze or phase completion from this note. Markdown remains canonical; no working Graphify/ICM executable integration was used.

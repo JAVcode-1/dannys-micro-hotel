@@ -97,6 +97,12 @@ Fonts are a design preference; self-host or load responsibly with font-display s
 
 ## 5. Component rules
 
+### Landing-page compact sizing — owner approved 2026-11-21
+
+The John Aldrin Villa portfolio screenshot is the sizing reference for the guest landing page: a centered, rounded white navigation surface with a 56 px minimum inner height, 13 px navigation text, and rounded 36 px minimum desktop CTA buttons. Keep Royal Horizon tokens, including navy text on orange. The header has an 8 px top inset, preserves its floating state on scroll and measures its actual height for anchor clearance. Mobile and coarse-pointer CTAs retain at least 44 px touch height; content may expand at larger text sizes. These compact desktop dimensions supersede the earlier blanket 44 px landing-control guidance only for desktop CTAs.
+
+Main navigation includes Rooms & Rates, How to book, Function Hall and Contact, plus Book a room linking to `/book`. Guest access is footer-only. The five-step online-booking guide explains room/schedule selection, email verification without requiring account registration, price/policy review and the 30-minute hold, full GCash payment with reference and screenshot, and actual staff verification before confirmation. Timely proof remains protected during staff review. The guide defers booking-open status to the existing booking page; it does not activate payments or alter reservation rules.
+
 | Component | Default | Interactions |
 |---|---|---|
 | Guest primary CTA | Sunset Orange fill + **Midnight Navy** text | Slight shadow/lift, visible focus, disabled state |

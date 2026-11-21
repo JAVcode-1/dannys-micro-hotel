@@ -184,7 +184,7 @@ function Header() {
     const element = header.current;
     const page = element?.closest<HTMLElement>(".landing");
     if (!element || !page) return;
-    const sections = ["rooms", "hall", "contact"]
+    const sections = ["rooms", "how-to-book", "hall", "contact"]
       .map((id) => page.querySelector<HTMLElement>(`#${id}`))
       .filter((section) => section !== null);
     let headerHeight = 0;
@@ -315,6 +315,15 @@ function Header() {
             Rooms &amp; rates
           </a>
           <a
+            href="#how-to-book"
+            aria-current={
+              activeSection === "how-to-book" ? "location" : undefined
+            }
+            onClick={() => setOpen(false)}
+          >
+            How to book
+          </a>
+          <a
             href="#hall"
             aria-current={activeSection === "hall" ? "location" : undefined}
             onClick={() => setOpen(false)}
@@ -328,7 +337,6 @@ function Header() {
           >
             Contact
           </a>
-          <a href="/verify">Guest access</a>
         </nav>
         <div className="landing-head-actions">
           <button
@@ -632,6 +640,74 @@ export default function LandingPage({
               View full room rates <span aria-hidden="true">↗</span>
             </a>
           </section>
+          <section
+            className="landing-booking-guide"
+            id="how-to-book"
+            aria-labelledby="booking-guide-title"
+            tabIndex={-1}
+          >
+            <div className="landing-section-head">
+              <div>
+                <div className="landing-eyebrow">Your stay, step by step</div>
+                <h2 id="booking-guide-title">How to book online.</h2>
+              </div>
+              <p>
+                New here? Follow these steps when online booking is available.
+                The booking page shows whether reservations are open.
+              </p>
+            </div>
+            <ol className="landing-booking-steps" role="list">
+              <li>
+                <h3>Choose your stay</h3>
+                <p>
+                  Select Book a room, then choose your room category, date,
+                  arrival time, package and guests. Each room can have its own
+                  schedule.
+                </p>
+              </li>
+              <li>
+                <h3>Verify your email</h3>
+                <p>
+                  Use the email verification code to continue. You can book
+                  without creating an account. Keep access to this email to
+                  manage your reservation.
+                </p>
+              </li>
+              <li>
+                <h3>Review &amp; reserve</h3>
+                <p>
+                  Check availability, the full price and policies. Enter your
+                  contact details and create your 30-minute hold to continue to
+                  payment.
+                </p>
+              </li>
+              <li>
+                <h3>Pay &amp; submit proof</h3>
+                <p>
+                  Pay the full amount using the hotel’s GCash QR shown in your
+                  booking. Submit your transaction reference and payment
+                  screenshot before the hold expires.
+                </p>
+              </li>
+              <li>
+                <h3>Wait for confirmation</h3>
+                <p>
+                  A screenshot alone does not confirm your booking. Confirmation
+                  follows after staff verifies the actual GCash payment and
+                  safely finalizes availability. Check your reservation status.
+                </p>
+              </li>
+            </ol>
+            <div className="landing-guide-footer">
+              <p>
+                Submitted your proof on time? Your request stays protected while
+                staff reviews it, even if the original hold timer ends.
+              </p>
+              <a className="landing-button landing-button-orange" href="/book">
+                Book a room <span aria-hidden="true">↗</span>
+              </a>
+            </div>
+          </section>
         </div>
 
         <section
@@ -675,6 +751,7 @@ export default function LandingPage({
           </div>
           <nav className="landing-footer-links" aria-label="Footer">
             <a href="#rooms">Rooms &amp; rates</a>
+            <a href="#how-to-book">How to book</a>
             <a href="#hall">Function Hall</a>
             <a href="#contact">Contact</a>
             <a href="/verify">Guest access</a>
