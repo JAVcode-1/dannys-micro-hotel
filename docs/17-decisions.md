@@ -8,6 +8,8 @@ status: approved-baseline
 
 The owner approved “Stay on your time” as the UI-01 landing design. The prototype provides the visual reference for the React homepage. Rates and durations come from the Express catalog. Room choices preselect the corresponding active category in the existing planner. Guest access stays available in the footer. Function Hall links to contact while the hall feature is disabled, and published reviews retain their existing gate. The placeholder email and two phone numbers live in `frontend/src/hotel-contact.ts`.
 
+The room cards share aligned rows in the two-column layout and stack in one column on mobile. Both galleries retain their existing photo crops.
+
 ### Previous homepage direction
 
 The owner approved “A Welcome in Full Color” for the guest homepage. UI-01 uses the official logo, the real daytime exterior and alternating room photography with scoped warm white, navy and orange design tokens. Native navigation and gallery controls use reduced-motion-aware CSS. Room preview rates come from the existing Express catalog, and the verified published reviews projection is used only behind its existing gate. The original GCash QR moved into the ignored, non-served local asset folder for UI-05. The curated frontend media excludes the attendee photograph. Backend rules, authentication, hosted Supabase and prior release restrictions retain their existing behavior.

@@ -8,6 +8,8 @@ status: h03-a-development-checkpoint-acceptance-pending
 
 UI-01 integrates the owner-approved “Stay on your time” prototype as the guest homepage. It uses the Express catalog for rates and durations, existing booking and guest access routes, and the existing hall and review gates. Vite serves curated WebP variants, including the uncropped logo and the third Double Standard photo. Contact placeholders live in `frontend/src/hotel-contact.ts`. The original GCash QR remains outside the frontend for UI-05. Local desktop and mobile captures are ready for the owner’s inspection. UI-02 requires a separate instruction. See [[../14-milestones]].
 
+The Rooms & Rates cards use shared layout rows in two columns, with a stacked layout on mobile.
+
 ## Latest H03-A checkpoint - 2026-11-20
 
 H03-A reuses X03 incident policy, disclosures, charges and waivers and adds searchable staff audit with actor, exact action, Manila dates and recorded subject, bounded cursor pagination and sensitive fields excluded. Existing H01/H02 events supply room subjects where recorded. No migration, reporting calculation or dependency added. Both hosted migrations remain unapplied and live gates closed. Carry forward the H01 legacy Ready mismatch, orphan Cleaning, inconsistent stays and legacy maintenance reconciliation conditions. H03-B awaits specific owner approval and accounting definitions. The held-badge state mismatch remains separately scoped. Formal Phase 08 acceptance remains open.
