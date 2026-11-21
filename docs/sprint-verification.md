@@ -14,6 +14,8 @@ Browser limitation: Windows Computer Use stopped because it could not establish 
 
 Checkpoint preparation: final staged paths and sensitive-file exclusions reviewed; source Gitleaks rescan reports no leaks. Baseline main `4e573dd`, six commits ahead of cached origin/main `33d3cf4`. Commit hash and verified remote state are reported in the delivery response. No history rewrite or branch switch. Unrelated Obsidian preferences, VS Code settings, skill archives, nested folder and prototype directory are excluded. Formatting-only changes to frontend index/package files satisfy the root formatting check.
 
+Verified code checkpoint: `29b9cdcd463f9b324b3fdbe2f28aec6d7ec49160` (`feat: integrate functional correction development checkpoint`). `git push origin main` exited 0 with `33d3cf4..29b9cdc main -> main`; local `HEAD` and fetched tracking `origin/main` both resolve to that full hash. This publishes the six reviewed UI commits and the functional checkpoint, without deploying or applying migrations. A documentation-only delivery note follows this code checkpoint.
+
 ## Modified files
 
 - `.prettierignore`
