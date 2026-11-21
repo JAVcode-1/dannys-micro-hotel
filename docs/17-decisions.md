@@ -12,6 +12,8 @@ The room cards share aligned rows in the two-column layout and stack in one colu
 
 The guest header stays visible during scrolling and marks the current section. Section links clear the measured header height. The existing split hero retains the Royal Blue panel and exterior photograph, with refined typography and reduced-motion-aware entrances.
 
+The header contracts into a centered pill past 16 px. The courtyard image wipes up and settles before the hero text and actions enter. The split composition stays in place.
+
 ### Previous homepage direction
 
 The owner approved “A Welcome in Full Color” for the guest homepage. UI-01 uses the official logo, the real daytime exterior and alternating room photography with scoped warm white, navy and orange design tokens. Native navigation and gallery controls use reduced-motion-aware CSS. Room preview rates come from the existing Express catalog, and the verified published reviews projection is used only behind its existing gate. The original GCash QR moved into the ignored, non-served local asset folder for UI-05. The curated frontend media excludes the attendee photograph. Backend rules, authentication, hosted Supabase and prior release restrictions retain their existing behavior.

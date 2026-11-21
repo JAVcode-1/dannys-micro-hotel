@@ -213,8 +213,9 @@ function Header() {
         previousSection = sectionId;
         setActiveSection(sectionId);
       }
-      if (wasScrolled !== scrollY > 2) {
-        wasScrolled = scrollY > 2;
+      const isScrolled = scrollY > 16;
+      if (wasScrolled !== isScrolled) {
+        wasScrolled = isScrolled;
         setScrolled(wasScrolled);
       }
     }
