@@ -14,6 +14,7 @@ The owner approved the standalone “Stay on your time” prototype. The integra
 - [x] Aligned the room cards in the two-column layout. Local Edge checks at 320–1920 CSS pixels covered longer room copy, missing catalog rows, large prices and 200% text sizing. Desktop room-section capture is at `.quality/ui-01/rooms-aligned-desktop.png`.
 - [x] Refined the sticky header and hero. Local Edge checks at 320–1920 CSS pixels covered active links, direct section links, anchors, mobile menu focus, smooth scrolling, reduced motion, and a long-copy fixture at 200% text size. Desktop, tablet and mobile captures are in `.quality/ui-01/header-hero-*.png`.
 - [x] Added a 1.1-second bottom-up courtyard reveal, followed by the headline and actions, and a 600 ms floating-header transition after 16 px of scroll.
+- [x] Reduced the header to 68 px on desktop and tablet and 60 px on mobile at default text size. Retained 44 px booking and menu controls and added 16–28 px of space above the hero. Local Edge checks covered 320, 390, 768 and 1440 px.
 - [ ] Owner inspection of the integrated page. UI-02 requires a separate instruction.
 
 Browser verification used local catalog fixtures. Physical-device and hosted acceptance and the full milestone gate remain pending. The existing frontend bundle-size warning persists.
