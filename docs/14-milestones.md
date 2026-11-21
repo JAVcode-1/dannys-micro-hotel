@@ -6,11 +6,21 @@ status: in-progress
 
 ## UI-01 guest landing checkpoint · 2026-11-21
 
+The owner approved the standalone “Stay on your time” prototype. The integrated React homepage now uses its layout, typography, Royal Horizon colors, approved photo crops, and reduced-motion-aware interactions. It reads active rates and durations from the existing Express catalog. Booking links enter the existing planner with a room category where applicable. Guest access remains in the footer, and the hall and review features keep their existing gates. Hotel contact details are centralized placeholders.
+
+- [x] Owner approved the standalone prototype for integration.
+- [x] Build, typecheck, lint, and all 159 application tests passed (108 backend and 51 frontend). Formatting checks passed for the edited source and test files.
+- [x] Integrated layout compared with the prototype in local Edge at 320, 390, 768 and 1440 CSS pixels. Checked room galleries with touch emulation and keyboard input, navigation and category handoff, catalog unavailability, missing imagery, and reduced motion. Updated desktop and mobile captures are in `.quality/ui-01/`.
+- [ ] Owner inspection of the integrated page. UI-02 requires a separate instruction.
+
+Browser verification used local catalog fixtures. Physical-device and hosted acceptance and the full milestone gate remain pending. The existing frontend bundle-size warning persists.
+
+### Previous homepage checkpoint
+
 “A Welcome in Full Color” replaces the homepage placeholder at baseline `159c685`. The editorial hero, room galleries, Function Hall preview and hotel introduction use optimized variants of the supplied logo and photographs. The existing Express catalog supplies prices and durations. Booking and guest access links use existing routes, and the hall booking and published-review gates remain closed by default. No dependency or migration was added.
 
 - [x] Build, typecheck and lint passed. All 158 application tests passed (108 backend and 50 frontend), with zero failures or skips.
 - [x] Local Edge covered 320, 360, 390, 768, 1024, 1366, 1440 and 1920 CSS-pixel layouts, 200% zoom emulation, keyboard and touch emulation, reduced motion, rapid menu and gallery interaction, and Break UI fixtures. The original QR retained its checksum after relocation to ignored local storage. The curated build and development server exclude it and the attendee photo.
-- [ ] Owner visual approval of desktop, tablet and mobile screenshots. UI-02 remains pending that approval and a separate instruction.
 
 Physical devices and hosted acceptance were outside the local checkpoint. The existing frontend bundle-size warning persists. No full milestone scanloop/greploop or deployment gate was run. See [[superpowers/specs/2026-11-21-ui-01-landing-design]] and [[superpowers/plans/2026-11-21-ui-01-landing]].
 

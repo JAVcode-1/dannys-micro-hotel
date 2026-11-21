@@ -8,7 +8,7 @@ test("guest landing exposes one main landmark, editorial heading and existing gu
   const html = renderToStaticMarkup(createElement(App));
   assert.equal((html.match(/<main\b/g) ?? []).length, 1);
   assert.equal((html.match(/<h1\b/g) ?? []).length, 1);
-  assert.match(html, /<h1[^>]*>Stay on your schedule\.<\/h1>/);
+  assert.match(html, /<h1[^>]*>Stay on <br\/?><em>your time\.<\/em><\/h1>/);
   for (const path of ["book", "rooms", "verify"])
     assert.match(html, new RegExp(`href="/${path}"`));
   assert.match(html, /Double Standard/);

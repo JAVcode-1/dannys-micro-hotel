@@ -11,8 +11,15 @@ import App from "../src/App.tsx";
 
 test("guest landing renders alongside existing Royal Horizon tokens", () => {
   const html = renderToStaticMarkup(createElement(App));
-  assert.match(html, /Stay on your schedule/);
-  assert.match(html, /Online booking is currently closed/);
+  assert.match(html, /Stay on <br\s*\/?><em>your time\./);
+  assert.match(html, /href="\/book\?category=family_executive"/);
+  assert.match(html, /href="\/verify"/);
+  assert.match(html, /href="#contact"[^>]*>Ask about the hall/);
+  assert.doesNotMatch(html, /href="\/function-hall"/);
+  assert.match(
+    renderToStaticMarkup(createElement(App, { hallEnabled: true })),
+    /href="\/function-hall"[^>]*>Ask about the hall/,
+  );
 
   const cssFile = readdirSync(new URL("../dist/assets/", import.meta.url)).find(
     (name) => name.endsWith(".css"),

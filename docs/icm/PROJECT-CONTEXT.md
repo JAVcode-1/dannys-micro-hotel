@@ -6,7 +6,7 @@ status: h03-a-development-checkpoint-acceptance-pending
 
 ## UI-01 guest landing checkpoint · 2026-11-21
 
-UI-01 replaces the public homepage placeholder at `159c685` with the approved photo-led “A Welcome in Full Color” design. Rates use Express, and the hall and review features keep their default gate behavior. Vite serves a curated public directory of WebP variants. The original GCash QR is held locally outside the frontend for UI-05, and attendee photos are outside served output. All 158 application tests and local browser verification passed. The owner’s visual approval of the desktop, tablet and mobile screenshots remains pending. UI-02 requires a separate instruction. See [[../14-milestones]].
+UI-01 integrates the owner-approved “Stay on your time” prototype as the guest homepage. It uses the Express catalog for rates and durations, existing booking and guest access routes, and the existing hall and review gates. Vite serves curated WebP variants, including the uncropped logo and the third Double Standard photo. Contact placeholders live in `frontend/src/hotel-contact.ts`. The original GCash QR remains outside the frontend for UI-05. Local desktop and mobile captures are ready for the owner’s inspection. UI-02 requires a separate instruction. See [[../14-milestones]].
 
 ## Latest H03-A checkpoint - 2026-11-20
 

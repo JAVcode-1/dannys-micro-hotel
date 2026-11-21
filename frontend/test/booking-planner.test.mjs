@@ -48,6 +48,36 @@ test("new rooms use an active package when Standard is unavailable", async () =>
   assert.equal(screen.getByLabelText("Package 1 — room 2").value, "360");
 });
 
+test("landing room choice selects a matching active package on arrival", async () => {
+  dom.window.history.replaceState(null, "", "/book?category=family_executive");
+  globalThis.fetch = async () => ({
+    ok: true,
+    json: async () =>
+      [
+        ["double_standard", "Double Standard", 180, 20000],
+        ["family_executive", "Family Executive", 720, 90000],
+        ["family_executive", "Family Executive", 360, 60000],
+      ].map(([code, name, duration_minutes, price_centavos]) => ({
+        code,
+        name,
+        duration_minutes,
+        price_centavos,
+      })),
+  });
+  try {
+    render(createElement(BookingPlanner));
+    await waitFor(() => {
+      assert.equal(
+        screen.getByLabelText("Category — room 1").value,
+        "family_executive",
+      );
+      assert.equal(screen.getByLabelText("Package 1 — room 1").value, "360");
+    });
+  } finally {
+    dom.window.history.replaceState(null, "", "/book");
+  }
+});
+
 test("hotel display converts UTC to Manila and always includes AM/PM", () => {
   assert.match(hotelTime("2027-01-01T17:00:00Z"), /Jan 2, 2027.*1:00 AM/);
 });

@@ -1,5 +1,6 @@
 ﻿import type { PublishedReviewPage } from "@staytrack/shared";
 import { useEffect, useRef, useState } from "react";
+import { hotelContact } from "./hotel-contact";
 import { apiBase } from "./staff-auth";
 
 type CatalogPackage = {
@@ -38,6 +39,13 @@ const photos = {
     width: 3072,
     height: 4096,
   },
+  standardGreen: {
+    name: "standard-green",
+    alt: "Double Standard room with green walls",
+    widths: [420, 760, 1040],
+    width: 3072,
+    height: 4096,
+  },
   family: {
     name: "family",
     alt: "Family Executive room with two beds and a geometric ceiling",
@@ -59,26 +67,20 @@ const photos = {
     width: 960,
     height: 636,
   },
-  nighttime: {
-    name: "nighttime",
-    alt: "Danny’s Micro Hotel walkway and room doors lit at night",
-    widths: [480, 960, 1440],
-    width: 2048,
-    height: 1536,
-  },
 } satisfies Record<string, Photo>;
 
 const rooms = [
   {
     code: "double_standard",
     name: "Double Standard",
-    description: "For a short stop or a full-day stay.",
-    photos: [photos.standard, photos.standardBlue],
+    description: "A simple room for a short break or a night’s rest.",
+    photos: [photos.standard, photos.standardBlue, photos.standardGreen],
   },
   {
     code: "family_executive",
     name: "Family Executive",
-    description: "For family stays, with an optional extra bed.",
+    description:
+      "More room to settle in together, with an optional extra bed for ₱100 per stay.",
     photos: [photos.family, photos.familyWindow],
   },
 ];
@@ -109,10 +111,16 @@ function usePublicData<T>(path: string, enabled = true) {
   return enabled ? data : undefined;
 }
 
-function Logo() {
+function Logo({ lazy = false }: { lazy?: boolean }) {
   return (
-    <a className="landing-logo" href="/" aria-label="Danny’s Micro Hotel home">
-      <img src="/hotel/logo.webp" alt="" width="238" height="225" />
+    <a className="landing-brand" href="/" aria-label="Danny’s Micro Hotel home">
+      <img
+        src="/hotel/logo-full.webp"
+        alt=""
+        width="320"
+        height="239"
+        loading={lazy ? "lazy" : undefined}
+      />
     </a>
   );
 }
@@ -155,32 +163,25 @@ function Photograph({
 
 function Header() {
   const [open, setOpen] = useState(false);
-  const [animate, setAnimate] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
+  const firstLink = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
-    if (!open || !window.matchMedia) return;
-    const desktop = window.matchMedia("(min-width: 62rem)");
-    function closeAtDesktop(event: MediaQueryListEvent) {
-      if (event.matches) setOpen(false);
-    }
-    desktop.addEventListener("change", closeAtDesktop);
-    return () => desktop.removeEventListener("change", closeAtDesktop);
-  }, [open]);
+    const mobile = window.matchMedia?.("(max-width: 42rem)");
+    const closeMenu = () => setOpen(false);
+    mobile?.addEventListener("change", closeMenu);
+    return () => mobile?.removeEventListener("change", closeMenu);
+  }, []);
 
-  const links = [
-    ["/rooms", "Rooms & Rates"],
-    ["#function-hall", "Function Hall"],
-    ["#about", "About"],
-    ["/verify", "Guest Access"],
-  ];
+  useEffect(() => {
+    if (open) firstLink.current?.focus();
+  }, [open]);
 
   return (
     <header
-      className="landing-header"
+      className="landing-site-head"
       onKeyDown={(event) => {
         if (event.key !== "Escape" || !open) return;
-        setAnimate(false);
         setOpen(false);
         trigger.current?.focus();
       }}
@@ -189,106 +190,134 @@ function Header() {
           setOpen(false);
       }}
     >
-      <div className="landing-header-inner">
+      <div className="landing-wrap landing-head-inner">
         <Logo />
-        <nav className="landing-nav" aria-label="Main navigation">
-          {links.map(([href, label]) => (
-            <a key={href} href={href}>
-              {label}
-            </a>
-          ))}
-        </nav>
-        <a className="landing-button landing-header-book" href="/book">
-          Plan your stay
-        </a>
-        <button
-          type="button"
-          ref={trigger}
-          className="landing-menu-trigger"
-          aria-expanded={open}
-          aria-controls="landing-mobile-nav"
-          onClick={(event) => {
-            setAnimate(event.detail > 0);
-            setOpen((current) => !current);
-          }}
-        >
-          {open ? "Close" : "Menu"}
-          <span className="landing-menu-mark" aria-hidden="true" />
-        </button>
         <nav
-          id="landing-mobile-nav"
-          className="landing-mobile-nav"
-          aria-label="Mobile navigation"
-          inert={!open}
-          data-open={open}
-          data-animate={animate}
+          className="landing-nav"
+          id="landing-navigation"
+          aria-label="Main"
+          data-open={open || undefined}
         >
-          {links.map(([href, label]) => (
-            <a
-              key={href}
-              href={href}
-              onClick={(event) => {
-                setAnimate(event.detail > 0);
-                setOpen(false);
-              }}
-            >
-              {label}
-            </a>
-          ))}
+          <a href="/rooms" ref={firstLink}>
+            Rooms &amp; rates
+          </a>
+          <a href="#hall" onClick={() => setOpen(false)}>
+            Function Hall
+          </a>
+          <a href="#contact" onClick={() => setOpen(false)}>
+            Contact
+          </a>
         </nav>
+        <div className="landing-head-actions">
+          <button
+            type="button"
+            ref={trigger}
+            className="landing-menu-toggle"
+            aria-expanded={open}
+            aria-controls="landing-navigation"
+            onClick={() => setOpen((current) => !current)}
+          >
+            Menu
+          </button>
+          <a className="landing-button landing-button-orange" href="/book">
+            Book a room <span aria-hidden="true">↗</span>
+          </a>
+        </div>
       </div>
     </header>
   );
 }
 
 function RoomGallery({ room }: { room: (typeof rooms)[number] }) {
+  const track = useRef<HTMLDivElement>(null);
+  const pending = useRef<number | null>(null);
   const [selected, setSelected] = useState(0);
-  const [animate, setAnimate] = useState(false);
+  const total = room.photos.length;
+
+  function currentSlide(element: HTMLDivElement) {
+    if (!element.clientWidth) return 0;
+    return Math.max(
+      0,
+      Math.min(total - 1, Math.round(element.scrollLeft / element.clientWidth)),
+    );
+  }
+
+  function move(step: number, animate: boolean) {
+    const element = track.current;
+    if (!element?.clientWidth) return;
+    const current = currentSlide(element);
+    const next = ((pending.current ?? current) + step + total) % total;
+    const smooth =
+      animate &&
+      !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches &&
+      Math.abs(next - current) === 1;
+    pending.current = smooth ? next : null;
+    element.scrollTo({
+      left: next * element.clientWidth,
+      behavior: smooth ? "smooth" : "instant",
+    });
+  }
+
   return (
-    <figure className="landing-gallery">
+    <div
+      className="landing-gallery"
+      role="group"
+      aria-label={room.name + " photo gallery"}
+    >
       <div
-        className="landing-photo landing-room-photo"
-        data-reveal
-        data-animate={animate}
+        className="landing-track"
+        ref={track}
+        tabIndex={0}
+        aria-label={room.name + " photos. Use the arrow keys to browse."}
+        onScroll={(event) => setSelected(currentSlide(event.currentTarget))}
+        onScrollEnd={() => {
+          pending.current = null;
+        }}
+        onPointerDown={() => {
+          pending.current = null;
+        }}
+        onKeyDown={(event) => {
+          if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+          event.preventDefault();
+          move(event.key === "ArrowLeft" ? -1 : 1, false);
+        }}
       >
-        {room.photos.map((photo, index) => (
-          <div
+        {room.photos.map((photo) => (
+          <Photograph
             key={photo.name}
-            className="landing-gallery-layer"
-            data-selected={selected === index}
-            aria-hidden={selected !== index}
-          >
-            <Photograph
-              photo={photo}
-              sizes="(min-width: 90rem) 640px, (min-width: 62rem) 49vw, (min-width: 48rem) 53vw, calc(100vw - 40px)"
-            />
-          </div>
+            photo={photo}
+            sizes="(max-width: 42rem) 91vw, (min-width: 100rem) 705px, 45vw"
+          />
         ))}
       </div>
-      <figcaption
-        className="landing-gallery-controls"
-        aria-label={room.name + " photos"}
-      >
-        {room.photos.map((photo, index) => (
+      <div className="landing-gallery-bar">
+        <span className="landing-count" aria-live="polite">
+          Photo {selected + 1} of {total}
+        </span>
+        <div className="landing-gallery-buttons">
           <button
-            key={photo.name}
             type="button"
-            aria-pressed={selected === index}
-            aria-label={`${room.name} photo ${index + 1} of ${room.photos.length}`}
-            onClick={(event) => {
-              setAnimate(event.detail > 0);
-              setSelected(index);
-            }}
+            className="landing-arrow"
+            aria-label={"Previous " + room.name + " photo"}
+            onClick={(event) => move(-1, event.detail > 0)}
           >
-            {String(index + 1).padStart(2, "0")}
+            ←
           </button>
-        ))}
-      </figcaption>
-    </figure>
+          <button
+            type="button"
+            className="landing-arrow"
+            aria-label={"Next " + room.name + " photo"}
+            onClick={(event) => move(1, event.detail > 0)}
+          >
+            →
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
-function RoomFeature({
+function RoomCard({
   room,
   packages,
 }: {
@@ -296,29 +325,36 @@ function RoomFeature({
   packages: CatalogPackage[] | undefined;
 }) {
   const rows = packages?.filter((item) => item.code === room.code) ?? [];
-  const startingRate = rows.reduce<CatalogPackage | undefined>(
-    (lowest, item) =>
-      !lowest || item.price_centavos < lowest.price_centavos ? item : lowest,
-    undefined,
-  );
+  const hours = [
+    ...new Set(rows.map((item) => item.duration_minutes / 60)),
+  ].sort((a, b) => a - b);
+  const durations = new Intl.ListFormat("en-PH", { type: "disjunction" })
+    .format(hours.map(String))
+    .replace(", or ", " or ");
+  const price = Math.min(...rows.map((item) => item.price_centavos));
+
   return (
-    <article className="landing-room">
+    <article className="landing-card" aria-labelledby={room.code + "-title"}>
       <RoomGallery room={room} />
-      <div className="landing-room-copy">
-        <h3>{room.name}</h3>
-        <p>{room.description}</p>
-        {startingRate && (
-          <p className="landing-rate">
-            From{" "}
-            <strong>
-              {currency.format(startingRate.price_centavos / 100)}
-            </strong>{" "}
-            for {startingRate.duration_minutes / 60} hours
-          </p>
+      <div className="landing-card-body">
+        {hours.length > 0 && (
+          <div className="landing-eyebrow">{durations} hours</div>
         )}
-        <a className="landing-text-link" href="/rooms">
-          View packages <span aria-hidden="true">↗</span>
-        </a>
+        <h3 id={room.code + "-title"}>{room.name}</h3>
+        <p>{room.description}</p>
+        <div className="landing-card-footer">
+          <span className="landing-price">
+            {rows.length > 0
+              ? "From " + currency.format(price / 100)
+              : "Rates unavailable"}
+          </span>
+          <a
+            className="landing-button landing-button-blue"
+            href={"/book?category=" + room.code}
+          >
+            Choose {room.name} <span aria-hidden="true">↗</span>
+          </a>
+        </div>
       </div>
     </article>
   );
@@ -355,6 +391,40 @@ function Reviews({ enabled }: { enabled: boolean }) {
   );
 }
 
+function Contact() {
+  return (
+    <section
+      className="landing-contact"
+      id="contact"
+      aria-labelledby="contact-title"
+      tabIndex={-1}
+    >
+      <div className="landing-wrap landing-contact-inner">
+        <div>
+          <div className="landing-eyebrow">Contact</div>
+          <h2 id="contact-title">Get in touch.</h2>
+          <p>
+            For room and Function Hall inquiries. The details shown here are
+            placeholders for this preview.
+          </p>
+        </div>
+        <address>
+          <div className="landing-contact-row">
+            <span>Email</span>
+            <span>{hotelContact.email}</span>
+          </div>
+          {hotelContact.phones.map(({ label, number }) => (
+            <div className="landing-contact-row" key={label}>
+              <span>{label}</span>
+              <span>{number}</span>
+            </div>
+          ))}
+        </address>
+      </div>
+    </section>
+  );
+}
+
 export default function LandingPage({
   reviewsEnabled,
   hallEnabled,
@@ -362,163 +432,127 @@ export default function LandingPage({
   reviewsEnabled: boolean;
   hallEnabled: boolean;
 }) {
-  const root = useRef<HTMLDivElement>(null);
   const packages = usePublicData<CatalogPackage[]>("/catalog");
 
-  useEffect(() => {
-    if (
-      typeof IntersectionObserver === "undefined" ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    )
-      return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (!entry.isIntersecting) continue;
-          if (entry.intersectionRatio <= 0.55)
-            entry.target.classList.add("landing-reveal");
-          observer.unobserve(entry.target);
-        }
-      },
-      { threshold: 0.12 },
-    );
-    root.current
-      ?.querySelectorAll("[data-reveal]")
-      .forEach((element) => observer.observe(element));
-    return () => observer.disconnect();
-  }, []);
-
   return (
-    <div className="landing" ref={root}>
+    <div className="landing" id="top">
       <a className="landing-skip" href="#landing-main">
         Skip to content
       </a>
       <Header />
       <main id="landing-main" tabIndex={-1}>
         <section className="landing-hero" aria-labelledby="landing-title">
-          <div className="landing-wrap landing-hero-copy">
-            <h1 id="landing-title">Stay on your schedule.</h1>
-            <div className="landing-hero-intro">
-              <p>Short stays or a full day at Danny’s Micro Hotel.</p>
-              <div className="landing-hero-actions">
-                <a className="landing-button" href="/book">
-                  Plan your stay <span aria-hidden="true">↗</span>
-                </a>
-                <a className="landing-text-link" href="/rooms">
-                  Rooms &amp; rates
-                </a>
-              </div>
-              <p className="landing-booking-status">
-                Online booking is currently closed.
-              </p>
+          <div className="landing-hero-copy">
+            <div className="landing-eyebrow">Open 24 hours</div>
+            <h1 id="landing-title">
+              Stay on <br />
+              <em>your time.</em>
+            </h1>
+            <p>
+              Rest for a few hours or settle in overnight at Danny’s Micro
+              Hotel.
+            </p>
+            <div className="landing-hero-actions">
+              <a className="landing-button landing-button-orange" href="/book">
+                Plan your stay <span aria-hidden="true">↗</span>
+              </a>
+              <a className="landing-text-link" href="#rooms">
+                Explore rooms <span aria-hidden="true">↓</span>
+              </a>
             </div>
           </div>
-          <div className="landing-hero-photo landing-photo">
+          <figure className="landing-hero-media">
             <Photograph
               photo={photos.daytime}
-              sizes="(min-width: 104rem) 1600px, (min-width: 62rem) calc(100vw - 80px), calc(100vw - 32px)"
+              sizes="(max-width: 42rem) 100vw, (max-width: 55rem) 50vw, (min-width: 100rem) 928px, 58vw"
               eager
             />
-          </div>
+            <figcaption>The courtyard at Danny’s</figcaption>
+          </figure>
         </section>
-        <div className="landing-wrap landing-highlights">
-          <span>Open 24 hours</span>
-          <a href="#landing-rooms">
-            Flexible stay lengths <span aria-hidden="true">↓</span>
-          </a>
-          <a href="#function-hall">
-            Function Hall <span aria-hidden="true">↓</span>
-          </a>
+
+        <div className="landing-wrap">
+          <section className="landing-intro" aria-labelledby="intro-title">
+            <div>
+              <div className="landing-eyebrow">Welcome to Danny’s</div>
+              <h2 id="intro-title">A place to pause.</h2>
+            </div>
+            <p>
+              Drop in for a break between plans, stay overnight with family, or
+              bring people together in our Function Hall. Our room packages let
+              you choose how long you need.
+            </p>
+          </section>
+
+          <section
+            className="landing-rooms"
+            id="rooms"
+            aria-labelledby="rooms-title"
+            tabIndex={-1}
+          >
+            <div className="landing-section-head">
+              <div>
+                <div className="landing-eyebrow">Rooms &amp; rates</div>
+                <h2 id="rooms-title">Find your room.</h2>
+              </div>
+              <p>
+                Browse the room photos and compare packages for a short stop, an
+                overnight stay, or a full day.
+              </p>
+            </div>
+            <div className="landing-room-grid">
+              {rooms.map((room) => (
+                <RoomCard key={room.code} room={room} packages={packages} />
+              ))}
+            </div>
+          </section>
         </div>
-        <section
-          className="landing-wrap landing-rooms"
-          aria-labelledby="landing-rooms"
-        >
-          <h2 id="landing-rooms" tabIndex={-1}>
-            Rooms &amp; rates
-          </h2>
-          {rooms.map((room) => (
-            <RoomFeature key={room.code} room={room} packages={packages} />
-          ))}
-        </section>
+
         <section
           className="landing-hall"
-          id="function-hall"
+          id="hall"
+          aria-labelledby="hall-title"
           tabIndex={-1}
-          aria-labelledby="landing-hall-title"
         >
           <div className="landing-wrap landing-hall-inner">
-            <div className="landing-hall-copy">
-              <h2 id="landing-hall-title">Function Hall</h2>
-              <p>
-                A space for meetings and gatherings, with two seating layouts.
-              </p>
-              <dl>
-                <div>
-                  <dt>Theater type</dt>
-                  <dd>Up to 70 guests</dd>
-                </div>
-                <div>
-                  <dt>Room type</dt>
-                  <dd>Up to 50 guests</dd>
-                </div>
-              </dl>
-              {hallEnabled && (
-                <a className="landing-text-link" href="/function-hall">
-                  View hall information <span aria-hidden="true">↗</span>
-                </a>
-              )}
-            </div>
-            <div className="landing-photo landing-hall-photo" data-reveal>
-              <Photograph
-                photo={photos.hall}
-                sizes="(min-width: 90rem) 840px, (min-width: 62rem) 60vw, calc(100vw - 40px)"
-              />
-            </div>
-          </div>
-        </section>
-        <section
-          className="landing-about"
-          id="about"
-          tabIndex={-1}
-          aria-labelledby="landing-about-title"
-        >
-          <div className="landing-wrap landing-about-inner">
-            <div className="landing-photo landing-about-photo" data-reveal>
-              <Photograph
-                photo={photos.nighttime}
-                sizes="(min-width: 90rem) 690px, (min-width: 62rem) 54vw, calc(100vw - 40px)"
-              />
-            </div>
+            <Photograph
+              photo={photos.hall}
+              sizes="(max-width: 42rem) 91vw, (min-width: 100rem) 735px, 47vw"
+            />
             <div>
-              <h2 id="landing-about-title">About Danny’s Micro Hotel</h2>
+              <div className="landing-eyebrow">Meetings &amp; events</div>
+              <h2 id="hall-title">Function Hall</h2>
               <p>
-                We’re open 24 hours, with Double Standard and Family Executive
-                rooms for short stays and longer visits. Our Function Hall
-                offers space for meetings and gatherings.
+                Bring your group together for a seminar, meeting, or
+                celebration. The hall accommodates up to 70 guests in Theater
+                Type and 50 in Room Type.
               </p>
-              <a className="landing-text-link" href="/book">
-                Plan your stay <span aria-hidden="true">↗</span>
+              <a
+                className="landing-button landing-button-line"
+                href={hallEnabled ? "/function-hall" : "#contact"}
+              >
+                Ask about the hall <span aria-hidden="true">↗</span>
               </a>
             </div>
           </div>
         </section>
+
         <Reviews enabled={reviewsEnabled} />
+        <Contact />
       </main>
-      <footer className="landing-footer">
+
+      <footer className="landing-site-foot">
         <div className="landing-wrap landing-footer-inner">
           <div className="landing-footer-brand">
-            <Logo />
-            <p>
-              Danny’s Micro Hotel
-              <br />
-              <span>Open 24 hours</span>
-            </p>
+            <Logo lazy />
+            <p>© {new Date().getFullYear()} Danny’s Micro Hotel</p>
           </div>
-          <nav aria-label="Footer navigation">
-            <a href="/rooms">Rooms &amp; Rates</a>
-            <a href="/verify">Guest Access</a>
-            <a href="/book">Plan your stay</a>
+          <nav className="landing-footer-links" aria-label="Footer">
+            <a href="/rooms">Rooms &amp; rates</a>
+            <a href="#hall">Function Hall</a>
+            <a href="#contact">Contact</a>
+            <a href="/verify">Guest access</a>
+            <a href="#top">Back to top ↑</a>
           </nav>
         </div>
       </footer>

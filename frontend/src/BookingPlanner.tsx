@@ -64,6 +64,9 @@ export default function BookingPlanner() {
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     const controller = new AbortController();
+    const category = new URLSearchParams(window.location.search).get(
+      "category",
+    );
     void fetch(`${apiBase}/catalog`, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error();
@@ -73,14 +76,24 @@ export default function BookingPlanner() {
           setMessage("No packages are currently available.");
           return;
         }
+        const preferredRate = currentRates.reduce<Rate | undefined>(
+          (preferred, rate) =>
+            rate.code === category &&
+            (!preferred || rate.duration_minutes < preferred.duration_minutes)
+              ? rate
+              : preferred,
+          undefined,
+        );
         setItems((current) =>
           current.map((item) => {
             const rate =
+              (item.id === 1 ? preferredRate : undefined) ??
               currentRates.find(
                 (row) =>
                   row.code === item.category &&
                   row.duration_minutes === item.blocks[0],
-              ) ?? currentRates[0];
+              ) ??
+              currentRates[0];
             return {
               ...item,
               category: rate.code,
@@ -158,6 +171,9 @@ export default function BookingPlanner() {
           <p className="mt-4 leading-7 text-muted">
             One group, different arrivals. Choose each room's schedule and
             package blocks. All times are Philippine time (Asia/Manila).
+          </p>
+          <p className="mt-2 text-sm text-muted">
+            Online booking is currently closed.
           </p>
         </div>
         <div className="grid items-start gap-8 lg:grid-cols-[1fr_320px]">
