@@ -111,14 +111,20 @@ function usePublicData<T>(path: string, enabled = true) {
   return enabled ? data : undefined;
 }
 
-function Logo({ lazy = false }: { lazy?: boolean }) {
+function Logo({
+  lazy = false,
+  cropped = false,
+}: {
+  lazy?: boolean;
+  cropped?: boolean;
+}) {
   return (
     <a className="landing-brand" href="/" aria-label="Danny’s Micro Hotel home">
       <img
-        src="/hotel/logo-full.webp"
+        src={cropped ? "/hotel/logo.webp" : "/hotel/logo-full.webp"}
         alt=""
-        width="320"
-        height="239"
+        width={cropped ? 238 : 320}
+        height={cropped ? 225 : 239}
         loading={lazy ? "lazy" : undefined}
       />
     </a>
@@ -163,8 +169,96 @@ function Photograph({
 
 function Header() {
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [activeSection, setActiveSection] = useState("");
+  const header = useRef<HTMLElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const firstLink = useRef<HTMLAnchorElement>(null);
+
+  useEffect(() => {
+    const element = header.current;
+    const page = element?.closest<HTMLElement>(".landing");
+    if (!element || !page) return;
+    const sections = ["rooms", "hall", "contact"]
+      .map((id) => page.querySelector<HTMLElement>(`#${id}`))
+      .filter((section) => section !== null);
+    let headerHeight = 0;
+    let frame = 0;
+    let previousSection = "";
+    let wasScrolled = false;
+
+    function updateLocation() {
+      frame = 0;
+      const { scrollY, innerHeight } = window;
+      const marker = Math.max(headerHeight + 16, innerHeight * 0.35);
+      let sectionId = "";
+      for (const section of sections) {
+        if (section.getBoundingClientRect().top > marker) break;
+        sectionId = section.id;
+      }
+      if (
+        scrollY > 0 &&
+        scrollY + innerHeight >= document.documentElement.scrollHeight - 2
+      ) {
+        // Near the footer, an anchor can be visible without reaching the header.
+        const target = sections.find(
+          (section) => `#${section.id}` === window.location.hash,
+        );
+        sectionId =
+          target && target.getBoundingClientRect().top > headerHeight + 24
+            ? target.id
+            : (sections.at(-1)?.id ?? sectionId);
+      }
+      if (previousSection !== sectionId) {
+        previousSection = sectionId;
+        setActiveSection(sectionId);
+      }
+      if (wasScrolled !== scrollY > 2) {
+        wasScrolled = scrollY > 2;
+        setScrolled(wasScrolled);
+      }
+    }
+
+    const schedule = () => {
+      if (!frame) frame = window.requestAnimationFrame(updateLocation);
+    };
+    const measure = () => {
+      const height = element.getBoundingClientRect().height;
+      if (height !== headerHeight) {
+        headerHeight = height;
+        page.style.setProperty("--landing-header-offset", `${height}px`);
+      }
+    };
+    const onResize = () => {
+      measure();
+      schedule();
+    };
+    measure();
+    if (window.scrollY === 0) {
+      const initialTarget = sections.find(
+        (section) => `#${section.id}` === window.location.hash,
+      );
+      initialTarget?.scrollIntoView?.({ behavior: "instant" });
+    }
+    updateLocation();
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? undefined
+        : new ResizeObserver(onResize);
+    observer?.observe(element);
+    observer?.observe(page);
+    window.addEventListener("resize", onResize);
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("hashchange", schedule);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("hashchange", schedule);
+      if (frame) window.cancelAnimationFrame(frame);
+      page.style.removeProperty("--landing-header-offset");
+    };
+  }, []);
 
   useEffect(() => {
     const mobile = window.matchMedia?.("(max-width: 42rem)");
@@ -180,6 +274,8 @@ function Header() {
   return (
     <header
       className="landing-site-head"
+      ref={header}
+      data-scrolled={scrolled || undefined}
       onKeyDown={(event) => {
         if (event.key !== "Escape" || !open) return;
         setOpen(false);
@@ -191,20 +287,32 @@ function Header() {
       }}
     >
       <div className="landing-wrap landing-head-inner">
-        <Logo />
+        <Logo cropped />
         <nav
           className="landing-nav"
           id="landing-navigation"
           aria-label="Main"
           data-open={open || undefined}
         >
-          <a href="/rooms" ref={firstLink}>
+          <a
+            href="/rooms"
+            ref={firstLink}
+            aria-current={activeSection === "rooms" ? "location" : undefined}
+          >
             Rooms &amp; rates
           </a>
-          <a href="#hall" onClick={() => setOpen(false)}>
+          <a
+            href="#hall"
+            aria-current={activeSection === "hall" ? "location" : undefined}
+            onClick={() => setOpen(false)}
+          >
             Function Hall
           </a>
-          <a href="#contact" onClick={() => setOpen(false)}>
+          <a
+            href="#contact"
+            aria-current={activeSection === "contact" ? "location" : undefined}
+            onClick={() => setOpen(false)}
+          >
             Contact
           </a>
         </nav>

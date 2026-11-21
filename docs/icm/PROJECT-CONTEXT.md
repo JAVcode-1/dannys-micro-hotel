@@ -10,6 +10,8 @@ UI-01 integrates the owner-approved “Stay on your time” prototype as the gue
 
 The Rooms & Rates cards use shared layout rows in two columns, with a stacked layout on mobile.
 
+The UI-01 header is sticky with active section links and a measured anchor offset. The hero retains its split layout and exterior photo with refined typography and motion.
+
 ## Latest H03-A checkpoint - 2026-11-20
 
 H03-A reuses X03 incident policy, disclosures, charges and waivers and adds searchable staff audit with actor, exact action, Manila dates and recorded subject, bounded cursor pagination and sensitive fields excluded. Existing H01/H02 events supply room subjects where recorded. No migration, reporting calculation or dependency added. Both hosted migrations remain unapplied and live gates closed. Carry forward the H01 legacy Ready mismatch, orphan Cleaning, inconsistent stays and legacy maintenance reconciliation conditions. H03-B awaits specific owner approval and accounting definitions. The held-badge state mismatch remains separately scoped. Formal Phase 08 acceptance remains open.

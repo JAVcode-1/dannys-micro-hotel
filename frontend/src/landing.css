@@ -2,6 +2,7 @@
   --ease: cubic-bezier(0.23, 1, 0.32, 1);
   --gutter: clamp(1rem, 4.5vw, 5rem);
   --display: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --landing-header-offset: calc(5.75rem + env(safe-area-inset-top));
 }
 .landing *,
 .landing *::before,
@@ -53,6 +54,9 @@
 .landing :focus-visible {
   outline: 3px solid var(--brand-primary);
   outline-offset: 4px;
+}
+.landing :where(#landing-main, #rooms, #hall, #contact, main a, main button) {
+  scroll-margin-top: calc(var(--landing-header-offset) + 0.85rem);
 }
 .landing-hero :focus-visible,
 .landing-contact :focus-visible {
@@ -125,11 +129,28 @@
   background: var(--surface-card);
 }
 .landing-site-head {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  padding-top: env(safe-area-inset-top);
   background: var(--surface-card);
   border-bottom: 1px solid var(--border-subtle);
 }
+.landing-site-head::after {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  content: "";
+  pointer-events: none;
+  box-shadow: 0 5px 18px color-mix(in srgb, var(--text-main) 10%, transparent);
+  opacity: 0;
+  transition: opacity 180ms var(--ease);
+}
+.landing-site-head[data-scrolled]::after {
+  opacity: 1;
+}
 .landing-head-inner {
-  min-height: 5.4rem;
+  min-height: 5.75rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -146,10 +167,16 @@
   aspect-ratio: 1200 / 896;
   object-fit: contain;
 }
+.landing-site-head .landing-brand {
+  width: 5rem;
+}
+.landing-site-head .landing-brand img {
+  aspect-ratio: 238 / 225;
+}
 .landing-nav {
   display: flex;
   align-items: center;
-  gap: clamp(1.1rem, 3vw, 3rem);
+  gap: clamp(1.5rem, 3.5vw, 3.5rem);
 }
 .landing-nav a,
 .landing-footer-links a {
@@ -157,6 +184,39 @@
   font-weight: 650;
   text-decoration: none;
   text-underline-offset: 0.3em;
+}
+.landing-nav a {
+  display: flex;
+  align-items: center;
+  position: relative;
+  min-height: 3rem;
+  font-size: 0.94rem;
+}
+.landing-nav a::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  bottom: 0.5rem;
+  width: 100%;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0;
+  transform: scaleX(0.68);
+  transform-origin: left;
+  transition:
+    transform 180ms var(--ease),
+    opacity 150ms var(--ease);
+}
+.landing-nav a:is([aria-current], :focus-visible) {
+  color: var(--brand-primary);
+}
+.landing-nav a:is([aria-current], :focus-visible)::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+.landing-nav a:focus-visible::after {
+  transition: none;
 }
 .landing-head-actions {
   display: flex;
@@ -203,6 +263,7 @@
 .landing h1 {
   font-size: clamp(4.1rem, 7.3vw, 8rem);
   margin: 1.35rem 0 1.5rem;
+  line-height: 1.075;
 }
 .landing h1 em {
   color: var(--accent-lavender);
@@ -210,7 +271,9 @@
 }
 .landing-hero-copy p {
   color: var(--surface-selected);
-  max-width: 29ch;
+  max-width: 32ch;
+  font-size: clamp(1.0625rem, 1.35vw, 1.25rem);
+  line-height: 1.65;
 }
 .landing-hero-actions {
   display: flex;
@@ -218,6 +281,22 @@
   align-items: center;
   gap: 0.65rem 1.35rem;
   margin-top: 2rem;
+}
+.landing-hero-actions .landing-button {
+  position: relative;
+}
+.landing-hero-actions .landing-button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow: 0 4px 13px color-mix(in srgb, var(--text-main) 30%, transparent);
+  opacity: 0;
+  transition: opacity 150ms var(--ease);
+}
+.landing-hero-actions a > span {
+  transition: transform 160ms var(--ease);
 }
 .landing-text-link {
   text-decoration: underline;
@@ -233,6 +312,7 @@
   position: relative;
   min-height: 25rem;
   background: var(--brand-primary-hover);
+  overflow: hidden;
 }
 .landing-hero-media img {
   position: absolute;
@@ -495,7 +575,13 @@
   font-size: clamp(2rem, 6vw, 3.3rem);
 }
 @media (hover: hover) and (pointer: fine) {
-  .landing-nav a:hover,
+  .landing-nav a:hover {
+    color: var(--brand-primary);
+  }
+  .landing-nav a:hover::after {
+    opacity: 1;
+    transform: scaleX(1);
+  }
   .landing-footer-links a:hover {
     text-decoration: underline;
     color: var(--brand-primary);
@@ -510,10 +596,22 @@
   .landing-button-orange:hover {
     border-color: var(--text-main);
   }
+  .landing-hero-actions .landing-button:hover:not(:active)::after {
+    opacity: 1;
+  }
+  .landing-hero-actions .landing-button:hover > span {
+    transform: translate(2px, -2px);
+  }
+  .landing-hero-actions .landing-text-link:hover > span {
+    transform: translateY(2px);
+  }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .landing-hero-copy > * {
-    animation: landing-arrive 420ms var(--ease) both;
+  html:has(.landing #rooms:target):not(:has(.landing :focus-visible)) {
+    scroll-behavior: smooth;
+  }
+  .landing-hero-copy > :is(.landing-eyebrow, h1, p) {
+    animation: landing-arrive 280ms var(--ease) both;
   }
   .landing-hero-copy h1 {
     animation-delay: 55ms;
@@ -521,13 +619,23 @@
   .landing-hero-copy p {
     animation-delay: 105ms;
   }
-  .landing-hero-actions {
-    animation-delay: 155ms;
+  .landing-hero-media img {
+    animation: landing-photo-arrive 500ms var(--ease) both;
   }
   @keyframes landing-arrive {
     from {
-      opacity: 0;
-      transform: translateY(9px);
+      opacity: 0.65;
+      transform: translateY(7px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes landing-photo-arrive {
+    from {
+      opacity: 0.84;
+      transform: scale(1.018);
     }
     to {
       opacity: 1;
@@ -551,10 +659,22 @@
 }
 @media (max-width: 42rem) {
   .landing-head-inner {
-    min-height: 4.6rem;
+    min-height: 4.9rem;
+    flex-wrap: wrap;
+    row-gap: 0.35rem;
+    padding-block: 0.35rem;
   }
-  .landing-brand {
-    width: 5.2rem;
+  .landing-site-head .landing-brand {
+    width: 4.25rem;
+  }
+  .landing-head-actions {
+    min-width: 0;
+  }
+  .landing-head-actions .landing-button {
+    flex-wrap: wrap;
+    gap: 0 0.4rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
   .landing-menu-toggle {
     display: inline-block;
@@ -567,7 +687,9 @@
     z-index: 2;
     background: var(--surface-card);
     border-bottom: 1px solid var(--border-subtle);
-    padding: 0.5rem var(--gutter);
+    padding: 0.5rem var(--gutter) max(0.5rem, env(safe-area-inset-bottom));
+    max-height: calc(100dvh - var(--landing-header-offset));
+    overflow: auto;
   }
   .landing-nav[data-open] {
     display: grid;
@@ -576,7 +698,14 @@
   .landing-nav a {
     display: flex;
     min-height: 2.75rem;
-    align-items: center;
+    justify-self: start;
+    padding-inline: 0.3rem;
+    margin-inline-start: -0.3rem;
+  }
+  .landing-nav a::after {
+    inset-inline: 0.3rem;
+    width: auto;
+    bottom: 0.35rem;
   }
   .landing-hero,
   .landing-intro,
