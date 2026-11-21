@@ -157,9 +157,7 @@ test("staff feature routes require both their feature gate and verified staff ac
   for (const path of ["/staff/hall", "/staff/reviews", "/staff/feedback"]) {
     window.history.replaceState(null, "", path);
     const disabled = render(createElement(App, { staffAuthClient: client() }));
-    assert.ok(
-      screen.getByRole("heading", { name: /A clearer way to welcome/ }),
-    );
+    assert.ok(screen.getByRole("heading", { name: "Stay on your schedule." }));
     disabled.unmount();
 
     const enabled = render(
@@ -482,5 +480,8 @@ test("invitation callback sent to homepage opens staff onboarding", () => {
   assert.ok(
     screen.getByText("Staff sign-in is not configured for this preview."),
   );
-  assert.equal(screen.queryByText(/A clearer way to welcome/), null);
+  assert.equal(
+    screen.queryByRole("heading", { name: "Stay on your schedule." }),
+    null,
+  );
 });

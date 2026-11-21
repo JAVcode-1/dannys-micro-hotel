@@ -1,6 +1,6 @@
 /* global fetch */
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "node:test";
@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 import { preview } from "vite";
 import App from "../src/App.tsx";
 
-test("foundation page renders with approved Royal Horizon tokens", () => {
+test("guest landing renders alongside existing Royal Horizon tokens", () => {
   const html = renderToStaticMarkup(createElement(App));
-  assert.match(html, /A clearer way to welcome every stay/);
-  assert.match(html, /Booking and staff tools will arrive in later phases/);
+  assert.match(html, /Stay on your schedule/);
+  assert.match(html, /Online booking is currently closed/);
 
   const cssFile = readdirSync(new URL("../dist/assets/", import.meta.url)).find(
     (name) => name.endsWith(".css"),
@@ -44,7 +44,7 @@ test("foundation page renders with approved Royal Horizon tokens", () => {
   }
 });
 
-test("Vite serves the themed foundation page and protected deep links", async () => {
+test("Vite serves curated landing assets and protected deep links", async () => {
   const server = await preview({
     configFile: fileURLToPath(new URL("../vite.config.ts", import.meta.url)),
     root: fileURLToPath(new URL("../", import.meta.url)),
@@ -66,6 +66,22 @@ test("Vite serves the themed foundation page and protected deep links", async ()
     const stylesheet = await fetch(`${origin}${cssPath}`);
     assert.equal(stylesheet.status, 200);
     assert.match(await stylesheet.text(), /--brand-primary:#2443b6/);
+    const hero = await fetch(`${origin}/hotel/daytime-1440.webp`);
+    assert.equal(hero.status, 200);
+    assert.equal(hero.headers.get("content-type"), "image/webp");
+    await hero.arrayBuffer();
+    for (const path of [
+      "images/payment/gcash-qr.jpg",
+      "images/function-hall/seminar.jpg",
+    ]) {
+      assert.equal(
+        existsSync(new URL(`../dist/${path}`, import.meta.url)),
+        false,
+      );
+      const response = await fetch(`${origin}/${path}`);
+      assert.notEqual(response.headers.get("content-type"), "image/jpeg");
+      await response.arrayBuffer();
+    }
   } finally {
     await server.close();
   }

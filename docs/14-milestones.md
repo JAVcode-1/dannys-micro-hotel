@@ -4,6 +4,15 @@ status: in-progress
 ---
 # 14 — Milestones & Work Tracker
 
+## UI-01 guest landing checkpoint · 2026-11-21
+
+“A Welcome in Full Color” replaces the homepage placeholder at baseline `159c685`. The editorial hero, room galleries, Function Hall preview and hotel introduction use optimized variants of the supplied logo and photographs. The existing Express catalog supplies prices and durations. Booking and guest access links use existing routes, and the hall booking and published-review gates remain closed by default. No dependency or migration was added.
+
+- [x] Build, typecheck and lint passed. All 158 application tests passed (108 backend and 50 frontend), with zero failures or skips.
+- [x] Local Edge covered 320, 360, 390, 768, 1024, 1366, 1440 and 1920 CSS-pixel layouts, 200% zoom emulation, keyboard and touch emulation, reduced motion, rapid menu and gallery interaction, and Break UI fixtures. The original QR retained its checksum after relocation to ignored local storage. The curated build and development server exclude it and the attendee photo.
+- [ ] Owner visual approval of desktop, tablet and mobile screenshots. UI-02 remains pending that approval and a separate instruction.
+
+Physical devices and hosted acceptance were outside the local checkpoint. The existing frontend bundle-size warning persists. No full milestone scanloop/greploop or deployment gate was run. See [[superpowers/specs/2026-11-21-ui-01-landing-design]] and [[superpowers/plans/2026-11-21-ui-01-landing]].
 
 ## H03-A development checkpoint - 2026-11-20
 

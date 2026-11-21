@@ -20,3 +20,4 @@ supabase/.branches/
 # Local scanner/reviewer generated reports
 .scanloop/reports/
 .quality/
+/.local-assets/

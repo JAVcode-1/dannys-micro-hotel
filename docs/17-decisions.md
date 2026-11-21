@@ -4,6 +4,10 @@ status: approved-baseline
 ---
 # 17 — Approved Decisions Register
 
+## UI-01 guest landing direction · 2026-11-21
+
+The owner approved “A Welcome in Full Color” for the guest homepage. UI-01 uses the official logo, the real daytime exterior and alternating room photography with scoped warm white, navy and orange design tokens. Native navigation and gallery controls use reduced-motion-aware CSS. Room preview rates come from the existing Express catalog, and the verified published reviews projection is used only behind its existing gate. The original GCash QR moved into the ignored, non-served local asset folder for UI-05. The curated frontend media excludes the attendee photograph. Backend rules, authentication, hosted Supabase and prior release restrictions retain their existing behavior.
+
 ## Staff session routing before UI refinement - 2026-11-20
 
 React Router keeps one staff session provider and layout mounted across protected pages. Restoration and Express membership verification use a loading state. A confirmed signed-out, invalid or expired session opens `/staff/sign-in`. A successful sign-in returns the employee to the requested staff page. Express remains the authority for all privileged requests, and Hall and Reviews keep their existing feature gates.
