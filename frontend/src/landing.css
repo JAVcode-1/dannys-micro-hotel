@@ -244,8 +244,9 @@
 }
 .landing-head-actions .landing-button {
   min-height: 2.75rem;
-  padding: 0.4rem 0.8rem;
-  gap: 0.45rem;
+  padding: 0.4rem 1rem;
+  gap: 0.5rem;
+  border-radius: 999px;
   font-size: 0.8125rem;
 }
 .landing-menu-toggle {
@@ -624,6 +625,16 @@
   .landing-button-orange:hover {
     border-color: var(--text-main);
   }
+  @media (width > 42rem) {
+    .landing-head-actions .landing-button-orange:hover {
+      border-color: transparent;
+      background: color-mix(
+        in srgb,
+        var(--accent-booking) 90%,
+        var(--surface-card)
+      );
+    }
+  }
   .landing-hero-actions .landing-button:hover:not(:active)::after {
     opacity: 1;
   }
@@ -724,7 +735,6 @@
     flex-wrap: wrap;
     min-width: 0;
     padding-inline: 0.9rem;
-    border-radius: 999px;
     overflow-wrap: anywhere;
   }
   .landing-head-actions .landing-button > span {
