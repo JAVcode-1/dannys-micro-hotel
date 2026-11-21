@@ -9,8 +9,12 @@ test("guest landing exposes one main landmark, editorial heading and existing gu
   assert.equal((html.match(/<main\b/g) ?? []).length, 1);
   assert.equal((html.match(/<h1\b/g) ?? []).length, 1);
   assert.match(html, /<h1[^>]*>Stay on <br\/?><em>your time\.<\/em><\/h1>/);
-  for (const path of ["book", "rooms", "verify"])
+  for (const path of ["book", "verify"])
     assert.match(html, new RegExp(`href="/${path}"`));
+  assert.equal(
+    (html.match(/href="#rooms"[^>]*>Rooms &amp; rates/g) ?? []).length,
+    2,
+  );
   assert.match(html, /Double Standard/);
   assert.match(html, /Family Executive/);
   assert.match(html, /Function Hall/);

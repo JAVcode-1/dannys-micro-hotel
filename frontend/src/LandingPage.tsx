@@ -303,9 +303,10 @@ function Header() {
           inert={mobile && !open}
         >
           <a
-            href="/rooms"
+            href="#rooms"
             ref={firstLink}
             aria-current={activeSection === "rooms" ? "location" : undefined}
+            onClick={() => setOpen(false)}
           >
             Rooms &amp; rates
           </a>
@@ -665,7 +666,7 @@ export default function LandingPage({
             <p>© {new Date().getFullYear()} Danny’s Micro Hotel</p>
           </div>
           <nav className="landing-footer-links" aria-label="Footer">
-            <a href="/rooms">Rooms &amp; rates</a>
+            <a href="#rooms">Rooms &amp; rates</a>
             <a href="#hall">Function Hall</a>
             <a href="#contact">Contact</a>
             <a href="/verify">Guest access</a>
