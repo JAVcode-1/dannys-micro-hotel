@@ -6,8 +6,6 @@ status: h03-a-development-checkpoint-acceptance-pending
 
 ## UI-01 guest landing checkpoint · 2026-11-21
 
-Scroll-experience work currently covers the hero only. It uses Framer Motion scroll values for the photo, with reduced travel on narrower viewports and a reduced-motion fallback. The next section awaits owner approval.
-
 UI-01 integrates the owner-approved “Stay on your time” prototype as the guest homepage. It uses the Express catalog for rates and durations, existing booking and guest access routes, and the existing hall and review gates. Vite serves curated WebP variants, including the uncropped logo and the third Double Standard photo. Contact placeholders live in `frontend/src/hotel-contact.ts`. The original GCash QR remains outside the frontend for UI-05. Local desktop and mobile captures are ready for the owner’s inspection. UI-02 requires a separate instruction. See [[../14-milestones]].
 
 The Rooms & Rates cards use shared layout rows in two columns, with a stacked layout on mobile.

@@ -1,10 +1,4 @@
 ﻿import type { PublishedReviewPage } from "@staytrack/shared";
-import {
-  useMotionValueEvent,
-  useReducedMotion,
-  useScroll,
-  useTransform,
-} from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { hotelContact } from "./hotel-contact";
 import { apiBase } from "./staff-auth";
@@ -556,19 +550,6 @@ export default function LandingPage({
   hallEnabled: boolean;
 }) {
   const packages = usePublicData<CatalogPackage[]>("/catalog");
-  const hero = useRef<HTMLElement>(null);
-  const heroPhoto = useRef<HTMLDivElement>(null);
-  const reduceMotion = useReducedMotion();
-  const { scrollYProgress } = useScroll({
-    target: hero,
-    offset: ["start start", "end start"],
-  });
-  const photoTravel = useTransform(scrollYProgress, [0, 1], ["0px", "88px"]);
-  useMotionValueEvent(photoTravel, "change", (travel) => {
-    if (!reduceMotion) {
-      heroPhoto.current?.style.setProperty("--landing-photo-travel", travel);
-    }
-  });
 
   return (
     <div className="landing" id="top">
@@ -577,11 +558,7 @@ export default function LandingPage({
       </a>
       <Header />
       <main id="landing-main" tabIndex={-1}>
-        <section
-          ref={hero}
-          className="landing-hero"
-          aria-labelledby="landing-title"
-        >
+        <section className="landing-hero" aria-labelledby="landing-title">
           <div className="landing-hero-copy">
             <div className="landing-eyebrow">Open 24 hours</div>
             <h1 id="landing-title">
@@ -602,14 +579,11 @@ export default function LandingPage({
             </div>
           </div>
           <figure className="landing-hero-media">
-            {/* Only the courtyard moves. Copy, links and the caption scroll naturally. */}
-            <div ref={heroPhoto} className="landing-hero-photo">
-              <Photograph
-                photo={photos.daytime}
-                sizes="(max-width: 42rem) 100vw, (max-width: 55rem) 50vw, (min-width: 100rem) 928px, 58vw"
-                eager
-              />
-            </div>
+            <Photograph
+              photo={photos.daytime}
+              sizes="(max-width: 42rem) 100vw, (max-width: 55rem) 50vw, (min-width: 100rem) 928px, 58vw"
+              eager
+            />
             <figcaption>The courtyard at Danny’s</figcaption>
           </figure>
         </section>
