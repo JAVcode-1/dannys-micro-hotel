@@ -20,6 +20,7 @@ The owner approved the standalone “Stay on your time” prototype. The integra
 - [x] Restyled the phone header controls with a labeled circular menu icon and a text-only booking pill in both header states. Verified 44 px control height and mobile menu behavior at 320 and 393 px.
 - [x] Added a short fade and slide for the mobile menu and a menu-to-close icon transition. Verified opening, closing, quick toggles, Escape focus restoration, and reduced motion in Edge.
 - [x] Homepage refresh now returns to the hero. Direct section links still open their target. Verified both cases in Edge at desktop and phone widths.
+- [x] Enabled native smooth scrolling for landing section links with reduced-motion support. Verified anchor focus, measured sticky-header clearance, mobile menu closing, and Back/Forward at 360, 390, and 1440 px.
 - [ ] Owner inspection of the integrated page. UI-02 requires a separate instruction.
 
 Browser verification used local catalog fixtures. Physical-device and hosted acceptance and the full milestone gate remain pending. The existing frontend bundle-size warning persists.

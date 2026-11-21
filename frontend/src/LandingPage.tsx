@@ -552,7 +552,7 @@ export default function LandingPage({
   const packages = usePublicData<CatalogPackage[]>("/catalog");
 
   return (
-    <div className="landing" id="top">
+    <div className="landing" id="top" tabIndex={-1}>
       <a className="landing-skip" href="#landing-main">
         Skip to content
       </a>
