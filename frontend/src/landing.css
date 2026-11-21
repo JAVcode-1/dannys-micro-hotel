@@ -705,7 +705,13 @@
     --landing-header-offset: calc(3.5rem + env(safe-area-inset-top));
   }
   .landing-site-head[data-scrolled] .landing-head-inner {
-    padding-inline: max(0.5rem, calc(var(--gutter) - 0.5rem));
+    width: min(calc(100% - 1.5rem), 20rem);
+    padding-inline: 0.625rem;
+  }
+  .landing-site-head[data-scrolled]
+    .landing-head-actions
+    :is(.landing-menu-toggle, .landing-button) {
+    border-radius: 999px;
   }
   .landing-head-inner {
     min-height: 3.5rem;
