@@ -1,6 +1,8 @@
+import ManilaDateTimeInput from "./ManilaDateTimeInput";
 import { useEffect, useRef, useState } from "react";
 import type { CancellationRow } from "@staytrack/shared";
 import { apiBase } from "./staff-auth";
+import { notifySuccess } from "./notifications";
 import { hotelTime, peso } from "./BookingPlanner";
 const button = "rounded-lg bg-primary px-4 py-2 text-white disabled:opacity-50";
 type PayerForm = {
@@ -195,6 +197,11 @@ export default function CancellationDesk({
           throw new Error(data.error);
         }
         attempts.current.delete(attemptId);
+        notifySuccess(action === "transfer"
+          ? "Manual refund transfer recorded. No money was sent by this application."
+          : action === "approve"
+            ? "Cancellation approved. Any refund still requires a manual transfer."
+            : "Cancellation or refund action recorded.");
         await load();
       } else {
         const next = rows.map((item) => {
@@ -526,18 +533,11 @@ export default function CancellationDesk({
                         }
                       />
                     </label>
-                    <label className="grid gap-1">
-                      Actual transfer time (Manila)
-                      <input
-                        className="rounded-lg border border-subtle p-2"
-                        type="datetime-local"
-                        step="0.001"
-                        value={transfer.time}
-                        onChange={(e) =>
-                          setTransfer({ ...transfer, time: e.target.value })
-                        }
-                      />
-                    </label>
+                    <ManilaDateTimeInput
+                      label="Actual transfer time (Manila)"
+                      value={transfer.time}
+                      onChange={(time) => setTransfer({ ...transfer, time })}
+                    />
                     <label className="block">
                       <input
                         type="checkbox"
@@ -653,6 +653,7 @@ export function GuestCancellationRequest({
       setMessage(
         `Request recorded: ${data.eligibility}. Await staff review; no refund has been transferred.`,
       );
+      notifySuccess("Cancellation requested. Awaiting staff review.");
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Request unavailable.",
@@ -677,7 +678,7 @@ export function GuestCancellationRequest({
         disabled={busy || !reason.trim()}
         onClick={() => void submit()}
       >
-        Request cancellation of this room item
+        {staff ? "Request cancellation of this room item" : "Request cancellation"}
       </button>
       {message && <p role="status">{message}</p>}
     </div>

@@ -4,6 +4,7 @@ import { claimTransaction } from "./inventory-claims.js";
 import { BookingError } from "./booking-quote.js";
 import { hasControlCharacters } from "./payment-media.js";
 import type { Express, RequestHandler } from "express";
+import { registerPhysicalRoom } from "./room-registration.js";
 
 export async function staffRooms(pool = databasePool(), enabled = false) {
   const corrections = (
@@ -162,6 +163,14 @@ export function registerHousekeeping(
   enabled = false,
   pool?: ReturnType<typeof databasePool>,
 ) {
+  app.post("/staff/rooms", staff, async (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    if (!enabled) { res.status(503).json({ error: "Room registration is not enabled." }); return; }
+    try { res.json(await registerPhysicalRoom(res.locals.actorId, req.body, pool)); }
+    catch (error) {
+      res.status(error instanceof BookingError ? error.status : 503).json({ error: error instanceof BookingError ? error.message : "Room registration unavailable. Refresh before retrying." });
+    }
+  });
   app.patch("/staff/rooms/:id/admin", staff, async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
     if (!enabled) {
@@ -296,6 +305,7 @@ export async function administerRoom(
 ) {
   const body = value as {
     code?: unknown;
+    category?: unknown;
     active?: unknown;
     note?: unknown;
     requestKey?: unknown;
@@ -307,6 +317,7 @@ export async function administerRoom(
     !body.code.trim() ||
     body.code.length > 80 ||
     hasControlCharacters(body.code) ||
+    (body.category !== undefined && !["double_standard", "family_executive"].includes(String(body.category))) ||
     typeof body.active !== "boolean" ||
     typeof body.note !== "string" ||
     !body.note.trim() ||
@@ -328,6 +339,7 @@ export async function administerRoom(
         ).rowCount
       )
         throw new BookingError("Staff access denied.", 403);
+      await db.query("select pg_advisory_xact_lock(741501)");
       await db.query("select pg_advisory_xact_lock(hashtextextended($1,0))", [
         actor + ":" + body.requestKey,
       ]);
@@ -337,9 +349,11 @@ export async function administerRoom(
         ])
       ).rows[0];
       if (!category) throw new BookingError("Room not found.", 404);
-      await db.query("select pg_advisory_xact_lock($1::bigint)", [
-        category.category_id,
-      ]);
+      const target = body.category === undefined ? category.category_id :
+        (await db.query("select id from staytrack.room_categories where code=$1 and active", [body.category])).rows[0]?.id;
+      if (!target) throw new BookingError("Choose an active room category.");
+      for (const id of [...new Set([String(category.category_id), String(target)])].sort((a,b) => Number(a)-Number(b)))
+        await db.query("select pg_advisory_xact_lock($1::bigint)", [id]);
       const room = (
         await db.query("select * from staytrack.rooms where id=$1 for update", [
           roomId,
@@ -356,10 +370,20 @@ export async function administerRoom(
           String(prior.room_id) !== roomId ||
           prior.new_code !== String(body.code).trim() ||
           prior.new_active !== body.active ||
+          String(room.category_id) !== String(target) ||
           prior.note !== String(body.note).trim()
         )
           throw new BookingError("Retry key conflict.", 409);
         return prior;
+      }
+      if ((await db.query("select 1 from staytrack.rooms where id<>$1 and lower(btrim(code))=lower($2)", [roomId, String(body.code).trim()])).rowCount)
+        throw new BookingError("Room identifier is already registered.", 409);
+      if (String(room.category_id) !== String(target)) {
+        if ((await db.query("select 1 from staytrack.inventory_claims where room_id=$1 union all select 1 from staytrack.room_blocks where room_id=$1", [roomId])).rowCount || room.active || !["unverified", "ready"].includes(room.operational_state))
+          throw new BookingError("Deactivate an unused room before correcting its category. Booking or maintenance history requires reconciliation.", 409);
+        const count = Number((await db.query("select count(*) n from staytrack.rooms where category_id=$1", [target])).rows[0].n);
+        if (count >= (body.category === "double_standard" ? 10 : 5)) throw new BookingError("The selected category already has its full physical room inventory.", 409);
+        await db.query("insert into staytrack.staff_audit(actor_auth_user_id,action) values($1,$2)", [actor, `room.category_corrected:${roomId}:${room.category_id}:${target}`]);
       }
       if (
         !(body.active as boolean) &&
@@ -389,8 +413,8 @@ export async function administerRoom(
           409,
         );
       await db.query(
-        "update staytrack.rooms set code=$2,active=$3 where id=$1",
-        [roomId, String(body.code).trim(), body.active],
+        "update staytrack.rooms set code=$2,active=$3,category_id=$4 where id=$1",
+        [roomId, String(body.code).trim(), body.active, target],
       );
       const event = (
         await db.query(

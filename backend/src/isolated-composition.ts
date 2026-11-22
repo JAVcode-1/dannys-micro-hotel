@@ -12,6 +12,7 @@ import { outboxReviewDelivery } from "./notifications.js";
 export type RuntimeComposition = {
   pool: Pool;
   writesEnabled: boolean;
+  hostedDevelopment?: boolean;
   reviewDelivery?: ReviewDelivery;
 };
 

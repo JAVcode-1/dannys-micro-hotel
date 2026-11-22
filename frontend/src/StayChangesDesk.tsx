@@ -1,6 +1,9 @@
+import ManilaDateTimeInput from "./ManilaDateTimeInput";
+import { parsePesoInput } from "./peso-input";
 import { useEffect, useRef, useState } from "react";
 import type { StayChangeRow } from "@staytrack/shared";
 import { apiBase } from "./staff-auth";
+import { notifySuccess } from "./notifications";
 import { hotelTime, peso } from "./BookingPlanner";
 const field =
   "mt-1 min-h-11 w-full rounded-lg border border-subtle bg-white p-2 text-base";
@@ -62,11 +65,13 @@ function Item({
       setPending(false);
     }
   }
-  const cents = /^\d+(?:\.\d{1,2})?$/.test(amount)
-      ? Number(amount.split(".")[0]) * 100 +
-        Number((amount.split(".")[1] ?? "").padEnd(2, "0"))
-      : NaN,
-    moneyValid = Number.isSafeInteger(cents) && cents > 0;
+  let cents = NaN;
+  try {
+    cents = parsePesoInput(amount);
+  } catch {
+    /* Keep an incomplete draft editable. */
+  }
+  const moneyValid = Number.isSafeInteger(cents) && cents > 0;
   const local = (v: string) =>
     v.length === 16 ? v + ":00+08:00" : v + "+08:00";
   const f = row.financials;
@@ -255,15 +260,11 @@ function Item({
             {row.channel === "walk_in" && <option value="cash">Cash</option>}
           </select>
         </label>
-        <label>
-          Received time (Manila)
-          <input
-            type="datetime-local"
-            className={field}
-            value={receivedAt}
-            onChange={(e) => setReceivedAt(e.target.value)}
-          />
-        </label>
+        <ManilaDateTimeInput
+          label="Received time (Manila)"
+          value={receivedAt}
+          onChange={setReceivedAt}
+        />
         {method === "gcash" && (
           <>
             <label>
@@ -431,24 +432,16 @@ function Item({
         </label>
         {kind === "overtime" && (
           <>
-            <label>
-              Interval start (Manila)
-              <input
-                type="datetime-local"
-                className={field}
-                value={start}
-                onChange={(e) => setStart(e.target.value)}
-              />
-            </label>
-            <label>
-              Interval end (Manila)
-              <input
-                type="datetime-local"
-                className={field}
-                value={end}
-                onChange={(e) => setEnd(e.target.value)}
-              />
-            </label>
+            <ManilaDateTimeInput
+              label="Interval start (Manila)"
+              value={start}
+              onChange={setStart}
+            />
+            <ManilaDateTimeInput
+              label="Interval end (Manila)"
+              value={end}
+              onChange={setEnd}
+            />
           </>
         )}
         <button
@@ -588,6 +581,7 @@ export default function StayChangesDesk({
       await refresh();
       throw new Error(data.error ?? "Action unavailable.");
     }
+    notifySuccess("Stay change recorded. Review the current funding and approval status.");
     await refresh();
   };
   return (

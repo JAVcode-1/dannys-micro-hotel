@@ -73,12 +73,14 @@ const rooms = [
   {
     code: "double_standard",
     name: "Double Standard",
+    occupancy: "Usually comfortable for 2 guests",
     description: "A simple room for a short break or a night’s rest.",
     photos: [photos.standard, photos.standardBlue, photos.standardGreen],
   },
   {
     code: "family_executive",
     name: "Family Executive",
+    occupancy: "Usually comfortable for 3 guests",
     description:
       "More room to settle in together, with an optional extra bed for ₱100 per stay.",
     photos: [photos.family, photos.familyWindow],
@@ -114,9 +116,11 @@ function usePublicData<T>(path: string, enabled = true) {
 function Logo({
   lazy = false,
   cropped = false,
+  wordmark = false,
 }: {
   lazy?: boolean;
   cropped?: boolean;
+  wordmark?: boolean;
 }) {
   return (
     <a
@@ -131,6 +135,11 @@ function Logo({
         height={cropped ? 225 : 239}
         loading={lazy ? "lazy" : undefined}
       />
+      {wordmark && (
+        <span className="landing-brand-wordmark">
+          Danny’s <small>MICRO HOTEL</small>
+        </span>
+      )}
     </a>
   );
 }
@@ -187,6 +196,19 @@ function Header() {
     const sections = ["rooms", "how-to-book", "hall", "contact"]
       .map((id) => page.querySelector<HTMLElement>(`#${id}`))
       .filter((section) => section !== null);
+    const reloaded = performance
+      .getEntriesByType("navigation")
+      .some(
+        (entry) => (entry as PerformanceNavigationTiming).type === "reload",
+      );
+    if (reloaded) {
+      history.replaceState(
+        history.state,
+        "",
+        location.pathname + location.search,
+      );
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
     let headerHeight = 0;
     let frame = 0;
     let previousSection = "";
@@ -298,7 +320,7 @@ function Header() {
       }}
     >
       <div className="landing-wrap landing-head-inner">
-        <Logo cropped />
+        <Logo cropped wordmark />
         <nav
           className="landing-nav"
           id="landing-navigation"
@@ -472,7 +494,10 @@ function RoomCard({
           <div className="landing-eyebrow">{durations} hours</div>
         )}
         <h3 id={room.code + "-title"}>{room.name}</h3>
-        <p>{room.description}</p>
+        <p>
+          <span className="landing-occupancy">{room.occupancy}</span>
+          {room.description}
+        </p>
         <div className="landing-card-footer">
           <span className="landing-price">
             {rows.length > 0
@@ -496,7 +521,7 @@ function Reviews({ enabled }: { enabled: boolean }) {
   if (!page?.count) return null;
   return (
     <section
-      className="landing-wrap landing-reviews"
+      className="landing-wrap landing-reviews landing-reveal"
       aria-labelledby="landing-reviews-title"
     >
       <h2 id="landing-reviews-title">Verified guest reviews</h2>
@@ -525,7 +550,7 @@ function Reviews({ enabled }: { enabled: boolean }) {
 function Contact() {
   return (
     <section
-      className="landing-contact"
+      className="landing-contact landing-reveal"
       id="contact"
       aria-labelledby="contact-title"
       tabIndex={-1}
@@ -565,6 +590,29 @@ export default function LandingPage({
 }) {
   const packages = usePublicData<CatalogPackage[]>("/catalog");
 
+  useEffect(() => {
+    const sections = document.querySelectorAll<HTMLElement>(".landing-reveal");
+    if (
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ||
+      !("IntersectionObserver" in window)
+    ) {
+      sections.forEach((section) => section.setAttribute("data-visible", ""));
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.setAttribute("data-visible", "");
+          observer.unobserve(entry.target);
+        });
+      },
+      { threshold: 0.08, rootMargin: "0px 0px -6% 0px" },
+    );
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div className="landing" id="top" tabIndex={-1}>
       <a className="landing-skip" href="#landing-main">
@@ -603,7 +651,10 @@ export default function LandingPage({
         </section>
 
         <div className="landing-wrap">
-          <section className="landing-intro" aria-labelledby="intro-title">
+          <section
+            className="landing-intro landing-reveal"
+            aria-labelledby="intro-title"
+          >
             <div>
               <div className="landing-eyebrow">Welcome to Danny’s</div>
               <h2 id="intro-title">A place to pause.</h2>
@@ -616,7 +667,7 @@ export default function LandingPage({
           </section>
 
           <section
-            className="landing-rooms"
+            className="landing-rooms landing-reveal"
             id="rooms"
             aria-labelledby="rooms-title"
             tabIndex={-1}
@@ -641,7 +692,7 @@ export default function LandingPage({
             </a>
           </section>
           <section
-            className="landing-booking-guide"
+            className="landing-booking-guide landing-reveal"
             id="how-to-book"
             aria-labelledby="booking-guide-title"
             tabIndex={-1}
@@ -711,7 +762,7 @@ export default function LandingPage({
         </div>
 
         <section
-          className="landing-hall"
+          className="landing-hall landing-reveal"
           id="hall"
           aria-labelledby="hall-title"
           tabIndex={-1}
@@ -729,12 +780,27 @@ export default function LandingPage({
                 celebration. The hall accommodates up to 70 guests in Theater
                 Type and 50 in Room Type.
               </p>
-              <a
-                className="landing-button landing-button-line"
-                href={hallEnabled ? "/function-hall" : "#contact"}
-              >
-                Ask about the hall <span aria-hidden="true">↗</span>
-              </a>
+              <p>
+                First 3 hours from ₱3,000.00 before 5:00 PM or ₱5,000.00 from
+                5:00 PM. Additional full hours: ₱1,000.00.
+              </p>
+              <div className="landing-hall-actions">
+                {hallEnabled && (
+                  <a
+                    className="landing-button landing-button-orange"
+                    href="/book?service=hall&setup=theater"
+                  >
+                    Book the hall <span aria-hidden="true">↗</span>
+                  </a>
+                )}
+                <a
+                  className="landing-button landing-button-line"
+                  href={hallEnabled ? "/function-hall" : "#contact"}
+                >
+                  {hallEnabled ? "Explore hall & rates" : "Ask about the hall"}{" "}
+                  <span aria-hidden="true">↗</span>
+                </a>
+              </div>
             </div>
           </div>
         </section>

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { apiBase } from "./staff-auth";
-import OccupancyGuide from "./OccupancyGuide";
 
 type Package = {
   code: string;
@@ -10,7 +9,11 @@ type Package = {
   price_centavos: number;
 };
 
-export default function Catalog() {
+export default function Catalog({
+  hallEnabled = false,
+}: {
+  hallEnabled?: boolean;
+}) {
   const [packages, setPackages] = useState<Package[]>([]);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -27,33 +30,23 @@ export default function Catalog() {
     return () => controller.abort();
   }, []);
   return (
-    <section className="bg-canvas py-6 text-main">
+    <section className="guest-catalog text-main">
       <div className="mx-auto max-w-5xl">
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-subtle pb-6">
-          <a href="/" className="font-bold text-primary">
-            DANNY'S MICRO HOTEL
-          </a>
-          <a
-            href="/verify"
-            className="rounded-xl bg-booking px-5 py-3 font-bold text-main"
-          >
-            Guest access
-          </a>
-        </header>
-        <p className="mt-14 text-sm font-bold uppercase tracking-[.2em] text-primary">
+        <p className="text-sm font-bold uppercase tracking-[.2em] text-primary">
           Our stays
         </p>
         <h1 className="mt-3 text-4xl font-bold tracking-tight">
           Rooms and rates
         </h1>
         <p className="mt-4 max-w-xl text-muted">
-          Choose the stay length that suits you. Online booking is not open yet.
+          Choose your stay length. You can book rooms and the Function Hall
+          together when online booking is available.
         </p>
         <a
           href="/book"
           className="mt-5 inline-flex min-h-11 items-center rounded-xl bg-booking px-5 font-bold text-main"
         >
-          Plan a multi-room stay
+          Plan your reservation
         </a>
         {error && (
           <p role="status" className="mt-8 text-red-700">
@@ -72,14 +65,26 @@ export default function Catalog() {
             return (
               <section
                 key={code}
-                className="rounded-3xl border border-subtle bg-white p-7 shadow-sm sm:p-9"
+                className="guest-rate-card rounded-3xl border border-subtle bg-white p-7 shadow-sm sm:p-9"
               >
+                <figure className="guest-room-photo">
+                  <img
+                    src={code === "double_standard" ? "/hotel/standard-760.webp" : "/hotel/family-760.webp"}
+                    alt={code === "double_standard" ? "Double Standard room at Danny’s Micro Hotel" : "Family Executive room at Danny’s Micro Hotel"}
+                    width="760"
+                    height="1013"
+                    loading="lazy"
+                  />
+                </figure>
                 <h2 className="text-2xl font-bold">{rows[0].name}</h2>
-                {rows[0].standard_occupancy_note && (
-                  <p className="mt-2 text-sm text-muted">
-                    {rows[0].standard_occupancy_note}
-                  </p>
-                )}
+                <p className="mt-2 text-sm font-semibold text-primary">
+                  {code === "double_standard"
+                    ? "Usually comfortable for 2 guests"
+                    : "Usually comfortable for 3 guests"}
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  Guidance only; staff can review other guest counts.
+                </p>
                 <ul className="mt-8 divide-y divide-subtle">
                   {rows.map((item) => (
                     <li
@@ -93,11 +98,50 @@ export default function Catalog() {
                     </li>
                   ))}
                 </ul>
+                <a
+                  href={`/book?category=${code}`}
+                  className="mt-5 inline-flex min-h-11 items-center rounded-xl bg-booking px-5 font-bold text-main"
+                >
+                  Book {rows[0].name}
+                </a>
               </section>
             );
           })}
         </div>
-        <OccupancyGuide />
+        {hallEnabled && (
+          <section className="mt-6 rounded-3xl border border-subtle bg-white p-7 sm:p-9">
+            <h2 className="text-2xl font-bold">Function Hall</h2>
+            <p className="mt-3 text-muted">
+              One exclusive hall: Theater Type for up to 70 attendees, or Room
+              Type for up to 50.
+            </p>
+            <p className="mt-4">
+              First 3 hours: <strong>₱3,000.00</strong> for starts from 8:00 AM
+              to before 5:00 PM; <strong>₱5,000.00</strong> from 5:00 PM.
+              Additional full hours: <strong>₱1,000.00 each</strong>.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-4">
+              <a
+                href="/book?service=hall&setup=theater"
+                className="inline-flex min-h-11 items-center rounded-xl bg-booking px-5 font-bold text-main"
+              >
+                Book Theater Type
+              </a>
+              <a
+                href="/book?service=hall&setup=room"
+                className="inline-flex min-h-11 items-center font-semibold text-primary"
+              >
+                Book Room Type
+              </a>
+              <a
+                href="/function-hall"
+                className="inline-flex min-h-11 items-center font-semibold text-primary"
+              >
+                Hall details
+              </a>
+            </div>
+          </section>
+        )}
       </div>
     </section>
   );

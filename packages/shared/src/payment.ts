@@ -1,4 +1,5 @@
 export type PaymentSession = {
+  allocations?: { label: string; amountCentavos: number }[];
   reservationId: string;
   amountDueCentavos: number;
   serverNow: string;

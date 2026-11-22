@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiBase } from "./staff-auth";
+import { notifySuccess } from "./notifications";
 
 type Item = {
   id: string;
@@ -125,6 +126,7 @@ export default function CheckInDesk({ token }: { token?: string }) {
         if (!response.ok) throw new Error(data.error);
         checkedIn = data.checked_in_at;
         checkout = data.checkout_at;
+        notifySuccess("Guest check-in recorded.");
       }
       const next = items.map((row) =>
         row.id === item.id
@@ -182,6 +184,7 @@ export default function CheckInDesk({ token }: { token?: string }) {
             : row,
         ),
       );
+      notifySuccess("No-show review recorded.");
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "No-show review unavailable.",

@@ -48,7 +48,7 @@ test("O02 preview requires screenshot and reference, then shows pending staff ve
   assert.ok(screen.getByText(/Five-minute reminder/));
   assert.match(screen.getByText(/Proof deadline/).textContent, /PM/);
   const form = screen
-    .getByRole("button", { name: "Preview proof submission" })
+    .getByRole("button", { name: "Preview upload" })
     .closest("form");
   fireEvent.submit(form);
   assert.ok(screen.getByRole("alert"));
@@ -77,7 +77,7 @@ test("O02 preview requires screenshot and reference, then shows pending staff ve
   assert.equal(submitted.file.name, "sample.png");
   assert.ok(screen.getByText(/does not confirm a booking/));
   assert.equal(
-    screen.queryByRole("button", { name: "Preview proof submission" }),
+    screen.queryByRole("button", { name: "Preview upload" }),
     null,
   );
 });
@@ -118,7 +118,7 @@ test("confirmed payment never shows an expired proof warning or payment form", (
     }),
   );
   assert.ok(screen.getByText("Payment verified"));
-  assert.ok(screen.getByText(/each room.*current status/));
+  assert.ok(screen.getByText(/each item's current status/));
   assert.equal(screen.queryByText(/contact staff for reconciliation/), null);
   assert.equal(screen.queryByLabelText("Transaction reference"), null);
 });

@@ -8,6 +8,7 @@ export type BookingItemInput = {
 };
 
 export type BookingQuote = {
+  hall?: OnlineHallQuote;
   items: (BookingItemInput & {
     endAt: string;
     packages: {
@@ -25,6 +26,9 @@ export type BookingQuote = {
 };
 
 export type GuestReservation = {
+  hall?: OnlineHallItem;
+  hallItems?: OnlineHallItem[];
+  serviceKind?: "accommodation" | "hall" | "combined";
   id: string;
   primaryName: string;
   createdAt: string;
@@ -57,4 +61,38 @@ export type GuestReservation = {
     confirmationAt?: string | null;
     blocks?: number[];
   }[];
+};
+
+export type OnlineHallInput = import("./function-hall.js").HallQuoteInput & {
+  requests?: string;
+};
+export type OnlineHallQuote = {
+  setup: "theater" | "room";
+  attendees: number;
+  minutes: number;
+  start: string;
+  end: string;
+  protectedStart: string;
+  protectedEnd: string;
+  base: number;
+  additional: number;
+  total: number;
+  settings: import("./function-hall.js").HallSettings;
+  noticeReason: string | null;
+};
+export type OnlineHallItem = {
+  id: string;
+  setup: "theater" | "room";
+  attendees: number;
+  startAt: string;
+  endAt: string;
+  totalCentavos: number;
+  originalCentavos?: number;
+  refundDueCentavos?: number;
+  refundedCentavos?: number;
+  status: string;
+  state: string;
+  proofDeadlineAt: string;
+  actualStart?: string | null;
+  confirmationAt?: string | null;
 };

@@ -1,3 +1,9 @@
+import {
+  quoteUnified,
+  parseOnlineHall,
+  insertOnlineHall,
+  onlineHallItems,
+} from "./unified-booking.js";
 import { readStayFinancials } from "./stay-finance.js";
 import {
   captureChargeDisclosures,
@@ -20,8 +26,8 @@ import { insertBookedItems } from "./booked-items.js";
 import { hasControlCharacters } from "./payment-media.js";
 
 export const bookingPolicy = {
-  version: "booking-v1",
-  text: "No smoking. Online reservations require full payment to the configured hotel GCash account and actual staff verification. Upload both payment proof and reference within 30 minutes; timely submitted proof protects capacity while staff review is pending. An upload does not confirm a reservation. Free cancellation is within one hour after staff confirmation, before that room checks in; rescheduling does not restart the window. Online late arrival does not move checkout. No-shows require staff review and are generally nonrefundable under the disclosed policy and applicable law. Refunds are processed manually. Occupancy guidance is advisory; minor eligibility and legal limits require staff review.",
+  version: "booking-v2",
+  text: "No smoking. Online reservations require full payment to the configured hotel GCash account and actual staff verification. Upload both payment proof and reference within 30 minutes; timely submitted proof protects capacity while staff review is pending. An upload does not confirm a reservation. Free cancellation ends one hour after staff confirmation or that item's actual room check-in or Hall event start, whichever occurs first; rescheduling does not restart the window. Online late arrival does not move checkout. No-shows require staff review and are generally nonrefundable under the disclosed policy and applicable law. Refunds are processed manually. Occupancy guidance is advisory; minor eligibility and legal limits require staff review.",
   pendingOwnerApproval: true,
 };
 export function parseBookingContact(value: unknown) {
@@ -45,8 +51,7 @@ export function parseBookingContact(value: unknown) {
   };
 }
 
-// Internal only until inventory, channel, Auth and payment readiness gates pass.
-// HTTP creation remains unconditionally disabled in app.ts.
+// HTTP creation requires an explicitly enabled runtime; identity and capacity are checked below.
 export async function createGuestHold(
   guest: GuestIdentity,
   key: string,
@@ -56,6 +61,7 @@ export async function createGuestHold(
   chargeDisclosures: unknown = [],
   contactValue?: unknown,
   expectedTotalCentavos?: number,
+  hallValue?: unknown,
 ) {
   if (
     expectedTotalCentavos !== undefined &&
@@ -74,13 +80,18 @@ export async function createGuestHold(
   const disclosures = parseChargeDisclosures(chargeDisclosures);
   const contact =
     contactValue === undefined ? undefined : parseBookingContact(contactValue);
-  const items = parseBookingItems(value);
+  const hall = hallValue == null ? undefined : parseOnlineHall(hallValue);
+  const items =
+    hall && Array.isArray(value) && value.length === 0
+      ? []
+      : parseBookingItems(value);
   const name = primaryName.trim();
   const email = guest.email.toLowerCase();
   const requestHash = createHash("sha256")
     .update(
       JSON.stringify({
         items,
+        ...(hall ? { hall } : {}),
         name,
         email,
         ...(disclosures.length ? { disclosures } : {}),
@@ -112,7 +123,13 @@ export async function createGuestHold(
         );
       return { id: prior.rows[0].id, replayed: true };
     }
-    const quote = await quoteBooking(items, client);
+    if (hall)
+      await client.query(
+        "select id from staytrack.hall_resource where id=1 for update",
+      );
+    const quote = hall
+      ? await quoteUnified(items, hall, client)
+      : await quoteBooking(items, client);
     if (
       expectedTotalCentavos !== undefined &&
       quote.totalCentavos !== expectedTotalCentavos
@@ -127,24 +144,31 @@ export async function createGuestHold(
       "select cleaning_buffer_minutes from staytrack.operational_settings where id = true for share",
     );
     const buffer = settings.rows[0]?.cleaning_buffer_minutes;
-    if (buffer === null || buffer === undefined)
+    if (quote.items.length && (buffer === null || buffer === undefined))
       throw new BookingError(
         "Staff must configure the cleaning buffer before holds can be created.",
         503,
       );
-    const claims = await createClaimsInTransaction(
-      claimKey,
-      quote.items.map((item) => ({
-        category: item.category,
-        start: Date.parse(item.startAt),
-        end: Date.parse(item.endAt),
-        bufferMinutes: buffer,
-      })),
-      client,
-    );
+    const claims = quote.items.length
+      ? await createClaimsInTransaction(
+          claimKey,
+          quote.items.map((item) => ({
+            category: item.category,
+            start: Date.parse(item.startAt),
+            end: Date.parse(item.endAt),
+            bufferMinutes: buffer ?? 0,
+          })),
+          client,
+        )
+      : { status: "created", ids: [], reason: undefined };
+    if (!quote.items.length)
+      await client.query(
+        "insert into staytrack.claim_requests(idempotency_key,request_hash) values($1,$2)",
+        [claimKey, requestHash],
+      );
     if (claims.status !== "created")
       throw new BookingError(
-        "The selected rooms are no longer available.",
+        claims.reason ?? "The selected rooms are unavailable for these schedules. Please check availability again.",
         409,
       );
     const reservation = await client.query<{ id: string }>(
@@ -154,6 +178,8 @@ export async function createGuestHold(
     );
     const id = reservation.rows[0].id;
     await insertBookedItems(client, id, quote, claims.ids);
+    if (hall && quote.hall)
+      await insertOnlineHall(client, id, name, hall, quote.hall);
     await captureChargeDisclosures(client, id, disclosures);
     if (contact)
       await client.query(
@@ -169,7 +195,14 @@ export async function createGuestHold(
         ],
       );
     return { id, replayed: false };
-  }, pool);
+  }, pool).catch((error) => {
+    if (hall && (error as { code?: string }).code === "23P01")
+      throw new BookingError(
+        "The selected Hall schedule is no longer available.",
+        409,
+      );
+    throw error;
+  });
 }
 
 export async function guestReservations(
@@ -217,6 +250,7 @@ export async function guestReservations(
     order by r.created_at desc,r.id desc limit $3 offset $4`,
     [guest.id, guest.email.toLowerCase(), limit, offset, reservationId ?? null],
   );
+  for (const r of rows) r.items ??= [];
   if (x03)
     for (const r of rows) {
       r.financials = await readStayFinancials(pool, r.id);
@@ -228,5 +262,14 @@ export async function guestReservations(
           )
         ).rows;
     }
+  for (const r of rows) {
+    r.items ??= [];
+    const halls = await onlineHallItems(pool, r.id);
+    if (halls.length) {
+      r.hall = halls[0];
+      r.hallItems = halls;
+      r.serviceKind = r.items.length ? "combined" : "hall";
+    }
+  }
   return rows;
 }

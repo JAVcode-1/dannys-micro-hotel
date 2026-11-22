@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { apiBase, staffAuth } from "./staff-auth";
+import { apiBase, guestAuth } from "./staff-auth";
+import { notifySuccess } from "./notifications";
 
 type GuestAccess =
   | { status: "loading" }
@@ -30,10 +31,10 @@ export function useGuestSession() {
 }
 
 export function GuestSessionProvider({
-  authClient = staffAuth,
+  authClient = guestAuth,
   children,
 }: {
-  authClient?: typeof staffAuth;
+  authClient?: typeof guestAuth;
   children: ReactNode;
 }) {
   const [session, setSession] = useState<Session | null | undefined>(
@@ -138,6 +139,7 @@ export function GuestSessionProvider({
           const { error } = await authClient.auth.signOut();
           if (error) throw error;
           setSession(null);
+          notifySuccess("Signed out successfully.");
         },
       }}
     >

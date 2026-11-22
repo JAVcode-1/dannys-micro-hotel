@@ -19,6 +19,49 @@ const { PaymentReviewPreview: App } =
   await import("../src/StaffPaymentReviews.tsx");
 const { PaymentReviewPanel } = await import("../src/StaffPaymentReviews.tsx");
 afterEach(cleanup);
+
+test("one payment review itemizes the Hall and accommodation together", () => {
+  render(
+    createElement(PaymentReviewPanel, {
+      review: {
+        id: "proof",
+        primaryName: "Synthetic combined guest",
+        amountDueCentavos: 320000,
+        transactionReference: "SYNTHETIC",
+        submittedAt: "2027-01-01T00:00:00Z",
+        status: "pending_review",
+        age: "on_time",
+        version: 1,
+        items: [
+          {
+            category: "double_standard",
+            totalCentavos: 20000,
+            startAt: "2027-01-02T00:00:00Z",
+            endAt: "2027-01-02T03:00:00Z",
+          },
+        ],
+        hallItems: [
+          {
+            id: "hall",
+            setup: "theater",
+            attendees: 60,
+            totalCentavos: 300000,
+            startAt: "2027-01-02T06:00:00Z",
+            endAt: "2027-01-02T09:00:00Z",
+          },
+        ],
+      },
+      onDecision: async () => {},
+      onProof: async () => ({ url: "", expiresIn: 0 }),
+    }),
+  );
+  assert.ok(screen.getByText("Accommodation + Function Hall"));
+  assert.ok(screen.getByText(/One GCash transaction covers every item/));
+  assert.match(screen.getByText(/60 attendees/).textContent, /3,000.00/);
+  assert.ok(
+    screen.getByRole("button", { name: "Confirm verified payment" }).disabled,
+  );
+});
 test("O03 staff preview is explicitly synthetic and cannot submit live confirmation", () => {
   render(createElement(App));
   assert.ok(screen.getByRole("heading", { name: "Payment review" }));

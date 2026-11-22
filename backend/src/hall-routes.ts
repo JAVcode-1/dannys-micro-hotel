@@ -1,3 +1,4 @@
+import { unifiedInstalled } from "./unified-booking.js";
 import type { Express, RequestHandler } from "express";
 import type { Pool } from "pg";
 import { BookingError } from "./booking-quote.js";
@@ -63,16 +64,18 @@ export function registerHall(app: Express, staff: RequestHandler, pool?: Pool) {
       const page = Number(req.query.page ?? 1);
       if (!Number.isSafeInteger(page) || page < 1 || page > 1000)
         throw new BookingError("Invalid page.");
+      const unified = await unifiedInstalled(pool);
       const { rows } = await pool.query(
         `select r.id,r.claim_id,r.channel,r.organizer,r.requests,r.status,r.payment_resolution,r.actual_start,r.actual_end,
+      ${unified ? "(select reservation_id from staytrack.online_hall_items where hall_reservation_id=r.id)" : "null::uuid"} as "unifiedReservationId",
       r.quote_input, q.quote,c.released_at,h.ready,
       (r.status='confirmed' and c.preparation_start<=clock_timestamp() and exists(
         select 1 from staytrack.hall_reservations occupied where occupied.status='in_progress' and occupied.id<>r.id
       )) preparation_conflict,
       coalesce(q.total_centavos,0)::text total,
       coalesce(o.amount_centavos,0)::text overtime,
-      coalesce(p.amount,0)::text collected,coalesce(f.amount,0)::text refunded,
-      greatest(0,coalesce(q.total_centavos,0)+coalesce(o.amount_centavos,0)-coalesce(p.amount,0)+coalesce(f.amount,0))::text balance
+      (coalesce(p.amount,0) ${unified ? "+coalesce((select sum(amount_centavos) from staytrack.online_payment_allocations where hall_reservation_id=r.id),0)" : ""})::text collected,coalesce(f.amount,0)::text refunded,
+      greatest(0,coalesce(q.total_centavos,0)+coalesce(o.amount_centavos,0)-coalesce(p.amount,0) ${unified ? "-coalesce((select sum(amount_centavos) from staytrack.online_payment_allocations where hall_reservation_id=r.id),0)" : ""}+coalesce(f.amount,0))::text balance
       from staytrack.hall_reservations r cross join staytrack.hall_resource h
       left join staytrack.hall_claims c on c.id=r.claim_id
       left join lateral(select quote,total_centavos from staytrack.hall_revisions where reservation_id=r.id order by id desc limit 1) q on true
@@ -83,6 +86,14 @@ export function registerHall(app: Express, staff: RequestHandler, pool?: Pool) {
       order by coalesce(c.event_start,r.created_at) desc,r.id limit 50 offset $1`,
         [(page - 1) * 50],
       );
+      if (unified)
+        for (const row of rows)
+          row.changeRequests = (
+            await pool.query(
+              "select id,kind,reason,input,recorded_at from staytrack.online_hall_requests where hall_reservation_id=$1 and kind<>'cancel' order by recorded_at desc limit 20",
+              [row.id],
+            )
+          ).rows;
       res.json({ entries: rows });
     }),
   );
@@ -108,6 +119,15 @@ export function registerHall(app: Express, staff: RequestHandler, pool?: Pool) {
         [id],
       );
       if (!rows[0]) throw new BookingError("Reservation unavailable.", 404);
+      if (await unifiedInstalled(pool)) {
+        const allocations = (
+          await pool.query(
+            `select a.submission_id id,v.verified_by actor,'gcash' method,a.amount_centavos::text amount,v.normalized_reference reference,'Shared online payment allocation' evidence,a.received_at from staytrack.online_payment_allocations a join staytrack.verified_online_payments v on v.submission_id=a.submission_id where a.hall_reservation_id=$1`,
+            [id],
+          )
+        ).rows;
+        rows[0].receipts = [...allocations, ...rows[0].receipts];
+      }
       res.json(rows[0]);
     }),
   );

@@ -4,6 +4,13 @@ status: proposed-schema-not-migration
 ---
 # 07 — Database Schema: Conceptual Model
 
+## Unified Online Booking schema extension - 2026-11-21
+
+The implementation adds a parent reservation relationship for the existing Hall item and immutable payment allocations for room and Hall costs. A Hall-only reservation may contain zero room bookings; all online reservations contain at least one bookable item. Hall claims remain in the exclusive Hall inventory and never consume bedroom inventory. The existing reservation payment/proof/reference registry is authoritative; do not create a second Hall receipt for the same original GCash transaction. Separate staff-managed Hall receipts remain supported.
+
+Additive candidate SQL must preserve previous migrations, private tables/RLS/client denial, active staff checks, immutable price/confirmation evidence, item refund caps and transaction rollback. Cross-resource locks cover both claims; proof protection and expiry use one deadline. Item cancellations/reschedules/extensions cannot mutate siblings or reset cancellation eligibility. Candidate migration names and executed local database evidence are recorded in [[unified-online-booking-requirements-sync]]; no hosted application is authorized.
+
+
 **Status:** Architecture blueprint only; **not** a tested SQL migration. Implementation may refine field names and indexes if documented in an ADR.
 
 ## Entity and relationship sketch
@@ -12,7 +19,9 @@ status: proposed-schema-not-migration
 erDiagram
   STAFF_ACCOUNTS ||--o{ AUDIT_EVENTS : performs
   GUESTS ||--o{ RESERVATIONS : primary_contact
-  RESERVATIONS ||--|{ ROOM_BOOKINGS : contains
+  RESERVATIONS ||--o{ ROOM_BOOKINGS : contains
+  RESERVATIONS ||--o| ONLINE_HALL_ITEMS : includes
+  ONLINE_HALL_ITEMS ||--|| HALL_RESERVATIONS : links_existing_hall
   ROOM_CATEGORIES ||--o{ ROOMS : groups
   ROOM_CATEGORIES ||--o{ PACKAGES : offers
   ROOM_CATEGORIES ||--o{ ROOM_BOOKINGS : requested_category

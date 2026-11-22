@@ -1,3 +1,4 @@
+import { onlineHallItems, unifiedInstalled } from "./unified-booking.js";
 import type { Express, RequestHandler } from "express";
 import { BookingError } from "./booking-quote.js";
 import { databasePool } from "./database.js";
@@ -48,14 +49,27 @@ export async function staffReservationIndex(
       `select r.id,r.primary_name as "primaryName",r.channel,r.created_at as "createdAt",
     r.total_centavos::float8 as "totalCentavos",count(b.id)::int as "roomCount",
     array_agg(distinct i.state) as states
-    from staytrack.reservations r join staytrack.room_bookings b on b.reservation_id=r.id
-    join staytrack.inventory_claims i on i.id=b.claim_id
+    from staytrack.reservations r left join staytrack.room_bookings b on b.reservation_id=r.id
+    left join staytrack.inventory_claims i on i.id=b.claim_id
     where ($1='' or position(lower($1) in lower(r.primary_name))>0 or position(lower($1) in r.id::text)>0
       or position(lower($1) in lower(coalesce(r.verified_email,'')))>0)
     group by r.id order by r.created_at desc,r.id limit 51 offset $2`,
       [q, page * 50],
     )
   ).rows;
+  for (const row of rows) {
+    const halls = await onlineHallItems(pool, row.id);
+    row.hallItems = halls;
+    row.hallCount = halls.length;
+    row.serviceKind = halls.length
+      ? row.roomCount
+        ? "combined"
+        : "hall"
+      : "accommodation";
+    row.states = (row.states ?? [])
+      .filter(Boolean)
+      .concat(halls.map((h) => h.state));
+  }
   return { reservations: rows.slice(0, 50), hasMore: rows.length > 50, page };
 }
 
@@ -123,7 +137,51 @@ export async function staffReservationDetail(
         [id],
       )
     ).rows;
-    return { reservation, contact, items, financials, payments, refunds };
+    const hallItems = await onlineHallItems(db, id);
+    if (hallItems.length) {
+      payments.push(
+        ...(
+          await db.query(
+            `select 'hall' as source,p.id::text,p.method,
+        p.amount_centavos::float8 as "amountCentavos",p.received_at as "recordedAt"
+        from staytrack.hall_receipts p join staytrack.online_hall_items o on o.hall_reservation_id=p.reservation_id
+        where o.reservation_id=$1 order by p.received_at,p.id`,
+            [id],
+          )
+        ).rows,
+      );
+      refunds.push(
+        ...(
+          await db.query(
+            `select a.id,null::uuid as "roomBookingId",a.reservation_id as "hallReservationId",
+        a.amount_centavos::float8 as "amountCentavos",case when t.approval_id is not null then 'recorded' else 'due' end as status,
+        t.transferred_at as "transferredAt" from staytrack.hall_refund_approvals a
+        join staytrack.online_hall_items o on o.hall_reservation_id=a.reservation_id
+        left join staytrack.hall_refund_transfers t on t.approval_id=a.id
+        where o.reservation_id=$1 and a.amount_centavos>0 order by a.id`,
+            [id],
+          )
+        ).rows,
+      );
+      payments.sort(
+        (a, b) =>
+          new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime(),
+      );
+    }
+    reservation.serviceKind = hallItems.length
+      ? items.length
+        ? "combined"
+        : "hall"
+      : "accommodation";
+    return {
+      reservation,
+      contact,
+      items,
+      hallItems,
+      financials,
+      payments,
+      refunds,
+    };
   }, pool);
 }
 
@@ -145,6 +203,14 @@ export function registerReservationWorkspace(
         (select count(*)::int from staytrack.room_check_ins ci left join staytrack.stay_item_terms t on t.room_booking_id=ci.room_booking_id where coalesce(t.effective_checkout_at,ci.checkout_at)<=clock_timestamp() and not exists(select 1 from staytrack.room_checkouts co where co.room_booking_id=ci.room_booking_id)) as overdue,
         (select count(*)::int from staytrack.rooms where active and operational_state='cleaning') as "needsCleaning",
         (select count(*)::int from staytrack.rooms where active and operational_state='maintenance') as maintenance`);
+      if (await unifiedInstalled(pool ?? databasePool())) {
+        const hall = (
+          await (pool ?? databasePool()).query(
+            `select count(*) filter(where h.status='confirmed' and (c.event_start at time zone 'Asia/Manila')::date=(clock_timestamp() at time zone 'Asia/Manila')::date)::int as "hallArrivals",count(*) filter(where h.status='in_progress')::int as "hallInProgress" from staytrack.hall_reservations h left join staytrack.hall_claims c on c.id=h.claim_id`,
+          )
+        ).rows[0];
+        Object.assign(result.rows[0], hall);
+      }
       res.json(result.rows[0]);
     } catch {
       res.status(503).json({

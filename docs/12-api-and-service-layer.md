@@ -4,6 +4,11 @@ status: proposed-not-implemented
 ---
 # 12 — REST API and Service Layer Contract (Draft)
 
+## Unified Online Booking implementation contract - 2026-11-21
+
+Use the existing Express guest quote/reservation/proof and staff verification surfaces with a shared room/Hall selection and reservation relationship. Server pricing and ownership are mandatory; never trust submitted totals, allocations, confirmation or actor IDs. All-or-nothing hold and confirmation coordination wraps the existing room and Hall inventory mechanics in one database transaction. One proof/reference covers the full total. Keep existing item-operation endpoints and separate operational state machines; bounded manual refund and change operations must resolve the correct parent/item allocation. See [[superpowers/specs/2026-11-21-unified-online-booking-design]] and [[unified-online-booking-requirements-sync]] for implemented routes and remaining checks. Production gates remain closed.
+
+
 **API version:** `/api/v1`. All routes below are **proposed, not deployed**. Final endpoints documented from actual implementation by Phase 04.
 
 | Method | Route | Primary rule |

@@ -4,6 +4,13 @@ status: baseline
 ---
 # 04 — Feature Specifications and Acceptance Examples
 
+## Unified Online Booking workflow - 2026-11-21
+
+UB-01 through UB-06 in [[unified-online-booking-requirements-sync]] supersede historical accommodation-only/staff-inquiry restrictions. Guests select rooms, the Hall, or both; each has an independent schedule, availability and immutable server-priced item. Verify the primary guest's email and ownership, review itemized total/policy/contact, atomically hold all selections for one 30-minute proof deadline, then submit one full-payment GCash reference and private screenshot. Timely proof protects every selected item. Staff verify the real transaction before atomic confirmation, staff-dashboard registration and one itemized confirmation/outbox message. Late-paid cases require reconciliation. Never create a partial initial reservation.
+
+Cancellation and approved changes operate per item; free cancellation ends at the earlier of confirmation plus one hour and actual item start. Manual refunds use item allocations and cumulative caps. Accommodation extensions require at least 50% upfront, Hall extensions 100% of additional cost. Countdown never performs checkout/event completion. Local implementation evidence and remaining gaps are separate from acceptance; production remains closed.
+
+
 **Implementation acceptance is tracked per phase**, not assumed from this document. Feature IDs are stable links for tickets/tests.
 
 | ID | Feature | Acceptance behavior |

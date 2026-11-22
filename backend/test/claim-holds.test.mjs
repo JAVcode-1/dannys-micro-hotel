@@ -10,6 +10,8 @@ test("cleanup uses a fake clock and is safe to repeat", async () => {
   const calls = [];
   const pool = {
     async query(sql, values) {
+      if (sql.includes("to_regclass"))
+        return { rows: [{ unified_installed: false }] };
       calls.push({ sql, values });
       return { rowCount: calls.length === 1 ? 1 : 0 };
     },

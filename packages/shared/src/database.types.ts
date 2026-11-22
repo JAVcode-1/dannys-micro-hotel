@@ -891,6 +891,95 @@ export type Database = {
           },
         ];
       };
+      online_hall_items: {
+        Row: {
+          reservation_id: string;
+          hall_reservation_id: string;
+          original_centavos: number;
+          proof_deadline_at: string;
+          state: string;
+          proof_submitted_at: string | null;
+        };
+        Insert: {
+          reservation_id: string;
+          hall_reservation_id: string;
+          original_centavos: number;
+          proof_deadline_at: string;
+          state?: string;
+          proof_submitted_at?: string | null;
+        };
+        Update: {
+          reservation_id?: string;
+          hall_reservation_id?: string;
+          original_centavos?: number;
+          proof_deadline_at?: string;
+          state?: string;
+          proof_submitted_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "online_hall_items_hall_reservation_id_fkey";
+            columns: "{hall_reservation_id}";
+            isOneToOne: true;
+            referencedRelation: "hall_reservations";
+            referencedColumns: "{id}";
+          },
+          {
+            foreignKeyName: "online_hall_items_reservation_id_fkey";
+            columns: "{reservation_id}";
+            isOneToOne: true;
+            referencedRelation: "reservations";
+            referencedColumns: "{id}";
+          },
+        ];
+      };
+      online_hall_requests: {
+        Row: {
+          id: string;
+          hall_reservation_id: string;
+          actor: string;
+          request_key: string;
+          request_hash: string;
+          kind: string;
+          reason: string;
+          input: Json;
+          result: Json;
+          recorded_at: string;
+        };
+        Insert: {
+          id?: string;
+          hall_reservation_id: string;
+          actor: string;
+          request_key: string;
+          request_hash: string;
+          kind: string;
+          reason: string;
+          input: Json;
+          result: Json;
+          recorded_at?: string;
+        };
+        Update: {
+          id?: string;
+          hall_reservation_id?: string;
+          actor?: string;
+          request_key?: string;
+          request_hash?: string;
+          kind?: string;
+          reason?: string;
+          input?: Json;
+          result?: Json;
+          recorded_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "online_hall_requests_hall_reservation_id_fkey";
+            columns: "{hall_reservation_id}";
+            isOneToOne: false;
+            referencedRelation: "hall_reservations";
+            referencedColumns: "{id}";
+          },
+        ];
+      };
       operational_settings: {
         Row: {
           id: boolean;
@@ -3124,6 +3213,18 @@ export type Database = {
       };
     };
     Views: {
+      online_payment_allocations: {
+        Row: {
+          reservation_id: string | null;
+          submission_id: string | null;
+          room_booking_id: string | null;
+          hall_reservation_id: string | null;
+          amount_centavos: number | null;
+          received_at: string | null;
+          verified_at: string | null;
+        };
+        Relationships: [];
+      };
       reservation_base_financials: {
         Row: {
           reservation_id: string | null;

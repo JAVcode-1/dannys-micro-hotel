@@ -33,6 +33,9 @@ body {
   margin: 0;
   font-family: "Segoe UI", sans-serif;
 }
+html:has(.staff-workspace) {
+  scrollbar-gutter: stable;
+}
 button,
 a {
   touch-action: manipulation;

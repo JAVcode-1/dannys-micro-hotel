@@ -52,7 +52,7 @@ test("guest OTP verifies through Auth and Express before success", async () => {
     target: { value: "guest@example.test" },
   });
   fireEvent.click(
-    screen.getByRole("button", { name: "Send verification code" }),
+    screen.getByRole("button", { name: "Send code" }),
   );
   await waitFor(() => assert.ok(screen.getByLabelText("Six-digit code")));
   fireEvent.change(screen.getByLabelText("Six-digit code"), {

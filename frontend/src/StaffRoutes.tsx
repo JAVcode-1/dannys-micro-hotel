@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { ComponentType } from "react";
+import { notifySuccess } from "./notifications";
 import {
   NavLink,
   Navigate,
@@ -38,7 +39,6 @@ type Page = {
   path: string;
   label: string;
   component: ComponentType<{ token: string }>;
-  wide?: boolean;
 };
 
 const primaryPages: Page[] = [
@@ -46,51 +46,43 @@ const primaryPages: Page[] = [
     path: "/staff/cancellations",
     label: "Cancellations and refunds",
     component: CancellationDesk,
-    wide: true,
   },
   {
     path: "/staff/stays",
     label: "Stays and checkout",
     component: StayMonitor,
-    wide: true,
   },
   {
     path: "/staff/check-ins",
     label: "Check-in",
     component: CheckInDesk,
-    wide: true,
   },
   {
     path: "/staff/walkins",
     label: "Walk-ins",
     component: WalkInDesk,
-    wide: true,
   },
   {
     path: "/staff/payments",
     label: "Payments",
     component: StaffPaymentReviews,
-    wide: true,
   },
-  { path: "/staff", label: "Today", component: StaffDashboard, wide: true },
+  { path: "/staff", label: "Today", component: StaffDashboard },
   {
     path: "/staff/reservations",
     label: "Reservations",
     component: StaffReservations,
-    wide: true,
   },
   {
     path: "/staff/settings/catalog",
     label: "Catalog",
     component: StaffCatalog,
-    wide: true,
   },
-  { path: "/staff/rooms", label: "Rooms", component: StaffRooms, wide: true },
+  { path: "/staff/rooms", label: "Rooms", component: StaffRooms },
   {
     path: "/staff/settings",
     label: "Settings",
     component: OperationalSettings,
-    wide: true,
   },
 ];
 
@@ -104,19 +96,16 @@ const additionalPages: Page[] = [
     path: "/staff/stay-changes",
     label: "Extensions and charges",
     component: StayChangesDesk,
-    wide: true,
   },
   {
     path: "/staff/audit",
     label: "Staff audit",
     component: StaffAuditDesk,
-    wide: true,
   },
   {
     path: "/staff/analytics",
     label: "Analytics",
     component: StaffAnalytics,
-    wide: true,
   },
 ];
 
@@ -137,7 +126,6 @@ const hallPage: Page = {
   path: "/staff/hall",
   label: "Function Hall",
   component: HallDesk,
-  wide: true,
 };
 
 function StaffPage({ component: Component }: Pick<Page, "component">) {
@@ -161,9 +149,7 @@ function StaffLayout({
   hallEnabled: boolean;
   notice: string;
 }) {
-  const { pathname } = useLocation();
   const [message, setMessage] = useState("");
-  const wide = pages.some((page) => page.wide && page.path === pathname);
   const groups = [
     ["Today", ["/staff", "/staff/check-ins"]],
     [
@@ -196,6 +182,7 @@ function StaffLayout({
     try {
       const { error } = await authClient.auth.signOut();
       if (error) throw error;
+      notifySuccess("Signed out successfully.");
     } catch {
       setMessage("Sign-out failed. Please try again.");
     }
@@ -203,7 +190,7 @@ function StaffLayout({
 
   return (
     <section
-      className={`mx-auto min-w-0 rounded-2xl border border-subtle bg-white p-4 sm:p-7 shadow-sm ${wide || pathname.startsWith("/staff/reservations/") ? "max-w-6xl" : "max-w-3xl"}`}
+      className="mx-auto w-full min-w-0 max-w-6xl rounded-2xl border border-subtle bg-white p-4 shadow-sm sm:p-7"
     >
       <h1 className="text-2xl font-bold text-main">Staff workspace</h1>
       <p className="mt-3 [overflow-wrap:anywhere]">Signed in as {identity}</p>
@@ -239,7 +226,7 @@ function StaffLayout({
               ))}
           </nav>
         </aside>
-        <div className="min-w-0">
+        <div className="w-full min-w-0">
           <Outlet context={token} />
           <button
             className="mt-4 rounded-lg bg-primary px-4 py-2 text-white"
@@ -361,7 +348,7 @@ export function staffRoutes(options: StaffOptions) {
   return (
     <Route
       element={
-        <main className="min-h-svh bg-canvas px-6 py-16 text-main">
+        <main className="staff-workspace min-h-svh w-full min-w-0 bg-canvas px-6 py-16 text-main">
           <StaffSessionProvider authClient={options.authClient}>
             <StaffRouteGuard {...options} pages={pages} />
           </StaffSessionProvider>

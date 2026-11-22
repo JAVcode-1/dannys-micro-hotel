@@ -4,6 +4,11 @@ status: planned
 ---
 # 13 — Phase-by-Phase Development Roadmap
 
+## Active task: Unified Online Booking - 2026-11-21
+
+Owner explicitly authorizes UB-01 through UB-06 as one coordinated feature, reusing current accommodation and Hall implementations. Dependencies: existing category claims, Hall exclusive scheduling, verified guest ownership, staff payment verification, immutable ledgers and notifications. Implementation plan: [[superpowers/plans/2026-11-21-unified-online-booking]]. Only essential targeted checks are authorized now; no formal production gate, hosted access/migration, real payment/email, commit or push. Keep phase acceptance open. Next task after implementation is owner inspection and the deferred comprehensive integration/UI/UX checks when instructed.
+
+
 
 ## Final Analytics scope revision - 2026-11-20
 

@@ -4,7 +4,15 @@ status: confirmed-facility-planned-software
 ---
 # Future Function Hall Reservation & Management
 
-Owner-confirmed requirements recorded 2026-11-20. Danny's Micro Hotel offers a Function Hall in addition to its accommodation categories. The real facility exists; its StayTrack reservation module is planned, **not implemented**. This document does not describe or invent the hotel's existing manual operating processes. Academic **4.0 — The Existing System** is a separate subsequent task and is not rewritten here.
+## Current Unified Online Booking authority - 2026-11-21
+
+The owner's UB-01 through UB-06 implementation request supersedes the earlier staff-inquiry-only customer restriction and all pending mixed-payment/hold/cancellation questions. Customers may reserve the Hall alone or with independently scheduled rooms in one planner. One exclusive physical Hall has alternative Theater Type/Room Type setups; it is not two halls.
+
+All online items require 100% upfront through one GCash transaction/reference/private screenshot with item allocations and actual staff verification. Staff-managed Hall bookings retain the minimum 50% deposit. Atomically claim all selected room/Hall inventory, apply one 30-minute proof deadline and protect every timely-proof item until review. Staff confirm the full reservation atomically and generate one itemized confirmation/outbox email. Physical event start and completion remain staff-managed.
+
+Online Hall cancellation follows the same one-hour-after-confirmation window, ending sooner at actual event start. Individual cancellation releases only the Hall claim; eligible refunds are manual and capped against its share of the verified payment. Independent staff-approved rescheduling preserves the original cancellation clock. Hall extensions require 100% of additional cost; room extensions retain at least 50%. Existing pricing, configured hours/notice/buffers and immutable history remain in force. See [[unified-online-booking-requirements-sync]] for implementation evidence and deferred acceptance.
+
+This task permits local implementation and disposable PostgreSQL only. No hosted access/application, real payments/email, production activation, commit or push. Earlier documentation-only restrictions below are historical where superseded here.
 
 ## Confirmed facility and setup options
 
@@ -39,6 +47,10 @@ Confirmed inclusions are **air-conditioning, sound system and mineral water**. N
 
 ## Planned software capabilities
 
+### Online Function Hall workflow
+
+Choose setup, date/start time, full-hour duration (minimum three hours), attendees and additional requests. Display server-priced availability before creating an atomic unified hold. Full payment, one proof deadline, protected review, confirmation and independent changes follow UB-01 through UB-06 above. Staff inquiry is not a prerequisite. A displayed available slot is not a guarantee until its transactional claim is created. No screenshot-only confirmation or automatic refund is allowed.
+
 - Reservation creation with setup selection, validated attendee count, event date and start/end times.
 - Server-calculated approved base package and excess hours, with immutable booked price/rule evidence and clear unsupported-policy blocking.
 - Time-slot availability and transactional overlapping-reservation prevention for the eventual confirmed resource model and preparation/cleaning buffers.
@@ -48,29 +60,17 @@ Confirmed inclusions are **air-conditioning, sound system and mineral water**. N
 
 Reuse suitable authentication, scheduling, inventory-locking patterns, payment records and auditing where safe. Keep hall-resource capacity separate from room inventory; do not reuse accommodation categories or assume room state transitions fit events. Core business operations still route through the separate Express API with server authorization, transactional capacity safeguards and sensitive-record protection.
 
-Accommodation-specific deposits, payment methods, cancellation/refund/rescheduling policies, cleaning, check-in and extension rules do **not** automatically apply to hall bookings. Hall reservation/payment/readiness state definitions require their own reviewed design before implementation. No hall migration, feature or live transaction is authorized by this documentation.
+Accommodation policies apply to online Hall items only where explicitly approved by UB-01 through UB-06. Preserve separate room and event states and the staff-managed Hall deposit workflow.
 
-## Open owner decisions — required before Function Hall implementation
+## Operational configuration and remaining owner acceptance
 
-| Question | Safe planning boundary |
-|---|---|
-| Is there exactly one function hall? | Do not assume resource count. |
-| Is the entire hall reserved exclusively for one booking? | Do not assume exclusivity or allow shared capacity without approval. |
-| Are partial excess hours rounded up or charged proportionally? | Do not quote unsupported fractional-hour charges. |
-| What is the latest allowed event ending time? | Do not promise unrestricted evening hours. |
-| Can events extend past midnight? | Do not infer cross-midnight availability or prices. |
-| Is a deposit required, and how much? | Do not import accommodation payment thresholds. |
-| Are cash, GCash, or both accepted? | No hall payment method is confirmed yet. |
-| What are the cancellation, rescheduling and refund policies? | Do not import room terms or automate refunds. |
-| How much preparation/cleaning buffer is required between events? | No guessed turnaround duration. |
-| Are there extra charges for equipment or other services? | Do not invent optional charges. |
-| Are mineral-water quantities limited? | Do not promise unlimited water or invent a quantity. |
+Existing Hall code provides configurable opening/closing, minimum notice, booking horizon, preparation/cleanup, no-show grace and reminders. Current provisional defaults are 8:00 AM-10:00 PM, three-hour notice, 90-day horizon and 30-minute preparation/cleanup; these are existing development settings, **not a fresh owner approval of operating policy**. Public bookings cannot bypass minimum notice with a staff override. Reject starts before priced hours, fractional excess hours and cross-midnight events. No shorter-than-three-hour package is offered.
 
-Also clarify starts before 8:00 AM before supporting them. Confirmed prices and inclusions above remain valid while unanswered policies remain explicitly pending.
+Pending before activation: management acceptance of configured hours/notice/buffers, any outside-hours staff operation, optional equipment/service charges and mineral-water quantities, real payee/QR, receipt/privacy/legal terms and hosted/device acceptance. Do not invent equipment fees, unlimited water or compliant fiscal receipts. One exclusive Hall, full online GCash payment, shared hold/confirmation, cancellation and change policies are resolved by the current owner request and are no longer open questions.
 
 ## Dependencies and future acceptance (not executed)
 
-Implement only after remaining approved core work and Analytics & Reports, with owner decisions resolved and a reviewed module design. Later demonstrate the three approved price examples, exact 5:00 PM boundary, setup-capacity limits, unsupported-rule blocking, competing overlapping bookings, staff authorization, payment reconciliation/auditing and room-inventory/report isolation. These are planned checks, not passing evidence. See [[13-development-roadmap]] and [[phases/09-hardening-pilot-and-release]].
+The current request authorizes unified implementation over existing gated core and Hall modules. Before activation, demonstrate the three approved price examples, exact 5:00 PM boundary, setup-capacity limits, unsupported-rule blocking, competing overlapping bookings, staff authorization, payment reconciliation/auditing and room-inventory/report isolation. These are planned checks, not passing evidence. See [[13-development-roadmap]] and [[phases/09-hardening-pilot-and-release]].
 
 
 ## Function Hall development checkpoint - 2026-11-20

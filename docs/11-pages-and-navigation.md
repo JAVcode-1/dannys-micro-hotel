@@ -4,9 +4,18 @@ status: planned
 ---
 # 11 — Pages and Navigation
 
+## Unified booking routes - 2026-11-21
+
+`/book` is the single room/Hall planner: Add room, Add Function Hall, independent schedules, Check availability and Continue reservation. Room rate links may preselect the category and Hall links the setup. `/rooms` and `/function-hall` expose approved Hall rates and booking entry points. Guest payment/history/detail use one parent reservation and itemized charges. The staff sidebar exposes Function Hall only when the capability is enabled; the same reservation connects staff management/payment review to separate room assignment/check-in and Hall calendar/event operations. Preserve the approved landing design and Royal Horizon theme. Production activation and device acceptance remain pending; see [[unified-online-booking-requirements-sync]].
+## Simplified guest navigation — 2026-11-21
+
+The booking page uses the shared header only. Each numbered room groups its own room type, arrival, stay length and guest-count fields, so labels do not repeat the room number. Guest-facing copy says “See total price” and “Add more time” while existing server pricing, independent schedules and availability rules remain unchanged.
+
+The shared guest header now presents four destinations: Rooms & rates, Function Hall, My bookings and Book a room. The hotel name returns Home. Reviews remain reachable through their public content and completed-stay invitations, while email verification appears contextually when booking or opening a reservation. Sign out appears only for an authenticated guest. The booking planner no longer renders a second local navigation. Existing direct routes, authorization and feature gates remain unchanged.
+
 ## Implemented correction-sprint routes — 2026-11-21
 
-This section supersedes the suggested routes below. Guest routes: `/`, `/rooms`, `/function-hall`, `/reviews`, `/book`, `/verify`, `/reservations`, `/reservations/:id`, `/reservations/:id/payment`, `/reviews/submit`, `/feedback/private`. `/login` and `/register` remain OTP compatibility routes. Reviews enforce completed-stay eligibility and verified ownership/grants. Hall booking is staff-assisted only. Disabled modules have unavailable states, unknown routes have not-found, and synthetic previews are development-only.
+This section supersedes the suggested routes below. Guest routes: `/`, `/rooms`, `/function-hall`, `/reviews`, `/book`, `/verify`, `/reservations`, `/reservations/:id`, `/reservations/:id/payment`, `/reviews/submit`, `/feedback/private`. `/login` and `/register` remain OTP compatibility routes. Reviews enforce completed-stay eligibility and verified ownership/grants. Future Function Hall booking is customer self-service with public availability and full verified payment before confirmation; its online route/flow is not implemented or enabled yet. The current gated hall workflow remains staff-managed. Disabled modules have unavailable states, unknown routes have not-found, and synthetic previews are development-only.
 
 Staff routes: `/staff/sign-in`, `/staff`, `/staff/reservations`, `/staff/reservations/:id`, `/staff/walkins`, `/staff/check-ins`, `/staff/stays`, `/staff/payments`, `/staff/cancellations`, `/staff/reschedules`, `/staff/stay-changes`, `/staff/rooms`, `/staff/hall`, `/staff/analytics`, `/staff/reviews`, `/staff/feedback`, `/staff/audit`, `/staff/settings`, `/staff/settings/catalog`. `/staff/catalog` redirects to settings/catalog. Navigation groups: Today, Reservations, Active Stays, Payments, Rooms, Function Hall, Management. Sessions remain mounted during protected navigation.
 
@@ -17,7 +26,7 @@ Staff detail includes per-room schedules, contextual actions, contact/policy evi
 | Route (suggested) | Purpose |
 |---|---|
 | `/` | Home, hotel categories, open 24h, policies |
-| `/rooms` | Room comparison, base prices and standard occupancy advice |
+| `/rooms` | Room comparison, base prices and advisory usual occupancy on each card; the separate occupancy checker is removed from this guest page |
 | `/book` | Choose independent per-room packages/time slots and occupants |
 | `/checkout` | Price summary and terms acknowledgment |
 | `/pay/:holdRef` | Static GCash QR + countdown + screenshot/ref form |

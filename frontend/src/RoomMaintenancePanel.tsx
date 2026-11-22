@@ -1,5 +1,6 @@
 ﻿import React from "react";
 import type { MaintenanceAction, StaffRoom } from "@staytrack/shared";
+import { notifySuccess } from "./notifications";
 import { apiBase } from "./staff-auth";
 
 export default function RoomMaintenancePanel({
@@ -56,6 +57,7 @@ export default function RoomMaintenancePanel({
         throw new Error(
           (await response.json()).error ?? "Maintenance update failed.",
         );
+      notifySuccess("Room maintenance updated.");
       await refresh();
       retry.current = null;
       setNote("");
@@ -88,6 +90,7 @@ export default function RoomMaintenancePanel({
         },
       );
       if (!response.ok) throw new Error((await response.json()).error);
+      notifySuccess("Room reassignment recorded.");
       retry.current = null;
       await refresh();
     } catch (error) {

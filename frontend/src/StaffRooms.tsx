@@ -1,5 +1,6 @@
 import RoomMaintenancePanel from "./RoomMaintenancePanel";
 import React from "react";
+import { notifySuccess } from "./notifications";
 import { apiBase } from "./staff-auth";
 import type {
   StaffRoom,
@@ -29,6 +30,7 @@ export default function StaffRooms({ token }: { token: string }) {
     async (signal?: AbortSignal) => {
       const response = await fetch(`${apiBase}/staff/rooms`, {
         headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
         signal,
       });
       if (!response.ok)
@@ -90,6 +92,7 @@ export default function StaffRooms({ token }: { token: string }) {
             "Housekeeping could not be recorded. Refresh and retry.",
         );
       }
+      notifySuccess({ start: "Cleaning started.", finish: "Cleaning finished. Ready inspection is still required.", ready: "Room marked Ready." }[action]);
       await load();
       delete retries.current[retry];
       setChecks((current) => ({ ...current, [cycle]: false }));
@@ -144,6 +147,7 @@ export default function StaffRooms({ token }: { token: string }) {
         Physical readiness and turnover protection are separate. Capacity claims
         below are provisional, not guest room assignments.
       </p>
+      <RoomRegistration key={token} token={token} refresh={load} disabled={loading || busy} />
       {loading && (
         <p role="status" className="mt-6 text-muted">
           Loading room board…
@@ -301,9 +305,7 @@ export default function StaffRooms({ token }: { token: string }) {
               />
               {room.legacy_inspection_eligible !== undefined && (
                 <RoomAdministration
-                  key={
-                    token + ":" + room.id + ":" + room.active + ":" + room.code
-                  }
+                  key={token + ":" + room.id}
                   room={room}
                   token={token}
                   refresh={load}
@@ -322,6 +324,44 @@ export default function StaffRooms({ token }: { token: string }) {
   );
 }
 
+function RoomRegistration({ token, refresh, disabled }: { token: string; refresh: () => Promise<void>; disabled: boolean }) {
+  const [code, setCode] = React.useState("");
+  const [category, setCategory] = React.useState("double_standard");
+  const [note, setNote] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [message, setMessage] = React.useState("");
+  const retry = React.useRef<{ payload: string; key: string } | null>(null);
+  return <form className="mt-5 rounded-xl border border-subtle bg-white p-4" onSubmit={event => {
+    event.preventDefault();
+    if (busy || disabled) return;
+    const payload = JSON.stringify({ code: code.trim(), category, note: note.trim() });
+    if (retry.current?.payload !== payload) retry.current = { payload, key: crypto.randomUUID() };
+    const requestKey = retry.current.key;
+    setBusy(true); setMessage("");
+    void (async () => {
+      try {
+        const response = await fetch(`${apiBase}/staff/rooms`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ ...JSON.parse(payload), requestKey }) });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Registration failed.");
+        notifySuccess("Room registered as inactive and Unverified. Inspect it before activation.");
+        retry.current = null; setCode(""); setNote("");
+        await refresh(); setMessage("Room registered as inactive and Unverified. Inspect it, then activate it for booking.");
+      } catch (error) { setMessage(error instanceof Error ? error.message : "Registration unavailable. Refresh before retrying."); }
+      finally { setBusy(false); }
+    })();
+  }}>
+    <h3 className="font-bold">Register a physical room</h3>
+    <p className="mt-2 text-sm text-muted">Register the actual 10 Double Standard and 5 Family Executive identifiers. The Function Hall is managed separately. New rooms are not automatically Ready or available.</p>
+    <fieldset disabled={busy || disabled} className="mt-3 grid gap-3 sm:grid-cols-2">
+      <label className="grid gap-1 text-sm">Actual room number or identifier<input required maxLength={80} value={code} onChange={e => setCode(e.target.value)} className="rounded border border-subtle p-2" /></label>
+      <label className="grid gap-1 text-sm">Room category<select value={category} onChange={e => setCategory(e.target.value)} className="rounded border border-subtle p-2"><option value="double_standard">Double Standard</option><option value="family_executive">Family Executive</option></select></label>
+      <label className="grid gap-1 text-sm sm:col-span-2">Registration note<input required maxLength={1000} value={note} onChange={e => setNote(e.target.value)} className="rounded border border-subtle p-2" /></label>
+      <button className="min-h-11 rounded-lg bg-primary px-4 font-semibold text-white disabled:opacity-50" disabled={!code.trim() || !note.trim()}>{busy ? "Registering…" : "Register room"}</button>
+    </fieldset>
+    {message && <p role="status" className="mt-3 text-sm">{message}</p>}
+  </form>;
+}
+
 function RoomAdministration({
   room,
   token,
@@ -333,21 +373,44 @@ function RoomAdministration({
 }) {
   const [note, setNote] = React.useState("");
   const [code, setCode] = React.useState(room.code);
+  const [category, setCategory] = React.useState(room.category_code);
   const [active, setActive] = React.useState(room.active);
   const [checked, setChecked] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [success, setSuccess] = React.useState("");
   const retry = React.useRef<{ payload: string; key: string } | null>(null);
+  React.useEffect(() => {
+    setCode(room.code);
+    setCategory(room.category_code);
+    setActive(room.active);
+  }, [room.code, room.category_code, room.active]);
   async function submit(inspection: boolean) {
-    const body = inspection
-      ? { note, checksConfirmed: checked }
-      : { note, code, active };
-    const payload = JSON.stringify({ inspection, ...body });
-    if (retry.current?.payload !== payload)
-      retry.current = { payload, key: crypto.randomUUID() };
-    setBusy(true);
+    if (busy) return;
     setError("");
+    setSuccess("");
+    if (!note.trim() || (!inspection && !code.trim())) {
+      setError(inspection
+        ? "Enter an inspection reason before marking the room Ready."
+        : "Enter the confirmed room identifier and an administration reason.");
+      return;
+    }
+    if (inspection && !checked) {
+      setError("Confirm that you physically inspected the room and it is Ready.");
+      return;
+    }
+    if (!inspection && active && !room.active && room.operational_state !== "ready") {
+      setError("Inspect and mark the room Ready first, then save with Active for booking selected.");
+      return;
+    }
+    const body = inspection
+      ? { note: note.trim(), checksConfirmed: checked }
+      : { note: note.trim(), code: code.trim(), active, category };
+    const payload = JSON.stringify({ inspection, ...body });
+    setBusy(true);
     try {
+      if (retry.current?.payload !== payload)
+        retry.current = { payload, key: crypto.randomUUID() };
       const response = await fetch(
         `${apiBase}/staff/rooms/${room.id}/${inspection ? "inspection" : "admin"}`,
         {
@@ -359,11 +422,22 @@ function RoomAdministration({
           body: JSON.stringify({ ...body, requestKey: retry.current.key }),
         },
       );
-      if (!response.ok) throw new Error((await response.json()).error);
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        throw new Error(result?.error || "Room update failed. Please try again.");
+      }
       retry.current = null;
-      await refresh();
       setNote("");
       setChecked(false);
+      notifySuccess(inspection ? "Inspection saved. Room marked Ready." : "Room administration saved.");
+      setSuccess(inspection
+        ? "Inspection saved. Room marked Ready." + (!room.active ? " Activate it for booking using Save room administration." : "")
+        : "Room administration saved." + (active ? " Active for online and walk-in bookings, subject to availability." : " Room is inactive for booking."));
+      try {
+        await refresh();
+      } catch {
+        setError("The change was saved, but the room board could not refresh. Use Refresh room board to see the latest status.");
+      }
     } catch (error) {
       setError(
         error instanceof Error ? error.message : "Room update unavailable.",
@@ -383,7 +457,10 @@ function RoomAdministration({
         missing legacy readiness evidence after any protected turnover expires;
         it does not invent historical cleaning events.
       </p>
-      {room.physically_ready === false &&
+      {!room.housekeeping_enabled && (
+        <p role="status" className="mt-2 text-sm">Room administration and inspection are currently unavailable.</p>
+      )}
+      {room.active && room.physically_ready === false &&
         room.operational_state === "ready" && (
           <p className="text-sm">
             Ready label requires current inspection or latest housekeeping
@@ -399,6 +476,13 @@ function RoomAdministration({
           onChange={(e) => setCode(e.target.value)}
           disabled={disabled}
         />
+      </label>
+      <label className="mt-2 grid gap-1">
+        Room category
+        <select value={category} disabled={disabled || room.active} onChange={e => setCategory(e.target.value)} className="rounded border border-subtle p-2">
+          <option value="double_standard">Double Standard</option><option value="family_executive">Family Executive</option>
+        </select>
+        <span className="text-xs text-muted">Category corrections require an inactive room without booking or maintenance history.</span>
       </label>
       <label className="flex gap-2 py-2">
         <input
@@ -420,8 +504,9 @@ function RoomAdministration({
         />
       </label>
       <button
+        type="button"
         className="mt-2 min-h-11 rounded border border-subtle px-3"
-        disabled={disabled || !note.trim() || !code.trim()}
+        disabled={disabled}
         onClick={() => void submit(false)}
       >
         Save room administration
@@ -438,14 +523,17 @@ function RoomAdministration({
             I physically inspected this room now and confirm it is Ready.
           </label>
           <button
+            type="button"
             className="min-h-11 rounded border border-subtle px-3"
-            disabled={disabled || !checked || !note.trim()}
+            disabled={disabled}
             onClick={() => void submit(true)}
           >
-            Record current legacy inspection
+            Inspect and mark Ready
           </button>
         </>
       )}
+      {busy && <p role="status">Saving room changes…</p>}
+      {success && <p role="status" className="mt-2 text-green-800">{success}</p>}
       {error && <p role="alert">{error}</p>}
     </details>
   );

@@ -32,6 +32,7 @@ export function createDevelopmentAuth(
   )
     throw new Error("Fixture Auth requires a loopback API.");
   const key = "staytrack.isolated.identity";
+  const staffTokenKey = "staytrack.isolated.staff-token";
   const listeners = new Set<
     (event: AuthChangeEvent, session: Session | null) => void
   >();
@@ -47,13 +48,18 @@ export function createDevelopmentAuth(
   async function load(kind: "guest" | "staff") {
     const response = await request(`${base}/development/session?kind=${kind}`, {
       cache: "no-store",
+      headers: kind === "staff"
+        ? { Authorization: `Bearer ${storage.getItem(staffTokenKey) ?? ""}` }
+        : {},
     });
     if (!response.ok)
       throw new Error("The isolated development API is unavailable.");
     const candidate = (await response.json()) as Session;
     if (
       !candidate.access_token ||
-      candidate.user?.email !== `${kind}@example.test`
+      !candidate.user?.id ||
+      (kind === "guest" && candidate.user.email !== "guest@example.test") ||
+      (kind === "staff" && !candidate.user.email?.endsWith("@example.test"))
     )
       throw new Error("Invalid isolated development identity.");
     return candidate;
@@ -63,9 +69,11 @@ export function createDevelopmentAuth(
     session = next;
     for (const listener of listeners) listener(event, next);
   }
-  async function login(kind: "guest" | "staff") {
-    const next = await load(kind);
+  async function login(kind: "guest" | "staff", issued?: Session) {
+    const next = issued ?? await load(kind);
+    if (kind === "staff") storage.setItem(staffTokenKey, next.access_token);
     storage.setItem(key, kind);
+    restoration = Promise.resolve(next);
     emit("SIGNED_IN", next);
     return { data: { session: next, user: next.user }, error: null };
   }
@@ -113,13 +121,22 @@ export function createDevelopmentAuth(
     }: {
       email: string;
       password: string;
-    }) =>
-      email.trim().toLowerCase() === "staff@example.test" &&
-      password === "development-only"
-        ? login("staff")
-        : failure(),
+    }) => {
+      const response = await request(`${base}/development/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: email, password }),
+      });
+      if (!response.ok) return failure();
+      const issued = await response.json() as Session;
+      if (!issued.access_token || !issued.user?.id || !issued.user.email?.endsWith("@example.test"))
+        return failure();
+      return login("staff", issued);
+    },
     signOut: async () => {
       storage.removeItem(key);
+      storage.removeItem(staffTokenKey);
+      restoration = Promise.resolve(null);
       emit("SIGNED_OUT", null);
       return { error: null };
     },

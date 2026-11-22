@@ -19,6 +19,22 @@ const time = (value: string) =>
     minute: "2-digit",
     hour12: true,
   });
+type HallItem = {
+  id: string;
+  setup: string;
+  startAt: string;
+  endAt: string;
+  attendees: number;
+  status: string;
+  totalCentavos: number;
+  actualStart?: string | null;
+};
+const serviceLabel = (kind?: string) =>
+  kind === "combined"
+    ? "Accommodation + Function Hall"
+    : kind === "hall"
+      ? "Function Hall"
+      : "Accommodation";
 type Reservation = {
   id: string;
   primaryName: string;
@@ -26,6 +42,8 @@ type Reservation = {
   createdAt: string;
   totalCentavos: number;
   roomCount?: number;
+  hallCount?: number;
+  serviceKind?: "accommodation" | "hall" | "combined";
   states?: string[];
   email?: string;
 };
@@ -60,6 +78,7 @@ type Detail = {
     confirmationAt?: string | null;
     pendingReschedule?: boolean;
   }[];
+  hallItems?: HallItem[];
   financials: StayFinancials;
   payments: {
     id: string;
@@ -68,7 +87,14 @@ type Detail = {
     amountCentavos: number;
     recordedAt: string;
   }[];
-  refunds: { roomBookingId: string; amountCentavos: number; status: string }[];
+  refunds: {
+    id?: string;
+    roomBookingId: string | null;
+    hallReservationId?: string;
+    amountCentavos: number;
+    status: string;
+    transferredAt?: string | null;
+  }[];
 };
 
 export default function StaffReservations({ token }: { token: string }) {
@@ -146,9 +172,11 @@ export default function StaffReservations({ token }: { token: string }) {
                 </Link>
                 <p>
                   {r.channel === "online" ? "Online" : "Walk-in"} ·{" "}
-                  {r.roomCount} room items · {money(r.totalCentavos)}
+                  {serviceLabel(r.serviceKind)} · {r.roomCount ?? 0} rooms
+                  {r.hallCount ? ` · ${r.hallCount} Hall event` : ""} ·{" "}
+                  {money(r.totalCentavos)}
                 </p>
-                <p className="text-sm">{r.id}</p>
+
                 <p>
                   {r.states
                     ?.map((s) =>
@@ -225,7 +253,9 @@ export function StaffReservationDetail({ token }: { token: string }) {
       <h2 className="mt-4 text-2xl font-bold">
         {data.reservation.primaryName}
       </h2>
-      <p>{data.reservation.id}</p>
+      <p className="mt-2 font-semibold text-primary">
+        {serviceLabel(data.reservation.serviceKind)}
+      </p>
       <p>
         {data.reservation.email || data.contact?.email || "No email recorded"} ·{" "}
         {data.reservation.channel}
@@ -272,7 +302,7 @@ export function StaffReservationDetail({ token }: { token: string }) {
           </div>
         ))}
       </dl>
-      <h3 className="font-bold">Room items</h3>
+      {data.items.length > 0 && <h3 className="font-bold">Accommodation</h3>}
       {data.items.map((item) => (
         <article className="my-3 rounded border p-4" key={item.id}>
           <h4 className="font-semibold">
@@ -309,6 +339,36 @@ export function StaffReservationDetail({ token }: { token: string }) {
           />
         </article>
       ))}
+      {data.hallItems?.map((hall) => (
+        <article
+          className="my-3 rounded border border-subtle p-4"
+          key={hall.id}
+        >
+          <h3 className="font-semibold">
+            Function Hall ·{" "}
+            {hall.setup === "theater" ? "Theater Type" : "Room Type"}
+          </h3>
+          <p>{hall.status.replaceAll("_", " ")}</p>
+          <p>
+            {time(hall.startAt)} – {time(hall.endAt)}
+          </p>
+          <p>
+            {hall.attendees} attendees · Booked amount{" "}
+            {money(hall.totalCentavos)}
+          </p>
+          {hall.actualStart && <p>Event started {time(hall.actualStart)}</p>}
+          <p className="mt-2 text-sm text-muted">
+            Hall operations and changes apply to this event only. Other
+            reservation items keep their own schedules.
+          </p>
+          <Link
+            className="mt-3 inline-flex min-h-11 items-center text-primary underline print:hidden"
+            to={`/staff/hall?item=${encodeURIComponent(hall.id)}`}
+          >
+            Manage Hall event, cancellation and refund
+          </Link>
+        </article>
+      ))}
       <h3 className="mt-6 font-bold">Verified payment history</h3>
       {data.payments.length ? (
         data.payments.map((p) => (
@@ -322,8 +382,10 @@ export function StaffReservationDetail({ token }: { token: string }) {
       <h3 className="mt-6 font-bold">Refund history</h3>
       {data.refunds.length ? (
         data.refunds.map((r) => (
-          <p key={r.roomBookingId}>
+          <p key={r.id ?? r.roomBookingId ?? r.hallReservationId}>
+            {r.hallReservationId ? "Function Hall" : "Accommodation"} ·{" "}
             {money(r.amountCentavos)} · {r.status}
+            {r.transferredAt ? ` · ${time(r.transferredAt)}` : ""}
           </p>
         ))
       ) : (

@@ -9,6 +9,9 @@ export type { PaymentSession } from "./payment.js";
 export type {
   BookingItemInput,
   BookingQuote,
+  OnlineHallInput,
+  OnlineHallQuote,
+  OnlineHallItem,
   GuestReservation,
 } from "./booking.js";
 

@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { notifySuccess } from "./notifications";
 import type { FormEvent } from "react";
 import type { staffAuth } from "./staff-auth";
+import { apiBase, isolatedDevelopment } from "./staff-auth";
 
 export default function StaffLogin({
   authClient,
@@ -23,10 +25,24 @@ export default function StaffLogin({
     setBusy(true);
     setMessage("");
     try {
-      const { error } = await authClient.auth.signInWithPassword({
-        email,
-        password,
-      });
+      let error;
+      if (isolatedDevelopment || email.includes("@")) {
+        ({ error } = await authClient.auth.signInWithPassword({ email, password }));
+      } else {
+        const response = await fetch(`${apiBase}/staff/sign-in`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: email, password }),
+        });
+        if (!response.ok) {
+          setMessage(response.status === 401
+            ? "Sign-in failed. Check your credentials or contact an administrator."
+            : "Sign-in is unavailable. Please try again.");
+          return;
+        }
+        const tokens = await response.json() as { access_token: string; refresh_token: string };
+        ({ error } = await authClient.auth.setSession(tokens));
+      }
       if (error)
         setMessage(
           "Sign-in failed. Check your credentials or contact an administrator.",
@@ -51,6 +67,7 @@ export default function StaffLogin({
           ? "Recovery is unavailable. Contact an administrator."
           : "If this email has an account, recovery instructions will arrive shortly.",
       );
+      if (!error) notifySuccess("Password recovery requested. Check your email if an account exists.");
     } catch {
       setMessage("Recovery is unavailable. Contact an administrator.");
     } finally {
@@ -65,7 +82,10 @@ export default function StaffLogin({
       const { error } = await authClient.auth.updateUser({ password });
       if (error)
         setMessage("Password update failed. Request a new recovery link.");
-      else onPasswordUpdated();
+      else {
+        notifySuccess("Password updated successfully.");
+        onPasswordUpdated();
+      }
     } catch {
       setMessage("Password update failed. Request a new recovery link.");
     } finally {
@@ -80,7 +100,7 @@ export default function StaffLogin({
         {passwordMode ? "Staff password setup" : "Staff sign-in"}
       </h1>
       <p className="mt-2 text-sm text-muted">
-        Use your individual employee account.
+        Use your individual staff username or email.
       </p>
       {passwordMode ? (
         <form
@@ -112,10 +132,10 @@ export default function StaffLogin({
           className="mt-6 space-y-4"
         >
           <label className="block text-sm font-medium">
-            Email
+            Username or email
             <input
               className="mt-1 w-full rounded-lg border border-subtle p-3"
-              type="email"
+              type="text"
               autoComplete="username"
               required
               value={email}
@@ -141,12 +161,15 @@ export default function StaffLogin({
           </button>
           <button
             type="button"
-            disabled={busy || !email}
+            disabled={busy || !email.includes("@")}
             onClick={() => void recover()}
             className="text-sm font-medium text-primary disabled:opacity-50"
           >
             Forgot password?
           </button>
+          {!isolatedDevelopment && email && !email.includes("@") && (
+            <p className="text-sm text-muted">For password recovery, enter the account’s email address.</p>
+          )}
         </form>
       )}
       {(message || sessionMessage) && (

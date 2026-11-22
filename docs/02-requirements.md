@@ -4,7 +4,18 @@ status: approved-baseline-with-pending-settings
 ---
 # 02 — Business & Functional Requirements
 
+## Unified Online Booking - UB-01 through UB-06, 2026-11-21
 
+The owner's implementation request resolves the earlier mixed-booking policy questions. This section supersedes older statements below that describe these decisions as pending or restrict customer Hall bookings to staff inquiries. Implementation and acceptance evidence are recorded separately in [[unified-online-booking-requirements-sync]].
+
+- **UB-01:** All online accommodation, Hall-only and combined reservations require 100% upfront verified payment. Staff-managed Hall reservations retain their existing minimum 50% deposit.
+- **UB-02:** One GCash transaction, reference and private screenshot cover the online reservation. Keep one authoritative payment and item allocations, separate room/Hall reporting and global reference uniqueness. Staff verify the actual transaction; a screenshot never confirms anything.
+- **UB-03:** Check every selected resource and obtain all room/Hall claims atomically. One 30-minute proof deadline applies. Timely proof protects every selected item until staff resolves verification; otherwise expire all initial holds together. Preserve paid-late reconciliation and manual refund safeguards.
+- **UB-04:** Staff verify the full amount and confirm all items atomically. The same persisted reservation appears in staff management without re-entry. Generate one itemized confirmation and enqueue its email; retain 15-minute review target and 30/60-minute escalation. Assignment, check-in and actual event start remain staff actions.
+- **UB-05:** Free online cancellation ends at one hour after staff confirmation or that item's actual room check-in/Hall start, whichever is earlier. Cancel/refund independently, release only the cancelled capacity and preserve siblings. GCash refunds are manual, itemized, idempotent and bounded by attributable verified payments.
+- **UB-06:** Independent rescheduling/extensions require staff approval and availability checks. Accommodation extensions retain at least 50% upfront; Hall extensions require 100% of additional cost. Preserve immutable prices, financial safeguards and unaffected items.
+
+Theater Type (70 attendees) and Room Type (50) are configurations of **one exclusive physical Hall**, not separate inventory. Preserve existing configured operating hours, notice, buffers and approved start-time pricing. Provisional operational defaults are not new owner-approved facts. No hosted access/application, real payment/email, production gate, commit or push is authorized by this implementation task.
 ## Final Analytics scope revision - 2026-11-20
 
 Owner-approved Analytics scope is **only Revenue Analytics, Room Category Performance and Package Popularity**, with date-range filtering, staff authorization and CSV/Excel exports; see [[future-analytics-and-reports]]. This supersedes the earlier six-feature proposal and related historical scope statements. Payment & Outstanding Balance Reports, Room Occupancy Analytics, Booking Analytics and Peak Hours & Demand Analytics are excluded as dedicated analytics/dashboard features and must not return under alternate labels. Existing operational availability, check-in/out, payments, balances, manual refunds, booking management and stay-duration monitoring remain unchanged.
@@ -98,6 +109,8 @@ There is **no 3h Family Executive package**. Multi-day stays consist of permitte
 - **Implementation timing:** optional **Phase 08 enhancement**, after authoritative reservation and checkout workflows exist. Not part of initial Phase 01 foundation; feature must not be activated without the acceptance tests in [[15-testing-plan]]. Full design: [[24-verified-guest-reviews]].
 
 ## Owner-confirmed future modules - 2026-11-20
+
+**Function Hall online-booking update — 2026-11-21:** Customers may start a hall booking online without a prior staff inquiry. Show availability and block unavailable/in-use time slots, with final allocation protected by one transaction. Require full verified payment before online confirmation; evidence upload alone is insufficient. This is planned behavior, not an implemented or enabled customer flow. Hall payment method, timeout, refunds and other pending hall policies remain unresolved; see [[future-function-hall-requirements]].
 
 Approved future Analytics scope: [[future-analytics-and-reports]]. The hotel also offers a separate Function Hall resource with Theater Type maximum 70 persons / Room Type maximum 50 persons; approved start-time-based pricing and inclusions are in [[future-function-hall-requirements]]. Neither software module is implemented. Hall inventory is not bedroom inventory; all existing accommodation counts/rates remain unchanged.
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { apiBase } from "./staff-auth";
+import { notifySuccess } from "./notifications";
 import { countdown, serverTime, type ClockAnchor } from "./stay-clock";
 type Item = {
   id: string;
@@ -159,6 +160,7 @@ export default function StayMonitor({ token }: { token?: string }) {
           throw new Error(data.error);
         }
         departed = data.checked_out_at;
+        notifySuccess("Checkout recorded. Room needs cleaning.");
       }
       const next = items.map((row) =>
         row.id === item.id

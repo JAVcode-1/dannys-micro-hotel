@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { notifySuccess } from "./notifications";
 import type { FormEvent } from "react";
 import type { BookingQuote } from "@staytrack/shared";
 import { apiBase } from "./staff-auth";
@@ -16,6 +17,63 @@ type Draft = {
   children: number;
   extraBed: boolean;
 };
+type HallDraft = {
+  setup: "theater" | "room";
+  date: string;
+  hour: string;
+  minute: string;
+  period: "AM" | "PM";
+  minutes: number;
+  attendees: number;
+  requests: string;
+};
+const hallDraftKey = "staytrack.hall-selections.v1";
+const newHall = (): HallDraft => ({
+  setup:
+    new URLSearchParams(window.location.search).get("setup") === "room"
+      ? "room"
+      : "theater",
+  date: "",
+  hour: "8",
+  minute: "00",
+  period: "AM",
+  minutes: 180,
+  attendees: 1,
+  requests: "",
+});
+function restoreHall(): HallDraft | null {
+  if (new URLSearchParams(window.location.search).get("service") === "hall")
+    return newHall();
+  try {
+    const saved = JSON.parse(
+      window.sessionStorage.getItem(hallDraftKey) ?? "null",
+    ) as HallDraft | null;
+    if (
+      saved &&
+      ["theater", "room"].includes(saved.setup) &&
+      typeof saved.date === "string" &&
+      typeof saved.hour === "string" &&
+      typeof saved.minute === "string" &&
+      ["AM", "PM"].includes(saved.period) &&
+      Number.isInteger(saved.minutes) &&
+      Number.isInteger(saved.attendees) &&
+      typeof saved.requests === "string"
+    )
+      return saved;
+  } catch {
+    /* Ignore invalid local drafts. */
+  }
+  return new URLSearchParams(window.location.search).get("service") === "hall"
+    ? newHall()
+    : null;
+}
+const hallInput = (hall: HallDraft) => ({
+  setup: hall.setup,
+  start: `${hall.date}T${String((Number(hall.hour) % 12) + (hall.period === "PM" ? 12 : 0)).padStart(2, "0")}:${hall.minute}`,
+  minutes: hall.minutes,
+  attendees: hall.attendees,
+  requests: hall.requests,
+});
 type Rate = {
   code: string;
   name: string;
@@ -95,13 +153,15 @@ export async function bookingRequestKey(
   return key;
 }
 function restoreDraft(): Draft[] {
+  if (new URLSearchParams(window.location.search).get("service") === "hall")
+    return [];
   try {
     const saved: unknown = JSON.parse(
       window.sessionStorage.getItem(draftKey) ?? "null",
     );
     if (
       Array.isArray(saved) &&
-      saved.length > 0 &&
+      saved.length >= 0 &&
       saved.length <= 15 &&
       saved.every(
         (x: Draft) =>
@@ -125,7 +185,9 @@ function restoreDraft(): Draft[] {
   } catch {
     /* Storage may be unavailable in a private browser. */
   }
-  return [newRoom(1)];
+  return new URLSearchParams(window.location.search).get("service") === "hall"
+    ? []
+    : [newRoom(1)];
 }
 const toInputs = (items: Draft[]) =>
   items.map((item) => ({
@@ -137,9 +199,16 @@ const toInputs = (items: Draft[]) =>
     extraBed: item.extraBed,
   }));
 
-export default function BookingPlanner() {
+export default function BookingPlanner({
+  hallEnabled = false,
+}: {
+  hallEnabled?: boolean;
+}) {
   const guest = useGuestSession();
   const [items, setItems] = useState<Draft[]>(restoreDraft);
+  const [hall, setHall] = useState<HallDraft | null>(() =>
+    hallEnabled ? restoreHall() : null,
+  );
   const [rates, setRates] = useState<Rate[]>([]);
   const [quote, setQuote] = useState<BookingQuote | null>(null);
   const [message, setMessage] = useState("");
@@ -153,10 +222,18 @@ export default function BookingPlanner() {
   const [primaryName, setPrimaryName] = useState("");
   const [phone, setPhone] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
+  const [policiesExpanded, setPoliciesExpanded] = useState(true);
   const [availability, setAvailability] = useState<boolean | null>(null);
   const [request, setRequest] = useState<{ body: string; key: string } | null>(
     null,
   );
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(hallDraftKey, JSON.stringify(hall));
+    } catch {
+      /* Continue without draft recovery. */
+    }
+  }, [hall]);
   useEffect(() => {
     try {
       window.sessionStorage.setItem(draftKey, JSON.stringify(items));
@@ -195,7 +272,7 @@ export default function BookingPlanner() {
         const currentRates = (await response.json()) as Rate[];
         setRates(currentRates);
         if (!currentRates.length) {
-          setMessage("No packages are currently available.");
+          setMessage("No stay lengths are currently available.");
           return;
         }
         const preferredRate = currentRates.reduce<Rate | undefined>(
@@ -237,7 +314,7 @@ export default function BookingPlanner() {
       .catch(() => {
         if (!controller.signal.aborted)
           setMessage(
-            "Current packages are unavailable. Please try again later.",
+            "Current stay lengths are unavailable. Please try again later.",
           );
       });
     return () => controller.abort();
@@ -250,6 +327,16 @@ export default function BookingPlanner() {
     setAvailability(null);
     setMessage("");
   }
+  function updateHall(patch: Partial<HallDraft>) {
+    setHall((current) => (current ? { ...current, ...patch } : current));
+    setQuote(null);
+    setAvailability(null);
+    setMessage("");
+  }
+  const selection = () => ({
+    items: toInputs(items),
+    ...(hall ? { hall: hallInput(hall) } : {}),
+  });
   async function submit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -260,16 +347,15 @@ export default function BookingPlanner() {
       const response = await fetch(`${apiBase}/guest/quote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items: toInputs(items),
-        }),
+        body: JSON.stringify(selection()),
       });
       const data = (await response.json()) as BookingQuote & { error?: string };
       if (!response.ok)
-        throw new Error(data.error || "Quote unavailable. Please try again.");
+        throw new Error(data.error || "Price unavailable. Please try again.");
       setQuote(data);
+      notifySuccess("Booking price updated.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Quote unavailable.");
+      setMessage(error instanceof Error ? error.message : "Price unavailable.");
     } finally {
       setBusy(false);
     }
@@ -282,21 +368,23 @@ export default function BookingPlanner() {
       const response = await fetch(`${apiBase}/availability`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: toInputs(items) }),
+        body: JSON.stringify(selection()),
       });
       const data = (await response.json()) as {
         available: boolean;
         quote: BookingQuote;
+        reason?: string;
         error?: string;
       };
       if (!response.ok)
         throw new Error(data.error ?? "Availability is unavailable.");
       setQuote(data.quote);
       setAvailability(data.available);
+      if (data.available) notifySuccess("Your selected schedules are available. Continue to reserve them.");
       setMessage(
         data.available
           ? "Available now. Capacity is reserved only when your hold succeeds."
-          : "These schedules are unavailable. Choose another time or category.",
+          : data.reason ?? "These schedules are unavailable. Choose another time or category.",
       );
     } catch (error) {
       setMessage(
@@ -320,7 +408,7 @@ export default function BookingPlanner() {
     setMessage("");
     const body = JSON.stringify({
       primaryName,
-      items: toInputs(items),
+      ...selection(),
       contact: {
         phone,
         policyVersion: policy.version,
@@ -356,7 +444,9 @@ export default function BookingPlanner() {
             "Booking unavailable. Retry the same request to recover its result.",
         );
       window.sessionStorage.removeItem(draftKey);
+      window.sessionStorage.removeItem(hallDraftKey);
       window.sessionStorage.removeItem(commandKey);
+      notifySuccess("Booking held. Submit payment proof before the deadline; staff confirmation is still required.", true);
       window.location.assign(
         `/reservations/${encodeURIComponent(result.id)}/payment`,
       );
@@ -371,19 +461,9 @@ export default function BookingPlanner() {
     }
   }
   return (
-    <section className="bg-canvas px-5 py-8 text-main sm:px-10">
+    <section className="booking-planner text-main">
       <div className="mx-auto max-w-6xl">
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-subtle pb-6">
-          <a href="/" className="font-bold tracking-tight text-primary">
-            DANNY'S MICRO HOTEL{" "}
-            <span className="ml-2 font-normal text-muted">/ StayTrack</span>
-          </a>
-          <nav className="flex gap-6 text-sm font-semibold text-primary">
-            <a href="/rooms">Rooms & rates</a>
-            <a href="/verify">Guest access</a>
-          </nav>
-        </header>
-        <div className="mb-9 mt-12 max-w-2xl">
+        <div className="booking-intro mb-9 max-w-2xl">
           <p className="text-xs font-bold uppercase tracking-[.2em] text-primary">
             Plan your stay
           </p>
@@ -391,36 +471,35 @@ export default function BookingPlanner() {
             Together, on your own time.
           </h1>
           <p className="mt-4 leading-7 text-muted">
-            One group, different arrivals. Choose each room's schedule and
-            package blocks. All times are Philippine time (Asia/Manila).
+            Choose rooms, the Function Hall, or both. Each item has its own
+            schedule. All times are Philippine time; all selected items share
+            one payment.
           </p>
-          <p className="mt-2 text-sm text-muted">
+          <p className="booking-notice mt-2 text-sm text-muted">
             {bookingEnabled
               ? "Isolated development booking. Do not send real money."
               : "Online booking is currently closed."}
           </p>
         </div>
-        <div className="grid items-start gap-8 lg:grid-cols-[1fr_320px]">
+        <div className="booking-columns grid items-start gap-8 lg:grid-cols-[1fr_320px]">
           <form onSubmit={(event) => void submit(event)}>
-            <fieldset
-              disabled={busy || rates.length === 0}
-              className="space-y-6 disabled:opacity-70"
-            >
-              <legend className="sr-only">Room schedules</legend>
+            <fieldset disabled={busy} className="space-y-6 disabled:opacity-70">
+              <legend className="sr-only">Reservation items</legend>
               {items.map((item, index) => (
                 <section
                   key={item.id}
                   aria-label={`Room ${index + 1}`}
-                  className="rounded-2xl border border-subtle bg-white p-5 sm:p-7"
+                  className="booking-item rounded-2xl border border-subtle bg-white p-5 sm:p-7"
+                  data-kind="room"
                 >
                   <div className="mb-6 flex items-center justify-between gap-4">
                     <h2 className="text-xl font-bold">
-                      <span className="mr-3 text-primary">
+                      <span className="booking-item-number mr-3 text-primary">
                         {String(index + 1).padStart(2, "0")}
                       </span>
                       Room {index + 1}
                     </h2>
-                    {items.length > 1 && (
+                    {(items.length > 1 || hall) && (
                       <button
                         type="button"
                         className="min-h-11 text-sm font-semibold text-primary"
@@ -429,15 +508,16 @@ export default function BookingPlanner() {
                             current.filter((room) => room.id !== item.id),
                           );
                           setQuote(null);
+                          setAvailability(null);
                         }}
                       >
-                        Remove room {index + 1}
+                        Remove room
                       </button>
                     )}
                   </div>
                   <div className="grid gap-5 sm:grid-cols-2">
                     <label className="font-medium">
-                      Category — room {index + 1}
+                      Room type
                       <select
                         className={inputClass}
                         value={item.category}
@@ -465,7 +545,7 @@ export default function BookingPlanner() {
                       </select>
                     </label>
                     <label className="font-medium">
-                      Arrival date — room {index + 1}
+                      Arrival date
                       <input
                         type="date"
                         required
@@ -478,9 +558,7 @@ export default function BookingPlanner() {
                     </label>
                   </div>
                   <fieldset className="mt-5">
-                    <legend className="font-medium">
-                      Arrival time — room {index + 1}
-                    </legend>
+                    <legend className="font-medium">Arrival time</legend>
                     <div className="mt-2 grid grid-cols-3 gap-3">
                       <label className="text-sm text-muted">
                         Hour
@@ -531,7 +609,9 @@ export default function BookingPlanner() {
                     {item.blocks.map((block, blockIndex) => (
                       <div key={blockIndex} className="flex items-end gap-3">
                         <label className="min-w-0 flex-1 font-medium">
-                          Package {blockIndex + 1} — room {index + 1}
+                          {blockIndex === 0
+                            ? "How long will you stay?"
+                            : `More time ${blockIndex}`}
                           <select
                             className={inputClass}
                             value={block}
@@ -562,7 +642,7 @@ export default function BookingPlanner() {
                           <button
                             type="button"
                             className={secondary}
-                            aria-label={`Remove package ${blockIndex + 1} from room ${index + 1}`}
+                            aria-label={`Remove extra time ${blockIndex} from room ${index + 1}`}
                             onClick={() =>
                               update(item.id, {
                                 blocks: item.blocks.filter(
@@ -589,18 +669,17 @@ export default function BookingPlanner() {
                         })
                       }
                     >
-                      + Add package block to room {index + 1}
+                      + Add time
                     </button>
                     <p className="text-sm text-muted">
-                      Blocks run consecutively as one continuous stay. Prices
-                      use your selected blocks.
+                      Added time begins when the previous stay length ends. The
+                      price updates with your choices.
                     </p>
                   </div>
                   <div className="mt-5 grid grid-cols-2 gap-5">
                     {(["adults", "children"] as const).map((field) => (
                       <label key={field} className="font-medium">
-                        {field === "adults" ? "Adults" : "Children"} — room{" "}
-                        {index + 1}
+                        {field === "adults" ? "Adults" : "Children"}
                         <input
                           type="number"
                           min={field === "adults" ? 1 : 0}
@@ -636,30 +715,208 @@ export default function BookingPlanner() {
                   </p>
                 </section>
               ))}
-              <div className="flex flex-wrap gap-3">
+              {hall && (
+                <section
+                  aria-label="Function Hall booking"
+                  className="booking-item rounded-2xl border border-subtle bg-white p-5 sm:p-7"
+                  data-kind="hall"
+                >
+                  <div className="mb-5 flex items-center justify-between gap-4">
+                    <h2 className="text-xl font-bold">
+                      <span className="booking-item-number mr-3" aria-hidden="true">FH</span>
+                      Function Hall
+                    </h2>
+                    <button
+                      type="button"
+                      className="min-h-11 font-semibold text-primary"
+                      disabled={!items.length}
+                      onClick={() => {
+                        setHall(null);
+                        setQuote(null);
+                        setAvailability(null);
+                      }}
+                    >
+                      Remove hall
+                    </button>
+                  </div>
+                  <p className="mb-5 text-sm text-muted">
+                    One exclusive hall, with two alternative setups. Preparation
+                    and cleanup time are protected separately.
+                  </p>
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <label className="font-medium">
+                      Hall setup
+                      <select
+                        className={inputClass}
+                        value={hall.setup}
+                        onChange={(e) =>
+                          updateHall({
+                            setup: e.target.value as HallDraft["setup"],
+                          })
+                        }
+                      >
+                        <option value="theater">
+                          Theater Type · up to 70 attendees
+                        </option>
+                        <option value="room">
+                          Room Type · up to 50 attendees
+                        </option>
+                      </select>
+                    </label>
+                    <label className="font-medium">
+                      Event date
+                      <input
+                        required
+                        type="date"
+                        className={inputClass}
+                        value={hall.date}
+                        onChange={(e) => updateHall({ date: e.target.value })}
+                      />
+                    </label>
+                  </div>
+                  <fieldset className="mt-5">
+                    <legend className="font-medium">Event start time</legend>
+                    <div className="grid grid-cols-3 gap-3">
+                      <label className="text-sm text-muted">
+                        Hour
+                        <select
+                          className={inputClass}
+                          value={hall.hour}
+                          onChange={(e) => updateHall({ hour: e.target.value })}
+                        >
+                          {Array.from({ length: 12 }, (_, i) => (
+                            <option key={i + 1}>{i + 1}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="text-sm text-muted">
+                        Minute
+                        <select
+                          className={inputClass}
+                          value={hall.minute}
+                          onChange={(e) =>
+                            updateHall({ minute: e.target.value })
+                          }
+                        >
+                          {Array.from({ length: 60 }, (_, i) => (
+                            <option key={i}>
+                              {String(i).padStart(2, "0")}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="text-sm text-muted">
+                        AM/PM
+                        <select
+                          className={inputClass}
+                          value={hall.period}
+                          onChange={(e) =>
+                            updateHall({
+                              period: e.target.value as HallDraft["period"],
+                            })
+                          }
+                        >
+                          <option>AM</option>
+                          <option>PM</option>
+                        </select>
+                      </label>
+                    </div>
+                  </fieldset>
+                  <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                    <label className="font-medium">
+                      Event duration
+                      <select
+                        className={inputClass}
+                        value={hall.minutes}
+                        onChange={(e) =>
+                          updateHall({ minutes: Number(e.target.value) })
+                        }
+                      >
+                        {Array.from({ length: 12 }, (_, i) => (
+                          <option key={i} value={(i + 3) * 60}>
+                            {i + 3} hours
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="font-medium">
+                      Number of attendees
+                      <input
+                        required
+                        type="number"
+                        min="1"
+                        max={hall.setup === "theater" ? 70 : 50}
+                        step="1"
+                        className={inputClass}
+                        value={hall.attendees}
+                        onChange={(e) =>
+                          updateHall({ attendees: e.target.valueAsNumber })
+                        }
+                      />
+                    </label>
+                  </div>
+                  <label className="mt-5 block font-medium">
+                    Additional requests
+                    <textarea
+                      className={inputClass + " py-3"}
+                      rows={3}
+                      maxLength={1000}
+                      value={hall.requests}
+                      onChange={(e) => updateHall({ requests: e.target.value })}
+                    />
+                  </label>
+                  <p className="mt-4 text-sm leading-6 text-muted">
+                    First 3 hours: ₱3,000.00 for starts from 8:00 AM to before
+                    5:00 PM; ₱5,000.00 from 5:00 PM. Each additional full hour:
+                    ₱1,000.00. The event must fit within configured hours and
+                    notice requirements. The server checks the final price and
+                    availability.
+                  </p>
+                </section>
+              )}
+              <div className="booking-actions flex flex-wrap gap-3">
                 <button
                   type="button"
                   className={secondary}
-                  disabled={items.length >= 15}
+                  disabled={items.length >= 15 || rates.length === 0}
                   onClick={() => {
                     setItems((current) => [
                       ...current,
                       newRoom(
-                        Math.max(...current.map((room) => room.id)) + 1,
+                        Math.max(0, ...current.map((room) => room.id)) + 1,
                         rates,
                       ),
                     ]);
                     setQuote(null);
+                    setAvailability(null);
                   }}
                 >
                   + Add room
                 </button>
-                <button className="min-h-11 rounded-xl bg-booking px-6 font-bold text-main disabled:opacity-50">
-                  {busy ? "Calculating…" : "Calculate server quote"}
+                {hallEnabled && (
+                  <button
+                    type="button"
+                    className={secondary}
+                    disabled={Boolean(hall)}
+                    onClick={() => {
+                      setHall(newHall());
+                      setQuote(null);
+                      setAvailability(null);
+                    }}
+                  >
+                    + Add Function Hall
+                  </button>
+                )}
+                <button
+                  disabled={!items.length && !hall}
+                  className="min-h-11 rounded-xl bg-booking px-6 font-bold text-main disabled:opacity-50"
+                >
+                  {busy ? "Calculating…" : "Get total"}
                 </button>
                 <button
                   type="button"
                   className={secondary}
+                  disabled={!items.length && !hall}
                   onClick={() => void checkAvailability()}
                 >
                   Check availability
@@ -673,23 +930,29 @@ export default function BookingPlanner() {
             )}
           </form>
           <aside
-            aria-label="Stay summary"
-            className="rounded-2xl border border-subtle bg-white p-6 lg:sticky lg:top-8"
+            aria-label="Reservation summary"
+            className="booking-summary rounded-2xl border border-subtle bg-white p-6 lg:sticky lg:top-8"
           >
             <p className="text-xs font-bold uppercase tracking-[.16em] text-primary">
-              Your stay
+              Your reservation
             </p>
             <h2 className="mt-3 text-2xl font-bold">
-              {items.length} {items.length === 1 ? "room" : "rooms"}, one plan.
+              {items.length > 0
+                ? `${items.length} ${items.length === 1 ? "room" : "rooms"}`
+                : ""}
+              {hall ? `${items.length ? " + " : ""}Function Hall` : ""}
+              {!items.length && !hall
+                ? "Choose your items"
+                : ", one reservation."}
             </h2>
             <div className="mt-5 rounded-xl bg-lavender p-4 text-sm leading-6">
               <strong>
-                {bookingEnabled ? "Booking review" : "Planning preview"}
+                {bookingEnabled ? "Review your booking" : "Your choices"}
               </strong>
               <p>
                 {bookingEnabled
-                  ? "Review the server price and policies before creating your 30-minute hold."
-                  : "Online booking and payments are not open. A quote does not reserve availability."}
+                  ? "Review your total and terms before holding all selected items together for 30 minutes."
+                  : "Online booking and payments are not open. Seeing a price does not reserve capacity."}
               </p>
             </div>
             {quote ? (
@@ -711,7 +974,7 @@ export default function BookingPlanner() {
                     <p>
                       {item.blocks.map((block) => `${block / 60}h`).join(" + ")}
                     </p>
-                    <p>Packages: {peso(item.baseCentavos)}</p>
+                    <p>Room price: {peso(item.baseCentavos)}</p>
                     {item.extraBedCentavos > 0 && (
                       <p>Extra bed (once): {peso(item.extraBedCentavos)}</p>
                     )}
@@ -721,8 +984,33 @@ export default function BookingPlanner() {
                     )}
                   </div>
                 ))}
-                <div>
-                  <p className="text-sm text-muted">Full reservation amount</p>
+                {quote.hall && (
+                  <div className="border-b border-subtle pb-4 text-sm leading-6">
+                    <h3 className="font-bold">
+                      Function Hall ·{" "}
+                      {quote.hall.setup === "theater"
+                        ? "Theater Type"
+                        : "Room Type"}
+                    </h3>
+                    <p>
+                      {hotelTime(quote.hall.start)} →{" "}
+                      {hotelTime(quote.hall.end)}
+                    </p>
+                    <p>
+                      {quote.hall.attendees} attendees ·{" "}
+                      {quote.hall.minutes / 60} hours
+                    </p>
+                    <p>First 3 hours: {peso(quote.hall.base)}</p>
+                    {quote.hall.additional > 0 && (
+                      <p>Additional hours: {peso(quote.hall.additional)}</p>
+                    )}
+                    <p className="font-bold">{peso(quote.hall.total)}</p>
+                  </div>
+                )}
+                <div className="booking-total">
+                  <p className="text-sm text-muted">
+                    Total for your reservation
+                  </p>
                   <p className="mt-1 text-3xl font-bold text-primary">
                     {peso(quote.totalCentavos)}
                   </p>
@@ -730,8 +1018,8 @@ export default function BookingPlanner() {
               </div>
             ) : (
               <p className="mt-5 text-sm leading-6 text-muted">
-                Choose each schedule, then calculate a quote using current
-                server prices.
+                Choose your items and schedules, then check the current total
+                price.
               </p>
             )}
             {bookingEnabled ? (
@@ -767,9 +1055,50 @@ export default function BookingPlanner() {
                     </label>
                     {policy && (
                       <>
-                        <p className="text-sm leading-6 text-muted">
-                          {policy.text}
-                        </p>
+                        <section aria-label="Booking policies" className="rounded-xl border border-subtle bg-canvas p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <h3 className="font-bold text-main">Booking policies</h3>
+                            <button
+                              type="button"
+                              className="min-h-11 rounded-lg border border-subtle px-3 text-sm font-semibold text-primary"
+                              aria-expanded={policiesExpanded}
+                              aria-controls="booking-policy-content"
+                              onClick={() => setPoliciesExpanded((expanded) => !expanded)}
+                            >
+                              {policiesExpanded ? "Hide" : "Show"}
+                              <span className="sr-only"> booking policies</span>
+                            </button>
+                          </div>
+                          <div id="booking-policy-content" hidden={!policiesExpanded}>
+                          <ul className="mt-4 space-y-4">
+                            {[
+                              { title: "Payment", text: "Pay the full amount via GCash. Submit proof and reference number within 30 minutes.", icon: "M3 7h18v13H3z M3 7V4h14v3 M16 12h5v4h-5z" },
+                              { title: "Confirmation", text: "Your booking is confirmed after staff verifies your payment. Timely proof submission protects your reservation.", icon: "M9 12l2 2 4-4 M12 3l8 3v6c0 5-8 9-8 9s-8-4-8-9V6z" },
+                              { title: "Cancellation", text: "Free cancellation within one hour of confirmation or before check-in/event start, whichever comes first. Rescheduling does not reset this period.", icon: "M8 2v4 M16 2v4 M3 10h18 M3 4h18v17H3z M9 13l6 5 M15 13l-6 5" },
+                              { title: "Late arrival", text: "Your scheduled checkout or event end time remains unchanged.", icon: "M12 8v4l3 2 M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0" },
+                              { title: "No-show", text: "Subject to staff review and generally non-refundable.", icon: "M12 8v5 M12 16h.01 M12 3L2 21h20z" },
+                              { title: "Refunds", text: "Eligible refunds are processed manually.", icon: "M4 10h10a6 6 0 0 1 0 12 M4 10l5-5 M4 10l5 5" },
+                              { title: "Hotel rules", text: "No smoking. Occupancy and minor eligibility are subject to staff review and safety requirements.", icon: "M4 21V3h16v18 M2 21h20 M8 7h2 M14 7h2 M8 11h2 M14 11h2 M10 21v-6h4v6" },
+                            ].map(({ title, text, icon }) => (
+                              <li key={title} className="flex items-start gap-3">
+                                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-selected text-primary">
+                                  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d={icon} />
+                                  </svg>
+                                </span>
+                                <div className="min-w-0 text-sm leading-6">
+                                  <p className="font-semibold text-main">{title}</p>
+                                  <p className="text-muted">{text}</p>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                          <details className="mt-5 border-t border-subtle pt-4">
+                            <summary className="text-sm font-semibold text-primary">Read the full policy</summary>
+                            <p className="mt-3 text-sm leading-6 text-muted">{policy.text}</p>
+                          </details>
+                          </div>
+                        </section>
                         {policy.pendingOwnerApproval && (
                           <p className="text-sm text-muted">
                             Development disclosure; owner and legal policy
@@ -798,19 +1127,17 @@ export default function BookingPlanner() {
                         !acknowledged ||
                         availability === false
                       }
-                      className="min-h-11 w-full rounded-xl bg-primary px-4 font-semibold text-white disabled:opacity-50"
+                      className="guest-primary-action min-h-11 w-full rounded-xl bg-booking px-4 font-semibold text-main disabled:opacity-50"
                     >
-                      {busy
-                        ? "Creating hold…"
-                        : "Create hold and continue to payment"}
+                      {busy ? "Creating hold…" : "Continue to GCash payment"}
                     </button>
                   </form>
                 ) : (
                   <a
                     href="/verify?returnTo=%2Fbook"
-                    className="inline-flex min-h-11 items-center font-semibold text-primary"
+                    className="guest-action inline-flex min-h-11 w-full items-center bg-booking font-semibold text-main"
                   >
-                    Verify email to continue booking
+                    Verify email
                   </a>
                 )}
               </div>
@@ -821,14 +1148,6 @@ export default function BookingPlanner() {
               >
                 Booking not open
               </button>
-            )}
-            {import.meta.env?.DEV && (
-              <a
-                href="/payment-preview"
-                className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-primary"
-              >
-                Preview the payment proof screen
-              </a>
             )}
           </aside>
         </div>

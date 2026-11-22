@@ -5,6 +5,11 @@ updated: 2026-11-12
 ---
 # 06 — High-Level System Architecture
 
+## Unified room/Hall coordination - 2026-11-21
+
+Keep React -> Express -> PostgreSQL business boundaries unchanged. Connect existing room and Hall inventory through a parent online reservation and item payment allocations. All selected inventory claims and the initial confirmation share one transaction and consistent lock order; failure rolls back the entire initial selection. A single full-payment proof/review lifecycle protects every item. Preserve distinct room-readiness, room-stay and Hall-event state machines, staff operations and immutable booked prices. One authoritative GCash record prevents duplicated revenue and references; reports classify allocations rather than copying receipts. See [[unified-online-booking-requirements-sync]] for UB-01 through UB-06 and actual verification status.
+
+
 ## Component view
 
 ```mermaid

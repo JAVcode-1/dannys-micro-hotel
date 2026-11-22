@@ -1,12 +1,13 @@
 import { useState } from "react";
+import { notifySuccess } from "./notifications";
 import type { FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { apiBase, staffAuth, isolatedDevelopment } from "./staff-auth";
+import { apiBase, guestAuth } from "./staff-auth";
 import GuestReservations from "./GuestReservations";
 import { safeGuestReturnTo, useGuestSession } from "./GuestSession";
 
 export default function GuestAccess({
-  authClient = staffAuth,
+  authClient = guestAuth,
   reviewsEnabled = false,
 }: {
   authClient?: SupabaseClient | null;
@@ -37,13 +38,21 @@ export default function GuestAccess({
         options: { shouldCreateUser: true },
       });
       if (error) throw error;
+      notifySuccess("Verification code requested. Check your email.");
       setStep("code");
       setMessage(
         "If the address can receive mail, a six-digit code will arrive shortly.",
       );
-    } catch {
+    } catch (error) {
+      const code = error && typeof error === "object" && "code" in error
+        ? error.code
+        : undefined;
       setMessage(
-        "We could not send a code right now. Please try again shortly.",
+        code === "email_address_not_authorized"
+          ? "Email delivery is not configured for customer addresses. Please contact the hotel."
+          : code === "over_email_send_rate_limit" || code === "over_request_rate_limit"
+            ? "Too many code requests. Please wait before trying again."
+            : "We could not send a code right now. Please try again shortly.",
       );
     } finally {
       setBusy(false);
@@ -85,6 +94,7 @@ export default function GuestAccess({
       setMessage(
         "Email verified. Reservation lookup uses your verified identity.",
       );
+      notifySuccess("Email verified. Signed in successfully.", Boolean(returnTo));
       if (returnTo) window.location.assign(safeGuestReturnTo(returnTo));
     } catch {
       setMessage("Verification is unavailable. Please try again.");
@@ -94,7 +104,7 @@ export default function GuestAccess({
   }
 
   return (
-    <section className="mx-auto max-w-lg rounded-3xl border border-subtle bg-white p-7 shadow-sm sm:p-10">
+    <section className="guest-access mx-auto max-w-lg rounded-3xl border border-subtle bg-white p-7 shadow-sm sm:p-10">
       <p className="text-xs font-bold uppercase tracking-[.2em] text-primary">
         Guest access
       </p>
@@ -105,15 +115,9 @@ export default function GuestAccess({
         Verify your email to continue your booking or access your private
         reservations.
       </p>
-      {isolatedDevelopment && (
-        <p className="mt-4 rounded-xl bg-lavender p-4 text-sm">
-          Isolated synthetic access only: guest@example.test · OTP 123456. No
-          email is sent.
-        </p>
-      )}
       {!authClient ? (
         <p className="mt-8 text-muted">
-          Guest verification is not configured for this preview.
+          Email verification is unavailable because authentication is not configured. Please contact the hotel.
         </p>
       ) : verified ? (
         <p className="mt-8 rounded-xl bg-selected p-4 text-primary">
@@ -167,7 +171,7 @@ export default function GuestAccess({
             {busy
               ? "Please wait…"
               : step === "email"
-                ? "Send verification code"
+                ? "Send code"
                 : "Verify email"}
           </button>
           {step === "code" && (
@@ -180,7 +184,7 @@ export default function GuestAccess({
                 setMessage("");
               }}
             >
-              Use another email
+              Change email
             </button>
           )}
         </form>
@@ -195,7 +199,7 @@ export default function GuestAccess({
           href={safeGuestReturnTo(returnTo)}
           className="mt-4 inline-flex min-h-11 items-center font-semibold text-primary"
         >
-          {returnTo ? "Continue to your booking" : "Open your reservations"}
+          {returnTo ? "Continue booking" : "My bookings"}
         </a>
       )}
       {!session && step === "verified" && token && (

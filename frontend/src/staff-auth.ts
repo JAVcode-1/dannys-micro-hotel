@@ -6,6 +6,7 @@ import {
 
 const url = import.meta.env?.VITE_SUPABASE_URL;
 const key = import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY;
+export const guestAuth = url && key ? createClient(url, key) : null;
 
 export const staffInviteCallback =
   typeof window !== "undefined" &&
@@ -14,13 +15,40 @@ export const staffInviteCallback =
     new URLSearchParams(window.location.search).get("type") === "invite");
 
 export const apiBase = import.meta.env?.VITE_API_URL || "/api";
-export const isolatedDevelopment = developmentAuthAllowed({
+const localDevelopment = developmentAuthAllowed({
   development: import.meta.env?.DEV === true,
-  enabled: import.meta.env?.VITE_ISOLATED_DEVELOPMENT === "true",
+  enabled: true,
   hostname: typeof window === "undefined" ? "" : window.location.hostname,
 });
-export const staffAuth = isolatedDevelopment
-  ? createDevelopmentAuth(apiBase, window.sessionStorage)
-  : url && key
-    ? createClient(url, key)
-    : null;
+export let isolatedDevelopment = false;
+export let hallEnabled = false;
+export let staffAuth = guestAuth;
+
+// Bootstrap once, before rendering: a frontend flag cannot enable API workflows.
+export async function initializeDevelopmentCapabilities() {
+  if (!localDevelopment) return;
+  try {
+    const response = await fetch(`${apiBase}/guest/booking-status`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!response.ok) return;
+    const capabilities = await response.json();
+    hallEnabled = capabilities.hallEnabled === true;
+    if (capabilities.isolatedDevelopment !== true) {
+      staffAuth = guestAuth;
+      return;
+    }
+    if (
+      capabilities.bookingEnabled !== true ||
+      capabilities.hallEnabled !== true ||
+      capabilities.unifiedEnabled !== true ||
+      capabilities.paymentsEnabled !== true
+    )
+      return;
+    staffAuth = createDevelopmentAuth(apiBase, window.sessionStorage);
+    isolatedDevelopment = true;
+  } catch {
+    // Missing/unavailable isolated API leaves capabilities closed.
+  }
+}

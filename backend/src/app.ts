@@ -1,4 +1,8 @@
+import { registerGuestHall } from "./unified-hall-actions.js";
+import { configuredMailAdapter } from "./mail.js";
+import { quoteUnified, hallAvailability } from "./unified-booking.js";
 import { registerHall } from "./hall-routes.js";
+import { signInStaffUsername } from "./staff-sign-in.js";
 import { registerReservationWorkspace } from "./reservation-workspace.js";
 import { registerReviews } from "./review-routes.js";
 import { registerAnalytics } from "./analytics.js";
@@ -29,7 +33,7 @@ import {
 import type { RuntimeComposition } from "./isolated-composition.js";
 import { sharedRequestLimit } from "./request-limits.js";
 import { databasePool } from "./database.js";
-import { assertIsolatedTarget, proxyTrust } from "./runtime-config.js";
+import { assertDevelopmentProject, assertIsolatedTarget, proxyTrust } from "./runtime-config.js";
 import {
   registerPaymentRoutes,
   type PaymentRouteOptions,
@@ -60,7 +64,20 @@ export function createApp(
   walkInOptions: WalkInRouteOptions = {},
   runtime?: RuntimeComposition,
 ) {
-  if (runtime?.writesEnabled) assertIsolatedTarget(runtime.pool.options);
+  if (runtime?.writesEnabled) {
+    if (runtime.hostedDevelopment) {
+      assertDevelopmentProject();
+      const ssl = runtime.pool.options.ssl;
+      if (
+        process.env.NODE_ENV !== "development" ||
+        runtime.pool !== databasePool() ||
+        !ssl || typeof ssl !== "object" || ssl.rejectUnauthorized !== true
+      )
+        throw new Error("Hosted development requires the configured database pool and verified TLS in development mode.");
+    } else {
+      assertIsolatedTarget(runtime.pool.options);
+    }
+  }
   const app = express();
   if (
     process.env.RATE_LIMIT_MODE &&
@@ -212,6 +229,19 @@ export function createApp(
       response.status(503).json({ status: "unavailable" });
     }
   });
+  app.post("/staff/sign-in", async (request, response) => {
+    if (runtime?.writesEnabled && !runtime.hostedDevelopment) {
+      response.status(503).json({ error: "Use the local development sign-in." });
+      return;
+    }
+    try {
+      response.json(await signInStaffUsername(request.body));
+    } catch (error) {
+      response.status(error instanceof BookingError ? error.status : 503).json({
+        error: error instanceof BookingError ? error.message : "Staff sign-in is unavailable.",
+      });
+    }
+  });
   app.get("/staff/me", async (request, response) => {
     const authorization = request.header("authorization");
     const match = /^Bearer ([^\s]+)$/.exec(authorization ?? "");
@@ -227,7 +257,7 @@ export function createApp(
       }
       await audit(staff.id);
       response.setHeader("Cache-Control", "no-store");
-      response.json({ id: staff.id, email: staff.email });
+      response.json({ id: staff.id, email: staff.email, username: staff.username });
     } catch {
       response.status(503).json({ error: "Staff access unavailable" });
     }
@@ -266,7 +296,7 @@ export function createApp(
       response.json(
         runtime?.pool
           ? await claimTransaction(
-              (db) => quoteBooking(request.body?.items, db),
+              (db) => quoteUnified(request.body?.items, request.body?.hall, db),
               runtime.pool,
             )
           : await quoteBooking(request.body?.items),
@@ -286,34 +316,54 @@ export function createApp(
       enabled: runtime?.writesEnabled === true,
       bookingEnabled: runtime?.writesEnabled === true,
       policy: bookingPolicy,
+      hallEnabled: runtime?.writesEnabled === true,
+      unifiedEnabled: runtime?.writesEnabled === true,
+      isolatedDevelopment: runtime?.writesEnabled === true && !runtime.hostedDevelopment,
+      paymentsEnabled:
+        runtime?.writesEnabled === true &&
+        paymentOptions.guestEnabled === true &&
+        paymentOptions.confirmationEnabled === true,
     });
   });
   app.post("/availability", async (request, response) => {
     response.setHeader("Cache-Control", "no-store");
     try {
       const result = await claimTransaction(async (client) => {
-        const quote = await quoteBooking(request.body?.items, client);
+        const quote = await quoteUnified(
+          request.body?.items,
+          request.body?.hall,
+          client,
+        );
         const settings = await client.query(
           "select cleaning_buffer_minutes from staytrack.operational_settings where id=true for share",
         );
         const buffer = settings.rows[0]?.cleaning_buffer_minutes;
-        if (buffer === null || buffer === undefined)
+        if (quote.items.length && (buffer === null || buffer === undefined))
           throw new BookingError(
             "Availability requires configured turnover settings.",
             503,
           );
-        const check = await createClaimsInTransaction(
-          randomUUID(),
-          quote.items.map((item) => ({
-            category: item.category,
-            start: Date.parse(item.startAt),
-            end: Date.parse(item.endAt),
-            bufferMinutes: buffer,
-          })),
-          client,
-          true,
-        );
-        return { available: check.status === "created", quote, advisory: true };
+        const check = quote.items.length
+          ? await createClaimsInTransaction(
+              randomUUID(),
+              quote.items.map((item) => ({
+                category: item.category,
+                start: Date.parse(item.startAt),
+                end: Date.parse(item.endAt),
+                bufferMinutes: buffer,
+              })),
+              client,
+              true,
+            )
+          : { status: "created", reason: undefined };
+        const hallAvailable =
+          !quote.hall || (await hallAvailability(client, quote.hall));
+        return {
+          available: check.status === "created" && hallAvailable,
+          reason: check.status !== "created" ? check.reason : !hallAvailable ? "The Function Hall is unavailable for the selected schedule, including preparation and cleanup time." : undefined,
+          quote,
+          advisory: true,
+        };
       }, runtime?.pool);
       response.json(result);
     } catch (error) {
@@ -359,6 +409,7 @@ export function createApp(
           body.chargeDisclosures,
           contact,
           body.expectedTotalCentavos,
+          body.hall,
         ),
       );
     } catch (error) {
@@ -561,6 +612,14 @@ export function createApp(
       response.status(503).json({ error: "Room catalog unavailable" });
     }
   });
+  app.get("/staff/notifications", catalogStaff, async (_request, response) => {
+    response.setHeader("Cache-Control", "no-store");
+    if (!runtime?.writesEnabled) { response.status(503).json({ error: "Notification delivery is not enabled." }); return; }
+    try {
+      const states = await runtime.pool.query("select state,count(*)::int as count from staytrack.notification_outbox group by state");
+      response.json({ deliveryConfigured: !!configuredMailAdapter(), states: states.rows });
+    } catch { response.status(503).json({ error: "Notification status unavailable." }); }
+  });
   app.get("/staff/settings", catalogStaff, async (_request, response) => {
     try {
       response.setHeader("Cache-Control", "no-store");
@@ -601,6 +660,12 @@ export function createApp(
     response.json(result);
   });
   registerPaymentRoutes(app, catalogStaff, guestVerifier, paymentOptions);
+  registerGuestHall(
+    app,
+    guestVerifier,
+    runtime?.pool,
+    runtime?.writesEnabled === true,
+  );
   registerReservationWorkspace(
     app,
     catalogStaff,

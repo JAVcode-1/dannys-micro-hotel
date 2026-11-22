@@ -7,6 +7,14 @@ version: 1.2
 ---
 # 09 — UI/UX Design System: Danny's Royal Horizon
 
+## Customer booking presentation - 2026-11-22
+
+The owner authorized visual refinement of the customer journey only. Guest booking surfaces use an editorial hospitality treatment: the existing Palatino-family display typography paired with the current body font, the approved Royal Horizon tokens, actual hotel imagery and quiet white cards. Selection, verification and payment/review receive consistent guidance; no navigation step claims payment confirmation. Price summaries preserve server amounts, and pending proof remains explicitly different from verified payment. Orange primary actions always use navy text. Customer styles are scoped to guest booking surfaces; staff/admin and landing styles are separate. Source includes responsive controls/focus treatment, but browser/device/accessibility acceptance remains pending.
+
+## Landing button override - 2026-11-22
+
+Owner-approved landing buttons use static geometry and an immediate 85% opacity hover on hover-capable fine pointers. This supersedes earlier button lift, scale, arrow movement and hover-shadow guidance for the landing page. Keep keyboard focus styling and existing touch target sizes.
+
 > [!success] APPROVED FOR IMPLEMENTATION — 2026-11-12
 > The project requester chose **Danny's Royal Horizon** for the **digital product** after reviewing Danny's Micro Hotel's real exterior/signage photographs, website concepts and the clean ClkiQ-style rooms inventory reference. Use these tokens throughout the guest booking site and Staff/Admin dashboard. This approval does **not** claim formal signoff from hotel management for trademarks, published imagery or production deployment.
 

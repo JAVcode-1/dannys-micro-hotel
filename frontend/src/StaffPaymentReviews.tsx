@@ -5,7 +5,9 @@ import type {
   PaymentReviewInput,
   StaffPaymentReview,
 } from "@staytrack/shared";
+import { parsePesoInput } from "./peso-input";
 import { apiBase } from "./staff-auth";
+import { notifySuccess } from "./notifications";
 
 const money = (value: number) =>
   new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(
@@ -42,7 +44,16 @@ export function PaymentReviewPanel({
   onDecision,
   onProof,
 }: {
-  review: StaffPaymentReview;
+  review: StaffPaymentReview & {
+    hallItems?: {
+      id: string;
+      setup: string;
+      startAt: string;
+      endAt: string;
+      attendees: number;
+      totalCentavos: number;
+    }[];
+  };
   confirmationEnabled?: boolean;
   preview?: boolean;
   onDecision: (value: PaymentReviewInput) => Promise<void>;
@@ -90,10 +101,19 @@ export function PaymentReviewPanel({
       return;
     }
     let verification: PaymentReviewInput["verification"];
+    let receivedCentavos = 0;
+    if (choice === "confirmed") {
+      try {
+        receivedCentavos = parsePesoInput(amount);
+      } catch (error) {
+        setMessage((error as Error).message);
+        return;
+      }
+    }
     if (choice === "confirmed") {
       if (
         !date ||
-        !/^\d+(?:\.\d{1,2})?$/.test(amount) ||
+        receivedCentavos <= 0 ||
         !reference.trim() ||
         !recipient.trim()
       ) {
@@ -109,7 +129,7 @@ export function PaymentReviewPanel({
         timeChecked: true,
         reference,
         recipient,
-        amountCentavos: Math.round(Number(amount) * 100),
+        amountCentavos: receivedCentavos,
         receivedAt: new Date(
           Date.UTC(
             y,
@@ -135,6 +155,7 @@ export function PaymentReviewPanel({
         ...JSON.parse(body),
         requestKey: attempt.current!.key,
       });
+      if (!preview) notifySuccess("Payment review decision recorded.");
       setMessage(
         preview
           ? "Preview decision saved locally. No payment or booking was changed."
@@ -230,6 +251,34 @@ export function PaymentReviewPanel({
           </li>
         ))}
       </ul>
+      {!!review.hallItems?.length && (
+        <div className="mt-4 rounded-lg bg-selected p-4">
+          <h3 className="font-semibold">
+            {review.items.length
+              ? "Accommodation + Function Hall"
+              : "Function Hall"}
+          </h3>
+          <p className="mt-1 text-sm">
+            One GCash transaction covers every item. Confirm only after
+            verifying the full reservation amount.
+          </p>
+          {review.hallItems.map((item) => (
+            <div key={item.id} className="mt-3 text-sm">
+              <strong>
+                Function Hall ·{" "}
+                {item.setup === "theater" ? "Theater Type" : "Room Type"}
+              </strong>
+              <p>
+                {time(item.startAt)} → {time(item.endAt)}
+              </p>
+              <p>
+                {item.attendees} attendees · Allocated amount{" "}
+                {money(item.totalCentavos)}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
       <button
         type="button"
         disabled={busy || preview}
@@ -345,6 +394,7 @@ export function PaymentReviewPanel({
                 Received amount (PHP)
                 <input
                   inputMode="decimal"
+                  placeholder="₱1,000.00"
                   value={amount}
                   onChange={(event) => setAmount(event.target.value)}
                   className="mt-1 w-full rounded-lg border border-subtle p-3"
@@ -527,6 +577,7 @@ export default function StaffPaymentReviews({ token }: { token: string }) {
           Refresh queue
         </button>
       </div>
+      <NotificationDeliveryStatus token={token} revision={revision} />
       {message && (
         <p role="status" className="mb-4 text-muted">
           {message}
@@ -589,6 +640,22 @@ export default function StaffPaymentReviews({ token }: { token: string }) {
       )}
     </section>
   );
+}
+
+function NotificationDeliveryStatus({ token, revision }: { token: string; revision: number }) {
+  const [message, setMessage] = useState("");
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch(`${apiBase}/staff/notifications`, { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal })
+      .then(async response => {
+        if (!response.ok) throw new Error("Notification status unavailable.");
+        const data = await response.json() as { deliveryConfigured: boolean; states: { state: string; count: number }[] };
+        const count = (state: string) => data.states.find(row => row.state === state)?.count ?? 0;
+        if (!controller.signal.aborted) setMessage(`${data.deliveryConfigured ? "Booking email delivery configured" : "Booking emails are queued until the email provider is configured"}. Pending: ${count("pending")}. Failed: ${count("failed")}. Provider acceptance does not guarantee inbox delivery.`);
+      }).catch(() => { if (!controller.signal.aborted) setMessage("Email delivery status is unavailable."); });
+    return () => controller.abort();
+  }, [token, revision]);
+  return message ? <p role="status" className="mb-4 text-sm text-muted">{message}</p> : null;
 }
 
 export function PaymentReviewPreview() {

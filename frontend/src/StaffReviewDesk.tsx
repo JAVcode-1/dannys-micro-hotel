@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { apiBase } from "./staff-auth";
+import { notifySuccess } from "./notifications";
 
 type Entry = {
   id: string;
@@ -68,6 +69,7 @@ export default function StaffReviewDesk({
       if (next === "contact_access") setContact((await response.json()).email);
       else setRefresh((v) => v + 1);
       setMessage("Action recorded.");
+      notifySuccess("Review or feedback action recorded.");
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Action unavailable.",
@@ -102,6 +104,7 @@ export default function StaffReviewDesk({
       if (!response.ok) throw new Error((await response.json()).error);
       if (pairingRequest) setPairing((await response.json()).pairing);
       else setMessage("Invitation request accepted.");
+      notifySuccess(pairingRequest ? "Review pairing code created." : "Invitation request accepted.");
     } catch (error) {
       setMessage(
         error instanceof Error

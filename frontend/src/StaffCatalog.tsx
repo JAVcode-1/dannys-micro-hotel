@@ -1,5 +1,7 @@
 import React from "react";
 import type { FormEvent } from "react";
+import { notifySuccess } from "./notifications";
+import { parsePesoInput, pesoInputValue } from "./peso-input";
 import { apiBase } from "./staff-auth";
 
 type Package = {
@@ -39,6 +41,7 @@ export default function StaffCatalog({ token }: { token: string }) {
         }),
       });
       if (!response.ok) throw new Error();
+      notifySuccess("Category name updated.");
       await load();
       setMessage("Category name updated and audited.");
     } catch {
@@ -64,6 +67,7 @@ export default function StaffCatalog({ token }: { token: string }) {
         }),
       });
       if (!response.ok) throw new Error();
+      notifySuccess("Category availability updated.");
       await load();
       setMessage("Category availability updated and audited.");
     } catch {
@@ -102,6 +106,7 @@ export default function StaffCatalog({ token }: { token: string }) {
         }),
       });
       if (!response.ok) throw new Error();
+      notifySuccess("Package availability updated.");
       await load();
       setMessage("Package availability updated and audited.");
     } catch {
@@ -123,8 +128,14 @@ export default function StaffCatalog({ token }: { token: string }) {
     const item = packages.find(
       (row) => `${row.code}:${row.duration_minutes}` === selected,
     );
-    const amount = Number(price);
-    if (!item || !Number.isSafeInteger(amount) || amount < 0) return;
+    let amount: number;
+    try {
+      amount = parsePesoInput(price);
+    } catch (error) {
+      setMessage((error as Error).message);
+      return;
+    }
+    if (!item) return;
     setBusy(true);
     setMessage("");
     try {
@@ -141,6 +152,7 @@ export default function StaffCatalog({ token }: { token: string }) {
         }),
       });
       if (!response.ok) throw new Error();
+      notifySuccess("Room rate updated.");
       await load();
       setMessage("Rate updated and audited.");
     } catch {
@@ -215,7 +227,7 @@ export default function StaffCatalog({ token }: { token: string }) {
                 (row) =>
                   `${row.code}:${row.duration_minutes}` === event.target.value,
               );
-              setPrice(item ? String(item.price_centavos) : "");
+              setPrice(item ? pesoInputValue(item.price_centavos) : "");
             }}
           >
             <option value="">Choose a package</option>
@@ -230,12 +242,12 @@ export default function StaffCatalog({ token }: { token: string }) {
           </select>
         </label>
         <label className="block text-sm font-medium">
-          Price in centavos
+          Price (PHP)
           <input
             required
             min="0"
-            step="1"
-            type="number"
+            inputMode="decimal"
+            placeholder="₱1,000.00"
             className="mt-1 min-h-11 w-full rounded-lg border border-subtle px-3"
             value={price}
             onChange={(event) => setPrice(event.target.value)}
@@ -257,8 +269,12 @@ export default function StaffCatalog({ token }: { token: string }) {
           >
             <span>
               {item.name} · {item.duration_minutes / 60} hours · v{item.version}{" "}
-              · ₱{(item.price_centavos / 100).toLocaleString("en-PH")} ·{" "}
-              {item.active ? "Active" : "Inactive"}
+              · ₱
+              {(item.price_centavos / 100).toLocaleString("en-PH", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}{" "}
+              · {item.active ? "Active" : "Inactive"}
             </span>
             {item.version ===
               Math.max(

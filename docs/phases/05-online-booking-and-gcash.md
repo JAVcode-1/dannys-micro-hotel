@@ -4,6 +4,11 @@ status: exit-gate-failed-acceptance-pending
 ---
 # Phase 05 — Online Booking & Manual GCash Verification
 
+## Unified Online Booking extension - 2026-11-21
+
+The current owner request authorizes UB-01 through UB-06 for accommodation-only, Hall-only and mixed online reservations. It supersedes pending mixed-payment/hold policy and historical staff-inquiry restrictions. One full GCash payment and private proof cover itemized room/Hall allocations. Create every claim atomically with one 30-minute deadline; protect all timely-submitted proof and expire all no-proof holds together. Staff verify actual full receipt before atomic confirmation and one itemized queued email. Register the same persisted reservation in staff operations. Keep assignment/check-in/event start manual and preserve review escalation and paid-late reconciliation. See [[../unified-online-booking-requirements-sync]] for actual implementation/evidence. No phase exit or hosted acceptance is completed by this extension.
+
+
 **Cross-phase status reconciliation - 2026-11-19 (after W03):** O01-O03 are development checkpoints. All 11 migrations through W03 are now owner-confirmed applied/synchronized; earlier eight-migration/unapplied counts are historical. Hosted Auth/OTP/staff/guest/proof-access, actual receiving-account verification and late-paid reconciliation procedures remain pending. Notification delivery/retry worker and scheduler remain unimplemented. Real inventory, channel/maintenance/expiry, retention/shared throttling/device/policy and full milestone gate gaps remain open. The formal Phase 05 exit remains FAIL. This documentation review reuses W03 CI (96 application + 11 isolated PostgreSQL tests); no new tests or hosted operations are claimed. Phase 06 also fails formal acceptance; Phase 07 X01 is identified only, not started. See [[06-walkins-and-stay-monitoring]].
 
 

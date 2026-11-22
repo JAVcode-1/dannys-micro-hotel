@@ -1,14 +1,8 @@
+import { parsePesoInput } from "./peso-input";
+
 export type PendingHallCommand = { path: string; payload: string; key: string };
 
-export function hallCentavos(value: string) {
-  if (!/^\d+(?:\.\d{1,2})?$/.test(value))
-    throw new Error("Enter a PHP amount with up to two decimal places.");
-  const [pesos, fraction = ""] = value.split(".");
-  const cents = BigInt(pesos) * 100n + BigInt(fraction.padEnd(2, "0"));
-  if (cents > BigInt(Number.MAX_SAFE_INTEGER))
-    throw new Error("PHP amount is too large.");
-  return Number(cents);
-}
+export const hallCentavos = parsePesoInput;
 
 export function pendingHallCommand(
   storage: Pick<Storage, "getItem" | "setItem" | "removeItem">,

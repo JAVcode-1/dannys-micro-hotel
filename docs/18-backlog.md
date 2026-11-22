@@ -4,6 +4,22 @@ status: triaged
 ---
 # 18 — Open Questions & Prioritized Backlog
 
+## Unified Online Booking - UB-01 through UB-06, 2026-11-21
+
+The owner's implementation request resolves the earlier mixed-booking policy questions. This section supersedes older statements below that describe these decisions as pending or restrict customer Hall bookings to staff inquiries. Implementation and acceptance evidence are recorded separately in [[unified-online-booking-requirements-sync]].
+
+- **UB-01:** All online accommodation, Hall-only and combined reservations require 100% upfront verified payment. Staff-managed Hall reservations retain their existing minimum 50% deposit.
+- **UB-02:** One GCash transaction, reference and private screenshot cover the online reservation. Keep one authoritative payment and item allocations, separate room/Hall reporting and global reference uniqueness. Staff verify the actual transaction; a screenshot never confirms anything.
+- **UB-03:** Check every selected resource and obtain all room/Hall claims atomically. One 30-minute proof deadline applies. Timely proof protects every selected item until staff resolves verification; otherwise expire all initial holds together. Preserve paid-late reconciliation and manual refund safeguards.
+- **UB-04:** Staff verify the full amount and confirm all items atomically. The same persisted reservation appears in staff management without re-entry. Generate one itemized confirmation and enqueue its email; retain 15-minute review target and 30/60-minute escalation. Assignment, check-in and actual event start remain staff actions.
+- **UB-05:** Free online cancellation ends at one hour after staff confirmation or that item's actual room check-in/Hall start, whichever is earlier. Cancel/refund independently, release only the cancelled capacity and preserve siblings. GCash refunds are manual, itemized, idempotent and bounded by attributable verified payments.
+- **UB-06:** Independent rescheduling/extensions require staff approval and availability checks. Accommodation extensions retain at least 50% upfront; Hall extensions require 100% of additional cost. Preserve immutable prices, financial safeguards and unaffected items.
+
+Theater Type (70 attendees) and Room Type (50) are configurations of **one exclusive physical Hall**, not separate inventory. Preserve existing configured operating hours, notice, buffers and approved start-time pricing. Provisional operational defaults are not new owner-approved facts. No hosted access/application, real payment/email, production gate, commit or push is authorized by this implementation task.
+## Function Hall online booking update — 2026-11-21
+
+Owner confirmed customer self-service online booking, public availability with unavailable/in-use slots blocked, and full verified payment before confirmation. Staff inquiry is no longer a prerequisite. Payment method/provider, payment window, failed-payment reconciliation and all other hall-specific open policies remain pending; do not import accommodation terms. See [[future-function-hall-requirements]] and [[17-decisions]].
+
 
 ## Final Analytics scope revision - 2026-11-20
 

@@ -4,14 +4,18 @@ import {
   Route,
   Routes,
   Link,
+  NavLink,
+  Navigate,
   Outlet,
   useParams,
+  useLocation,
 } from "react-router";
+import "./guest-booking.css";
 import { staffRoutes } from "./StaffRoutes";
 import GuestAccess from "./GuestAccess";
 import Catalog from "./Catalog";
 import BookingPlanner from "./BookingPlanner";
-import { staffAuth, staffInviteCallback } from "./staff-auth";
+import { guestAuth, staffAuth, staffInviteCallback } from "./staff-auth";
 import GuestReviews from "./GuestReviews";
 import GuestReviewAccess from "./GuestReviewAccess";
 import { HallInformation } from "./HallDesk";
@@ -21,7 +25,6 @@ import {
   GuestReservationsPage,
   GuestReservationPage,
 } from "./GuestReservations";
-import { PaymentPreview } from "./GuestPayment";
 import { PaymentReviewPreview } from "./StaffPaymentReviews";
 import { WalkInPreview } from "./WalkInDesk";
 import { StayChangesPreview } from "./StayChangesDesk";
@@ -34,45 +37,87 @@ type AppOptions = {
   reviewsEnabled?: boolean;
   hallEnabled?: boolean;
   staffAuthClient?: typeof staffAuth;
-  guestAuthClient?: typeof staffAuth;
+  guestAuthClient?: typeof guestAuth;
 };
 function GuestLayout() {
   const session = useGuestSession();
+  const { pathname } = useLocation();
+  const bookingPage =
+    /^\/(book|rooms|function-hall|verify|login|register|reservations)(\/|$)/.test(pathname);
+  const step =
+    pathname === "/book" ? 1
+      : ["/verify", "/login", "/register"].includes(pathname) ? 2
+        : /^\/reservations\/[^/]+\/payment$/.test(pathname) ? 3 : 0;
   const [message, setMessage] = useState("");
   return (
-    <div className="min-h-svh bg-canvas text-main">
-      <header className="border-b border-subtle bg-white px-4 py-4 print:hidden">
+    <div className="guest-journey min-h-svh bg-canvas text-main">
+      <a href="#guest-main" className="guest-skip">Skip to main content</a>
+      <header className="guest-header print:hidden">
         <nav
           aria-label="Guest navigation"
-          className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 text-primary"
+          className="guest-navigation"
         >
-          <Link to="/" className="font-bold">
-            Danny’s Micro Hotel
+          <Link to="/" className="guest-brand">
+            <img src="/hotel/logo-full.webp" alt="" width="64" height="48" />
+            <span>
+              Danny’s <small>MICRO HOTEL</small>
+            </span>
           </Link>
-          <Link to="/rooms">Rooms and rates</Link>
-          <Link to="/function-hall">Function Hall</Link>
-          <Link to="/reviews">Reviews</Link>
-          <Link to="/book">Book a room</Link>
-          <Link to="/reservations">My reservations</Link>
-          {session?.access.status === "authenticated" ? (
-            <button
-              onClick={() =>
-                void session
-                  .signOut()
-                  .catch(() => setMessage("Sign-out failed. Try again."))
-              }
-            >
-              Sign out
-            </button>
-          ) : (
-            <Link to="/verify">Verify email</Link>
-          )}
+          <div className="guest-navigation-links">
+            <NavLink to="/rooms">Rooms &amp; rates</NavLink>
+            <NavLink to="/function-hall">Function Hall</NavLink>
+            <NavLink to="/reservations">My bookings</NavLink>
+            {session?.access.status === "authenticated" ? (
+              <button
+                onClick={() =>
+                  void session
+                    .signOut()
+                    .catch(() => setMessage("Sign-out failed. Try again."))
+                }
+              >
+                Sign out
+              </button>
+            ) : null}
+          </div>
+          <NavLink to="/book" className="guest-book-now">
+            Book now
+          </NavLink>
         </nav>
       </header>
-      {message && <p role="alert">{message}</p>}
-      <main className="mx-auto max-w-6xl px-4 py-8">
+      {message && (
+        <p role="alert" className="guest-session-message">{message}</p>
+      )}
+      {step > 0 && (
+        <div className="guest-progress-wrap">
+          <ol className="guest-progress" aria-label="Booking steps">
+            {["Choose your stay", "Verify email", "Payment & review"].map((label, index) => (
+              <li key={label} aria-current={step === index + 1 ? "step" : undefined}>
+                <span className="guest-step-number" aria-hidden="true">
+                  0{index + 1}
+                </span>
+                <span>{label}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+      <main
+        id="guest-main"
+        className={bookingPage
+          ? `guest-content guest-booking-area${/^\/(rooms|verify|login|register|function-hall)\/?$/.test(pathname) ? " guest-compact-top" : ""}`
+          : "mx-auto max-w-6xl px-4 py-8"}
+      >
         <Outlet />
       </main>
+      {bookingPage && (
+        <footer className="guest-footer print:hidden">
+          <span>Danny’s Micro Hotel</span>
+          <span>All schedules shown in Philippine time.</span>
+          <Link to="/reservations">
+            Manage your reservation <span aria-hidden="true">↗</span>
+          </Link>
+        </footer>
+      )}
     </div>
   );
 }
@@ -147,8 +192,14 @@ export default function App({
             }
           />
           <Route element={<GuestLayout />}>
-            <Route path="/rooms" element={<Catalog />} />
-            <Route path="/book" element={<BookingPlanner />} />
+            <Route
+              path="/rooms"
+              element={<Catalog hallEnabled={hallEnabled} />}
+            />
+            <Route
+              path="/book"
+              element={<BookingPlanner hallEnabled={hallEnabled} />}
+            />
             {["/verify", "/login", "/register"].map((path) => (
               <Route
                 key={path}
@@ -217,9 +268,9 @@ export default function App({
                 )
               }
             />
+            <Route path="/payment-preview" element={<Navigate to="/book" replace />} />
             {import.meta.env?.DEV && (
               <>
-                <Route path="/payment-preview" element={<PaymentPreview />} />
                 <Route
                   path="/staff/payment-review-preview"
                   element={<PaymentReviewPreview />}

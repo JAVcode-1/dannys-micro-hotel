@@ -1,5 +1,17 @@
 # Danny's Micro Hotel — Documentation-first system project
 
+## Run StayTrack locally
+
+With Node.js 22+ and npm installed, run **`npm run dev`** from this repository root, then open **http://127.0.0.1:5173**.
+
+Normal development now starts the real Express API and Vite using the Supabase settings in backend/.env. Install workspace dependencies with npm ci if needed. The launcher shares only the public Auth URL/key with the frontend; database credentials and secret keys stay backend-only. No disposable database, fixture login, automatic migration or seed is used by npm run dev. Stop and restart both servers after changing environment configuration.
+
+Guest email OTP uses Supabase Auth. Customer delivery requires configured custom SMTP and token email templates; see [Supabase setup](docs/22-supabase-setup.md). Hosted staff sign-in uses the existing individual Supabase account, not the local fixture account. Saved booking selections remain in browser sessionStorage.
+
+**Hosted development booking is wired:** the 14 approved pending migrations are applied to the pinned D-040 development project. Register and inspect the actual rooms, review Hall readiness, configure the real GCash/policy settings and finish OTP/email-provider configuration before manual booking/payment acceptance. Production remains closed. See [current setup and evidence](docs/hosted-booking-setup.md); no full test-suite or production-readiness claim is made.
+
+The explicit npm run dev:isolated command retains the disposable fixture harness for separate development work; it is no longer the normal startup. Older isolated-development instructions apply only to that harness.
+
 **START CODING:** Read [`START-CODING-HERE.md`](START-CODING-HERE.md), then [`CODEX-VERIFY-THEN-F01.md`](CODEX-VERIFY-THEN-F01.md). This is a complete replacement project folder, not an update patch.
 
 **State:** Requirements baseline drafted and approved through the latest owner discussions; **no implementation is claimed**.
@@ -8,6 +20,10 @@
 > **START HERE:** Open [[00-START-HERE]] in Obsidian, then [[docs/13-development-roadmap]] and [[docs/phases/00-phase-gates]].
 
 This folder contains **planning documentation and exact original Claude skill instructions; no hotel application implementation yet**. React, Node.js, and **Supabase PostgreSQL** coding happens in the **next stage**, phase-by-phase. The documents are the source of truth for implementation and are readable in VS Code, GitHub, and Obsidian.
+
+## Hosted staff username
+
+The owner-designated existing Supabase staff account has official application username `admin`. Its email remains internal to Supabase Auth; use the owner-configured password, which is not repeated here. Deploy the updated frontend and Express API together: the sign-in page accepts the username, and Express resolves its admin-managed Auth metadata before Supabase password verification and active staff authorization. The workspace displays the verified username. Normal development uses this hosted Supabase identity. No production transaction gate is opened by this account change.
 
 ## Open in Obsidian
 
@@ -64,3 +80,4 @@ The original unmodified `greploop`, `scanloop`, and `code-structure` skills are 
 ## Mandatory Codex review and security tools
 
 Read `QUALITY-GATE-SETUP.md`: `.codex/agents/` defines the three independent reviewer roles, `.agents/skills/` preserves the original Claude SKILL.md files, and `scripts/setup-security-tools.ps1` installs Gitleaks/Semgrep/OSV to your Windows machine when run locally. Use `scripts/run-quality-gate.ps1` before completing coding tasks.
+

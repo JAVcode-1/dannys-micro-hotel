@@ -1,3 +1,8 @@
+import {
+  onlineHallItems,
+  confirmOnlineHall,
+  unifiedInstalled,
+} from "./unified-booking.js";
 import { createHash } from "node:crypto";
 import type { PoolClient } from "pg";
 import type { PaymentReviewInput, StaffPaymentReview } from "@staytrack/shared";
@@ -127,6 +132,15 @@ export async function staffPaymentReviews(
     order by (p.status = 'pending_review') desc, (p.status <> 'confirmed') desc, p.submitted_at, p.id limit 101 offset $1`,
     [page * 100],
   );
+  for (const row of rows) {
+    row.items ??= [];
+    row.hallItems = await onlineHallItems(pool, row.reservationId);
+    row.serviceKind = row.hallItems.length
+      ? row.items.length
+        ? "combined"
+        : "hall"
+      : "accommodation";
+  }
   return rows.map(({ serverNow, submittedAt, ...row }) => ({
     ...row,
     submittedAt: submittedAt.toISOString(),
@@ -189,6 +203,8 @@ async function checkConfirmationCapacity(
      join staytrack.room_categories c on c.id=i.category_id where b.reservation_id=$1 order by i.id for update of i,b`,
     [reservationId],
   );
+  if (!cart.rowCount && (await onlineHallItems(client, reservationId)).length)
+    return;
   if (
     !cart.rowCount ||
     cart.rows.some(
@@ -301,6 +317,10 @@ export async function decidePaymentReview(
       );
       if (staff.rowCount !== 1)
         throw new BookingError("Staff access denied.", 403);
+      if (await unifiedInstalled(client))
+        await client.query(
+          "select id from staytrack.hall_resource where id=1 for update",
+        );
       const initial = await client.query<{ reservation_id: string }>(
         "select reservation_id from staytrack.payment_submissions where id=$1",
         [id],
@@ -394,6 +414,7 @@ export async function decidePaymentReview(
             "Verify the configured hotel receiving account; recipient mismatch requires reconciliation.",
             409,
           );
+        await confirmOnlineHall(client, reservationId);
         await checkConfirmationCapacity(client, reservationId);
         const terms = (
           await client.query<{ cancellation_display_text: string | null }>(
@@ -455,15 +476,23 @@ export async function decidePaymentReview(
         "insert into staytrack.staff_audit(actor_auth_user_id,action) values ($1,$2)",
         [actorId, `payment.review.${input.decision}`],
       );
-      // Delivery is deliberately disabled. A failed insert rolls back the entire decision.
-      await client.query(
+      const hallItems = await onlineHallItems(client, reservationId);
+      // The notification snapshot commits with the staff decision, never with proof upload.
+      const snapshot = await client.query(
         `insert into staytrack.payment_notification_outbox(review_id,reservation_id,recipient_email,payload)
-        select $1,r.id,r.verified_email,jsonb_build_object('decision',$3::text,'onlineConfirmationAt',r.online_confirmation_at,
+        select $1,r.id,r.verified_email,jsonb_build_object('reservationId',r.id,'decision',$3::text,'onlineConfirmationAt',r.online_confirmation_at,
           'cancellationTerms',r.cancellation_terms_snapshot,'amountCentavos',r.total_centavos,
-          'items',(select jsonb_agg(jsonb_build_object('id',b.id,'startAt',b.start_at,'endAt',b.end_at,'totalCentavos',b.total_centavos) order by b.item_index)
-          from staytrack.room_bookings b where b.reservation_id=r.id)) from staytrack.reservations r where r.id=$2`,
-        [review.id, reservationId, input.decision],
+          'hallItems',$4::jsonb,
+          'items',(select jsonb_agg(jsonb_build_object('id',b.id,'category',b.category_code,'packages',b.pricing_snapshot,'startAt',b.start_at,'endAt',b.end_at,'totalCentavos',b.total_centavos) order by b.item_index)
+          from staytrack.room_bookings b where b.reservation_id=r.id)) from staytrack.reservations r where r.id=$2 returning payload,recipient_email`,
+        [review.id, reservationId, input.decision, JSON.stringify(hallItems)],
       );
+      if (input.decision === "confirmed" && await unifiedInstalled(client)) {
+        await client.query(`insert into staytrack.notification_outbox(dedupe_key,recipient,kind,reservation_id,payload)
+          values($1,$2,'reservation_confirmed',$3,$4::jsonb)
+          on conflict(dedupe_key) do update set payload=excluded.payload where staytrack.notification_outbox.state='pending'`,
+          [`reservation_confirmed:${reservationId}`, snapshot.rows[0].recipient_email, reservationId, JSON.stringify(snapshot.rows[0].payload)]);
+      }
       return { status: input.decision, version, replayed: false };
     }, pool);
   } catch (error) {

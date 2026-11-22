@@ -14,13 +14,18 @@ Object.defineProperty(globalThis, "navigator", {
 });
 globalThis.HTMLElement = dom.window.HTMLElement;
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-const { render, screen, fireEvent, waitFor, cleanup } =
+const { render, screen, fireEvent, waitFor, cleanup, within } =
   await import("@testing-library/react");
 const {
   default: BookingPlanner,
   hotelTime,
   bookingRequestKey,
 } = await import("../src/BookingPlanner.tsx");
+function roomField(label, number) {
+  return within(
+    screen.getByRole("region", { name: `Room ${number}` }),
+  ).getByLabelText(label);
+}
 const originalFetch = globalThis.fetch;
 const { GuestSessionProvider } = await import("../src/GuestSession.tsx");
 afterEach(() => {
@@ -133,12 +138,10 @@ test("verified guest submits reviewed server price, contact, acknowledgement and
     ),
   );
   await waitFor(() => assert.ok(screen.getByLabelText("Primary guest name")));
-  fireEvent.change(screen.getByLabelText("Arrival date — room 1"), {
+  fireEvent.change(roomField("Arrival date", 1), {
     target: { value: "2027-01-01" },
   });
-  fireEvent.click(
-    screen.getByRole("button", { name: "Calculate server quote" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Get total" }));
   await waitFor(() =>
     assert.ok(screen.getByText("₱200.00", { selector: "p.text-3xl" })),
   );
@@ -152,7 +155,7 @@ test("verified guest submits reviewed server price, contact, acknowledgement and
     screen.getByLabelText("I have read and acknowledge the booking policies."),
   );
   const submit = screen.getByRole("button", {
-    name: "Create hold and continue to payment",
+    name: "Continue to GCash payment",
   });
   fireEvent.submit(submit.closest("form"));
   await waitFor(() => assert.equal(holds.length, 1));
@@ -186,23 +189,20 @@ test("booking selections survive verification navigation and reload without trus
   });
   const view = render(createElement(BookingPlanner));
   await waitFor(() =>
-    assert.equal(screen.getByLabelText("Package 1 — room 1").value, "180"),
+    assert.equal(roomField("How long will you stay?", 1).value, "180"),
   );
-  fireEvent.change(screen.getByLabelText("Arrival date — room 1"), {
+  fireEvent.change(roomField("Arrival date", 1), {
     target: { value: "2027-02-01" },
   });
-  fireEvent.change(screen.getByLabelText("Adults — room 1"), {
+  fireEvent.change(roomField("Adults", 1), {
     target: { value: "4" },
   });
   view.unmount();
   render(createElement(BookingPlanner));
   await waitFor(() =>
-    assert.equal(
-      screen.getByLabelText("Arrival date — room 1").value,
-      "2027-02-01",
-    ),
+    assert.equal(roomField("Arrival date", 1).value, "2027-02-01"),
   );
-  assert.equal(screen.getByLabelText("Adults — room 1").value, "4");
+  assert.equal(roomField("Adults", 1).value, "4");
   assert.equal(screen.queryByText("₱200.00"), null);
 });
 
@@ -220,14 +220,11 @@ test("new rooms use an active package when Standard is unavailable", async () =>
   });
   render(createElement(BookingPlanner));
   await waitFor(() =>
-    assert.equal(screen.getByLabelText("Package 1 — room 1").value, "360"),
+    assert.equal(roomField("How long will you stay?", 1).value, "360"),
   );
   fireEvent.click(screen.getByRole("button", { name: "+ Add room" }));
-  assert.equal(
-    screen.getByLabelText("Category — room 2").value,
-    "family_executive",
-  );
-  assert.equal(screen.getByLabelText("Package 1 — room 2").value, "360");
+  assert.equal(roomField("Room type", 2).value, "family_executive");
+  assert.equal(roomField("How long will you stay?", 2).value, "360");
 });
 
 test("landing room choice selects a matching active package on arrival", async () => {
@@ -249,11 +246,8 @@ test("landing room choice selects a matching active package on arrival", async (
   try {
     render(createElement(BookingPlanner));
     await waitFor(() => {
-      assert.equal(
-        screen.getByLabelText("Category — room 1").value,
-        "family_executive",
-      );
-      assert.equal(screen.getByLabelText("Package 1 — room 1").value, "360");
+      assert.equal(roomField("Room type", 1).value, "family_executive");
+      assert.equal(roomField("How long will you stay?", 1).value, "360");
     });
   } finally {
     dom.window.history.replaceState(null, "", "/book");
@@ -302,34 +296,31 @@ test("guest can add independently scheduled Family room, repeat blocks and recei
   };
   render(createElement(BookingPlanner));
   await waitFor(() =>
-    assert.equal(screen.getByLabelText("Package 1 — room 1").value, "180"),
+    assert.equal(roomField("How long will you stay?", 1).value, "180"),
   );
-  fireEvent.change(screen.getByLabelText("Arrival date — room 1"), {
+  fireEvent.change(roomField("Arrival date", 1), {
     target: { value: "2027-01-01" },
   });
   fireEvent.click(screen.getByRole("button", { name: "+ Add room" }));
-  fireEvent.change(screen.getByLabelText("Category — room 2"), {
+  fireEvent.change(roomField("Room type", 2), {
     target: { value: "family_executive" },
   });
-  fireEvent.change(screen.getByLabelText("Arrival date — room 2"), {
+  fireEvent.change(roomField("Arrival date", 2), {
     target: { value: "2027-01-02" },
   });
   assert.equal(
-    screen.getByLabelText("Package 1 — room 2").querySelectorAll("option")
-      .length,
+    roomField("How long will you stay?", 2).querySelectorAll("option").length,
     1,
   );
   assert.doesNotMatch(
-    screen.getByLabelText("Package 1 — room 2").textContent,
+    roomField("How long will you stay?", 2).textContent,
     /3 hours/,
   );
   fireEvent.click(
-    screen.getByRole("button", { name: "+ Add package block to room 2" }),
+    screen.getAllByRole("button", { name: "+ Add time" })[1],
   );
   fireEvent.click(screen.getByRole("checkbox"));
-  fireEvent.click(
-    screen.getByRole("button", { name: "Calculate server quote" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Get total" }));
   await waitFor(() => assert.ok(screen.getByText("₱2,700.00")));
   assert.equal(submitted.items[0].startAt, "2027-01-01T14:00:00+08:00");
   assert.equal(submitted.items[1].startAt, "2027-01-02T14:00:00+08:00");
@@ -339,8 +330,126 @@ test("guest can add independently scheduled Family room, repeat blocks and recei
     screen.getByRole("button", { name: "Booking not open" }).disabled,
     true,
   );
-  fireEvent.change(screen.getByLabelText("Adults — room 1"), {
+  fireEvent.change(roomField("Adults", 1), {
     target: { value: "3" },
   });
   assert.equal(screen.queryByText("₱2,700.00"), null);
+});
+
+test("explicit Hall setup entry overrides saved room and Hall selections", async () => {
+  dom.window.history.replaceState(null, "", "/book?service=hall&setup=room");
+  dom.window.sessionStorage.setItem(
+    "staytrack.hall-selections.v1",
+    JSON.stringify({
+      setup: "theater",
+      date: "2027-03-01",
+      hour: "8",
+      minute: "00",
+      period: "AM",
+      minutes: 180,
+      attendees: 3,
+      requests: "",
+    }),
+  );
+  dom.window.sessionStorage.setItem(
+    "staytrack.booking-selections.v1",
+    JSON.stringify([
+      {
+        id: 1,
+        category: "double_standard",
+        date: "2027-03-01",
+        hour: "2",
+        minute: "00",
+        period: "PM",
+        blocks: [180],
+        adults: 2,
+        children: 0,
+        extraBed: false,
+      },
+    ]),
+  );
+  globalThis.fetch = async (url) => ({
+    ok: true,
+    json: async () =>
+      url.endsWith("/catalog")
+        ? [
+            {
+              code: "double_standard",
+              name: "Double Standard",
+              duration_minutes: 180,
+              price_centavos: 20000,
+            },
+          ]
+        : { enabled: false },
+  });
+  try {
+    render(createElement(BookingPlanner, { hallEnabled: true }));
+    await waitFor(() =>
+      assert.equal(screen.getByLabelText("Hall setup").value, "room"),
+    );
+    assert.equal(screen.queryByRole("region", { name: "Room 1" }), null);
+  } finally {
+    dom.window.history.replaceState(null, "", "/book");
+  }
+});
+
+test("Hall-only quote sends independent schedule and renders combined authoritative price", async () => {
+  dom.window.history.replaceState(null, "", "/book?service=hall&setup=theater");
+  let payload;
+  globalThis.fetch = async (url, options) => {
+    if (url.endsWith("/catalog"))
+      return {
+        ok: true,
+        json: async () => [
+          {
+            code: "double_standard",
+            name: "Double Standard",
+            duration_minutes: 180,
+            price_centavos: 20000,
+          },
+        ],
+      };
+    if (url.endsWith("/guest/booking-status"))
+      return { ok: true, json: async () => ({ enabled: false }) };
+    payload = JSON.parse(options.body);
+    return {
+      ok: true,
+      json: async () => ({
+        items: [],
+        hall: {
+          setup: "theater",
+          attendees: 1,
+          minutes: 180,
+          start: "2027-03-01T00:00:00Z",
+          end: "2027-03-01T03:00:00Z",
+          base: 300000,
+          additional: 0,
+          total: 300000,
+        },
+        totalCentavos: 300000,
+      }),
+    };
+  };
+  try {
+    render(createElement(BookingPlanner, { hallEnabled: true }));
+    fireEvent.change(screen.getByLabelText("Event date"), {
+      target: { value: "2027-03-01" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Get total" }));
+    await waitFor(() =>
+      assert.ok(screen.getByText("₱3,000.00", { selector: "p.text-3xl" })),
+    );
+    assert.deepEqual(payload.items, []);
+    assert.equal(payload.hall.start, "2027-03-01T08:00");
+    assert.equal(payload.hall.setup, "theater");
+    fireEvent.change(screen.getByLabelText("Number of attendees"), {
+      target: { value: "2" },
+    });
+    assert.equal(
+      screen.queryByText("₱3,000.00", { selector: "p.text-3xl" }),
+      null,
+    );
+  } finally {
+    dom.window.history.replaceState(null, "", "/book");
+  }
 });

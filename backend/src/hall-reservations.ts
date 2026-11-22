@@ -1,3 +1,5 @@
+import { unifiedInstalled } from "./unified-booking.js";
+import { cancelOnlineHall } from "./unified-hall-actions.js";
 import type { HallSettings, HallQuoteInput } from "@staytrack/shared";
 import type { Pool, PoolClient } from "pg";
 import { createHash } from "node:crypto";
@@ -222,6 +224,7 @@ async function applyCommand(
     );
     return inserted.rows[0];
   }
+  const unified = await unifiedInstalled(c);
   const {
     rows: [r],
   } = await c.query<{
@@ -238,7 +241,7 @@ async function applyCommand(
     overtime: string;
   }>(
     `select r.*,q.quote,
-    coalesce((select sum(amount_centavos) from staytrack.hall_receipts where reservation_id=r.id),0)::text gross,
+    (coalesce((select sum(amount_centavos) from staytrack.hall_receipts where reservation_id=r.id),0) ${unified ? "+ coalesce((select sum(amount_centavos) from staytrack.online_payment_allocations where hall_reservation_id=r.id),0)" : ""})::text gross,
     coalesce((select sum(a.amount_centavos) from staytrack.hall_refund_approvals a
       join staytrack.hall_refund_transfers t on t.approval_id=a.id where a.reservation_id=r.id),0)::text refunded,
     coalesce((select sum(amount_centavos) from staytrack.hall_refund_approvals where reservation_id=r.id),0)::text approved,
@@ -249,6 +252,14 @@ async function applyCommand(
     [reservation],
   );
   if (!r) fail("Reservation unavailable.", 404);
+  const online =
+    unified &&
+    (
+      await c.query(
+        "select 1 from staytrack.online_hall_items where hall_reservation_id=$1",
+        [r.id],
+      )
+    ).rowCount === 1;
   const net = BigInt(r.gross) - BigInt(r.refunded);
   const current = r.quote;
   const result: HallResult = {
@@ -297,6 +308,10 @@ async function applyCommand(
     case "recover_inquiry":
     case "reschedule":
     case "extend": {
+      if (online && ["confirm", "recover_inquiry"].includes(action))
+        fail(
+          "Confirm all online reservation items through payment verification.",
+        );
       if (action !== "confirm") str(input.reason);
       if (action !== "confirm" && input.expectedClaim !== r.claim_id)
         fail("The hall schedule changed. Refresh before retrying.");
@@ -364,7 +379,9 @@ async function applyCommand(
           ? net < BigInt(quote.total) ||
             (r.status === "in_progress" &&
               BigInt(r.gross) - BigInt(r.approved) < BigInt(quote.total))
-          : !hallDepositMet(BigInt(quote.total), net)
+          : online
+            ? net < BigInt(quote.total)
+            : !hallDepositMet(BigInt(quote.total), net)
       ) {
         if (action !== "confirm" && net > BigInt(current?.total ?? 0))
           await flag(c, r.id);
@@ -483,6 +500,11 @@ async function applyCommand(
       return result;
     case "cancel":
       str(input.reason);
+      if (online) {
+        await cancelOnlineHall(c, r.id, now);
+        result.status = "cancelled";
+        return result;
+      }
       if (!["inquiry", "confirmed"].includes(r.status))
         fail("This reservation cannot be cancelled.");
       await release();
@@ -492,6 +514,17 @@ async function applyCommand(
     case "approve_refund": {
       const reason = str(input.reason);
       const amount = integer(input.amount, 0);
+      if (
+        online &&
+        (!current ||
+          !["confirmed", "in_progress", "completed"].includes(r.status) ||
+          amount <= 0 ||
+          BigInt(amount) >
+            BigInt(r.gross) - BigInt(current.total) - BigInt(r.approved))
+      )
+        fail(
+          "Approve only the verified Hall overpayment left after its full current cost and all prior refund approvals. Eligible cancellation creates its own refund approval.",
+        );
       if (
         r.status === "in_progress" &&
         current &&
@@ -519,6 +552,8 @@ async function applyCommand(
       );
       if (!eligible.rowCount || input.verified !== true)
         fail("Record only a verified, approved refund.");
+      if (online && input.method !== "gcash")
+        fail("Online refunds require a verified manual GCash transfer.");
       const money = normalizeHallReceipt({ ...input, amount: 1 });
       const transferred = transactionDate(input.transferredAt, now);
       await c.query(

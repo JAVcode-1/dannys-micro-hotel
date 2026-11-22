@@ -1,6 +1,9 @@
 ﻿import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router";
 import type { FormEvent } from "react";
+import ManilaDateTimeInput from "./ManilaDateTimeInput";
 import { apiBase } from "./staff-auth";
+import { notifySuccess } from "./notifications";
 import {
   pendingHallCommand,
   hallCentavos,
@@ -18,6 +21,20 @@ const hotel = new Intl.DateTimeFormat("en-PH", {
   hour12: true,
 });
 type Row = {
+  changeRequests?: {
+    id: string;
+    kind: string;
+    reason: string;
+    input: {
+      start?: string;
+      setup?: string;
+      attendees?: number;
+      minutes?: number;
+      hours?: number;
+    };
+    recorded_at: string;
+  }[];
+  unifiedReservationId?: string | null;
   claim_id: string | null;
   preparation_conflict: boolean;
   id: string;
@@ -72,26 +89,56 @@ type Finances = {
 
 export function HallInformation() {
   return (
-    <main className="min-h-svh bg-canvas px-6 py-14 text-main">
-      <section className="mx-auto max-w-3xl space-y-5 rounded-2xl border border-subtle bg-white p-8">
-        <h1 className="text-3xl font-semibold">Function Hall</h1>
+    <section className="mx-auto max-w-3xl space-y-6 rounded-2xl border border-subtle bg-white p-6 sm:p-9">
+      <p className="text-xs font-bold uppercase tracking-[.16em] text-primary">
+        Meetings &amp; events
+      </p>
+      <h1 className="text-3xl font-bold">Your event, your way.</h1>
+      <p>
+        One exclusive Function Hall, with Theater Type for up to 70 attendees or
+        Room Type for up to 50. These are alternative setups of the same hall.
+      </p>
+      <div className="rounded-xl bg-selected p-5 text-sm leading-7">
         <p>
-          Theater Type accommodates up to 70 people. Room Type accommodates up
-          to 50.
+          <strong>First 3 hours: ₱3,000.00</strong> for starts from 8:00 AM to
+          before 5:00 PM.
         </p>
         <p>
-          Three hours cost ₱3,000 for starts from 8:00 AM to before 5:00 PM, or
-          ₱5,000 for starts at 5:00 PM onward. Additional full hours cost
-          ₱1,000. Staff confirm available event times.
+          <strong>First 3 hours: ₱5,000.00</strong> for starts at 5:00 PM
+          onward.
+        </p>
+        <p>
+          Each additional full hour: <strong>₱1,000.00</strong>.
         </p>
         <p>Air-conditioning, sound system and mineral water are included.</p>
-        <p>
-          Ask the hotel in person, by telephone, or through Facebook Messenger.
-          Staff confirm reservations after verifying the down payment and
-          availability.
-        </p>
-      </section>
-    </main>
+      </div>
+      <p className="text-sm leading-6 text-muted">
+        Choose an available event time within the configured operating hours,
+        advance-notice and preparation/cleanup requirements. The booking planner
+        checks the final price and availability.
+      </p>
+      <div className="flex flex-wrap gap-3">
+        <a
+          href="/book?service=hall&setup=theater"
+          className="inline-flex min-h-11 items-center rounded-xl bg-booking px-5 font-bold text-main"
+        >
+          Book Theater Type
+        </a>
+        <a
+          href="/book?service=hall&setup=room"
+          className="inline-flex min-h-11 items-center rounded-xl border border-subtle px-5 font-semibold text-primary"
+        >
+          Book Room Type
+        </a>
+      </div>
+      <p className="text-sm leading-6 text-muted">
+        You can add rooms to the same reservation. Online bookings require one
+        full GCash payment with a reference and screenshot. Staff verify the
+        actual transaction before confirming all selected items. Timely proof
+        protects your selections during review. Booking is available only when
+        enabled by the hotel.
+      </p>
+    </section>
   );
 }
 
@@ -109,6 +156,10 @@ function Text({
   type?: string;
   required?: boolean;
 }) {
+  if (type === "datetime-local")
+    return (
+      <ManilaDateTimeInput name={name} label={label} required={required} />
+    );
   return (
     <label className="block">
       {label}
@@ -117,7 +168,8 @@ function Text({
         name={name}
         type={type}
         required={required}
-        step={name === "amount" ? "0.01" : undefined}
+        inputMode={name === "amount" ? "decimal" : undefined}
+        placeholder={name === "amount" ? "₱1,000.00" : undefined}
       />
     </label>
   );
@@ -155,6 +207,7 @@ const settingsLabels: Record<string, string> = {
 };
 
 export default function HallDesk({ token }: { token: string }) {
+  const [searchParams] = useSearchParams();
   const [entries, setEntries] = useState<Row[]>([]);
   const [settings, setSettings] = useState<Record<string, number>>();
   const [report, setReport] = useState<Report>();
@@ -167,7 +220,7 @@ export default function HallDesk({ token }: { token: string }) {
   const [tab, setTab] = useState("calendar");
   const [retry, setRetry] = useState<{ payload: string; key: string }>();
   const [pending, setPending] = useState<PendingHallCommand>();
-  const [selected, setSelected] = useState("");
+  const [selected, setSelected] = useState(searchParams.get("item") ?? "");
   const [finances, setFinances] = useState<Finances>();
   useEffect(() => {
     setEntries([]);
@@ -335,11 +388,8 @@ export default function HallDesk({ token }: { token: string }) {
               : " · Protected interval unavailable"),
         );
       else {
-        setMessage(
-          result.id
-            ? "Action recorded. Reference: " + result.id
-            : "Action recorded.",
-        );
+        setMessage("Action recorded.");
+        notifySuccess("Function Hall action recorded.");
         setRevision((v) => v + 1);
       }
     } catch (error) {
@@ -382,6 +432,8 @@ export default function HallDesk({ token }: { token: string }) {
           result.result?.issue ??
           "Saved command recovered. Review the updated reservation.",
       );
+      if (!result.issue && !result.result?.issue)
+        notifySuccess("Saved Function Hall command recovered.");
       setRevision((v) => v + 1);
     } catch (error) {
       setMessage(
@@ -541,6 +593,84 @@ export default function HallDesk({ token }: { token: string }) {
                 <h3 className="font-semibold">
                   {row.organizer} · {row.status.replaceAll("_", " ")}
                 </h3>
+                {row.unifiedReservationId && (
+                  <p className="text-sm text-primary">
+                    Online unified reservation ·{" "}
+                    <Link
+                      className="underline"
+                      to={`/staff/reservations/${row.unifiedReservationId}`}
+                    >
+                      View all items and shared payment
+                    </Link>
+                  </p>
+                )}
+                {row.unifiedReservationId && row.status === "inquiry" && (
+                  <p className="text-sm">
+                    <Link
+                      className="text-primary underline"
+                      to="/staff/payments"
+                    >
+                      Verify the shared online payment
+                    </Link>
+                    . Do not recreate or separately confirm this event.
+                  </p>
+                )}
+                {!!row.changeRequests?.length && (
+                  <details className="rounded border border-subtle p-3">
+                    <summary className="cursor-pointer font-semibold">
+                      Guest change requests
+                    </summary>
+                    <p className="my-2 text-sm">
+                      Requests need staff review and availability checking.
+                      History is not an approval status.
+                    </p>
+                    {row.changeRequests.map((request) => (
+                      <div
+                        key={request.id}
+                        className="my-3 border-t border-subtle pt-2 text-sm"
+                      >
+                        <p className="font-semibold">
+                          {request.kind === "extend"
+                            ? "Extension"
+                            : "Reschedule"}{" "}
+                          requested{" "}
+                          {hotel.format(new Date(request.recorded_at))}
+                        </p>
+                        <p>{request.reason}</p>
+                        {request.input.start && (
+                          <p>
+                            Requested start:{" "}
+                            {hotel.format(
+                              new Date(
+                                request.input.start +
+                                  (request.input.start.length === 16
+                                    ? ":00+08:00"
+                                    : ""),
+                              ),
+                            )}
+                          </p>
+                        )}
+                        {request.input.setup && (
+                          <p>
+                            Setup:{" "}
+                            {request.input.setup === "theater"
+                              ? "Theater Type"
+                              : "Room Type"}
+                          </p>
+                        )}
+                        {request.input.attendees !== undefined && (
+                          <p>Attendees: {request.input.attendees}</p>
+                        )}
+                        {request.input.minutes !== undefined && (
+                          <p>Duration: {request.input.minutes / 60} hours</p>
+                        )}
+                        {request.input.hours !== undefined && (
+                          <p>Additional hours: {request.input.hours}</p>
+                        )}
+                      </div>
+                    ))}
+                  </details>
+                )}
                 <button
                   className="min-h-11 text-primary"
                   onClick={() => {
@@ -675,7 +805,15 @@ export default function HallDesk({ token }: { token: string }) {
                   "complete_refund",
                   "overtime",
                 ].map((a) => (
-                  <option key={a} value={a}>
+                  <option
+                    key={a}
+                    value={a}
+                    disabled={
+                      !!entries.find((row) => row.id === selected)
+                        ?.unifiedReservationId &&
+                      ["confirm", "recover_inquiry"].includes(a)
+                    }
+                  >
                     {a.replaceAll("_", " ")}
                   </option>
                 ))}
@@ -698,7 +836,7 @@ export default function HallDesk({ token }: { token: string }) {
               <Text name="hours" label="Additional full hours" type="number" />
             )}
             {["receipt", "approve_refund", "overtime"].includes(action) && (
-              <Text name="amount" label="Amount (PHP)" type="number" />
+              <Text name="amount" label="Amount (PHP)" />
             )}
             {action === "complete_refund" && (
               <label>

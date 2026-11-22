@@ -4,6 +4,7 @@ import { test } from "node:test";
 import { btoa } from "node:buffer";
 import { JSDOM } from "jsdom";
 import { createElement } from "react";
+import { MemoryRouter } from "react-router";
 const dom = new JSDOM("", { url: "http://localhost/staff/hall" });
 globalThis.window = dom.window;
 globalThis.document = dom.window.document;
@@ -45,7 +46,9 @@ test(
       return Response.json({ noShowGrace: 60, reminder: 15 });
     };
     try {
-      render(createElement(HallDesk, { token }));
+      render(
+        createElement(MemoryRouter, null, createElement(HallDesk, { token })),
+      );
       await screen.findByRole("region", { name: "Saved Hall command" });
       fireEvent.click(
         screen.getByRole("button", { name: "Retry original command" }),
@@ -108,7 +111,13 @@ test(
       return Response.json({ noShowGrace: 60, reminder: 15 });
     };
     try {
-      render(createElement(HallDesk, { token: "invalid" }));
+      render(
+        createElement(
+          MemoryRouter,
+          null,
+          createElement(HallDesk, { token: "invalid" }),
+        ),
+      );
       await screen.findByRole("button", { name: "Manage this reservation" });
       fireEvent.click(
         screen.getByRole("button", { name: "Manage this reservation" }),

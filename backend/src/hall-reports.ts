@@ -21,6 +21,12 @@ export async function hallReport(
   const last = day(to);
   if (last < first || last - first >= 366 * 86400000)
     throw new BookingError("Choose up to 366 days.");
+  const unified =
+    (
+      await pool.query(
+        "select to_regclass('staytrack.online_payment_allocations') is not null as installed",
+      )
+    ).rows[0]?.installed === true;
   const { rows } = await pool.query(
     `
     with bounds as (
@@ -29,6 +35,13 @@ export async function hallReport(
     ), flows as (
       select received_at at,amount_centavos gross,0::bigint refund
       from staytrack.hall_receipts,bounds where received_at>=lo and received_at<hi
+      ${
+        unified
+          ? `union all select received_at,amount_centavos,0::bigint
+      from staytrack.online_payment_allocations,bounds
+      where hall_reservation_id is not null and received_at>=lo and received_at<hi`
+          : ""
+      }
       union all select t.transferred_at,0,a.amount_centavos
       from staytrack.hall_refund_transfers t join staytrack.hall_refund_approvals a on a.id=t.approval_id
       cross join bounds where t.transferred_at>=lo and t.transferred_at<hi
@@ -46,7 +59,7 @@ export async function hallReport(
       coalesce(sum(greatest(0,extract(epoch from least(c.event_start,hi)-greatest(c.preparation_start,lo))))/60,0)::int preparation_minutes,
       coalesce(sum(greatest(0,extract(epoch from least(c.cleanup_end,hi)-greatest(c.event_end,lo))))/60,0)::int cleanup_minutes
       from staytrack.hall_reservations r join staytrack.hall_claims c on c.id=r.claim_id
-      cross join bounds where c.released_at is null and r.status<>'cancelled' and c.preparation_start<hi and c.cleanup_end>lo
+      cross join bounds where c.released_at is null and r.status in ('confirmed','in_progress','completed','no_show') and c.preparation_start<hi and c.cleanup_end>lo
     )
     select coalesce(sum(gross),0)::text gross,coalesce(sum(refund),0)::text refunds,
       (coalesce(sum(gross),0)-coalesce(sum(refund),0))::text net,

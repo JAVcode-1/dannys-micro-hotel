@@ -4,6 +4,106 @@ status: in-progress
 ---
 # 14 ‚Äî Milestones & Work Tracker
 
+## Navigation wordmark - 2026-11-22
+
+Owner requested the reference logo-and-text lockup. The landing navigation now shows the existing logo beside blue serif Danny's, with spaced MICRO HOTEL beneath; the customer navigation uses the same wording and type proportions. Wordmark sizes reduce on small screens. Footer logo rendering, navigation destinations, booking behavior and admin pages are unchanged. Product files: LandingPage.tsx, landing.css, App.tsx and guest-booking.css. No tests/builds/lint/typecheck or browser inspection run, and no commit/push. Next action: owner checks the navigation branding visually.
+
+
+## Official hosted staff username - 2026-11-22
+
+Owner requested admin as the official hosted application username, retaining the requested password, rather than a local-only identity. Assigned staff_username=admin in the designated existing Supabase Auth user's admin-managed app_metadata, preserving all other metadata, underlying email and active Staff/Admin membership. Username assignment is recorded in staff_audit. No email/account was deleted or duplicated, no permission tier was added, and no password/token is stored in source or these notes.
+
+Added the hosted Express POST /staff/sign-in username path. It resolves only admin-managed app_metadata joined to active private staff membership, fails closed for missing/ambiguous usernames, verifies the password through Supabase Auth, checks identity and active staff again, and audits successful username sign-in. Existing /staff request throttling, private response headers and session verification remain in force. No browser-trusted identity or user-editable metadata grants rights. The frontend accepts username or email, installs the issued Supabase session, and displays the server-verified username in the staff workspace. Email recovery remains email-based. Isolated development retains its separate local login; production transaction gates remain closed.
+
+Product files: backend/src/staff-sign-in.ts (new), app.ts, staff-auth.ts; frontend/src/StaffLogin.tsx and StaffSession.tsx. No migration or database reset. Actual hosted evidence: unique username binding and active membership verified; the newly implemented backend function successfully signed in as admin against Supabase with the owner's requested password, and the verification session was signed out locally. The TypeScript loader initially hit sandbox EPERM; the authorized elevated invocation succeeded. No automated suite, build, lint, typecheck, browser acceptance, deployment, commit or push. No unrelated users/bookings/payments changed. Next action: owner restarts local source services, and deploys the updated frontend/API together to use username sign-in on the hosted application.
+
+
+## Owner-authorized hosted staff provisioning - 2026-11-22
+
+The owner explicitly authorized Supabase account provisioning, superseding the earlier no-hosted-access restriction only for this targeted account operation. The designated Auth user already existed, was email-confirmed and already had active staytrack.staff_accounts membership. Reused that individual user, set the owner-requested password through the Supabase Admin Auth API, preserved active Staff/Admin access and recorded staff.account.owner_requested_password_set in staff_audit. No password, email address, session token or server secret is stored in this note or source code.
+
+Observed evidence: hosted password sign-in returned the designated user identity, and a targeted staff membership read returned active=true. The temporary verification session was signed out locally. This verifies Auth plus staff eligibility, not a deployed application acceptance test. The hosted login is email-based; the local admin username/configuration remains separate. No duplicate account, new permission tier, migration, unrelated user update, booking/payment mutation, live transaction gate change, deployment, commit or push.
+
+Next action: owner signs in with the designated email and requested password in the hosted-configured application when deployed; npm run dev continues using local synthetic accounts. Production configuration and all previous release/acceptance gates remain pending.
+
+
+## Local admin sign-in - 2026-11-22
+
+Owner requested a local admin username. Created the account configuration only in ignored .quality/isolated-development/admin-account.json, with a random individual identity, synthetic email alias and salted scrypt hash; the requested password is not stored in source or documentation. The isolated API seeds its active Staff/Admin membership on startup. Local staff credentials are checked by a rate-limited backend login endpoint; staff session restoration requires the issued bearer token rather than an anonymous session lookup. The frontend now accepts username or email in isolated mode and delegates verification to that endpoint. Production email-based Auth and equal Staff/Admin permissions remain unchanged.
+
+Product files: backend/src/isolated-server.ts, frontend/src/development-auth.ts and StaffLogin.tsx, plus ignored account configuration. No hosted account was created and no existing Gmail credential was checked against Supabase. Restart npm run dev, then use the configured admin username and owner-specified password. Existing local account configuration survives disposable database restarts; session tokens do not.
+
+No tests, builds, lint, typecheck or hosted operations were run. Login after restart remains for owner verification. No commit/push or acceptance checkbox changes. Next action: owner signs in locally, then requests any separate real staff-account provisioning if needed.
+
+
+## Customer booking design refinement - 2026-11-22
+
+Owner requested frontend-design polish for the customer booking journey only, with Royal Horizon colors; admin design is a later task. Added a scoped guest-booking stylesheet and refined the shared customer header/navigation, non-clickable step guidance, room/Hall booking cards, reservation summary and total, email verification, GCash proof presentation, reservation details and room rates. Reused existing hotel logo/room WebP assets. Royal blue structures the flow; orange guest actions retain navy text, with subtle lavender/selected-blue supporting surfaces. Buttons remain static with opacity-only hover feedback. Responsive layouts, 44px controls, keyboard focus/skip link and print treatment are included in the source.
+
+Product files: frontend/src/App.tsx, BookingPlanner.tsx, Catalog.tsx, GuestAccess.tsx, GuestPayment.tsx, GuestReservations.tsx and new guest-booking.css. No staff component, landing page, startup configuration, API, pricing, ownership/payment state machine or database change. No dependencies or new images added. Existing pending/verified distinctions, holds, independent room/Hall selections and manual verification disclosures are preserved.
+
+Verification: manual source and existing asset-path inspection only. No automated tests, build, lint, typecheck or browser/device inspection was run; visual/functional acceptance remains with the owner. No hosted access, commit or push, and no phase checkbox marked complete. Next task: owner reviews customer booking screens; admin design begins only when instructed.
+
+
+## Single-command local startup - 2026-11-22
+
+Owner requested npm run dev as the only routine full-system startup. Root scripts/dev.mjs now prepares missing workspace dependencies and cached pinned embedded PostgreSQL tooling, then enters the existing disposable local composition. dev:isolated remains a compatibility alias. The API runs from TypeScript source with watch mode; frontend startup waits for isolated API readiness and uses an explicit 127.0.0.1 proxy. Both entry points reject production mode. Existing fixture Auth/private media/fake mail, loopback staytrack_test guard, migrations and business authorization remain unchanged. Production configuration stays separate; each full startup uses a fresh disposable database.
+
+Changed configuration: package.json, scripts/dev.mjs, scripts/isolated-development.mjs, frontend/vite.config.ts. Startup documentation: README.md and docs/isolated-development.md. No dependency install, startup, tests, builds, lint or typecheck was executed in this edit-only task. No hosted access, commit or push; no acceptance checkbox changed. Next action: owner runs npm run dev and personally verifies the local system.
+
+
+## Isolated capabilities and consistent staff shell - 2026-11-22
+
+Owner requested only Hall/booking capability wiring and staff width correction. Local frontend startup now reads the API's booking-status capabilities before rendering. Synthetic Auth, Hall information/planner/sidebar and local workflows require a development build, loopback browser and the explicit isolated API marker with booking/Hall/unified/payment capabilities enabled. A frontend environment flag alone cannot activate them; normal production API gates and guest/staff authorization are unchanged. The Add Function Hall control stays beside Add room and disables after the one Hall is selected. Existing room-only, Hall-only and mixed flows are retained.
+
+All authenticated staff pages now share one full-width max-w-6xl shell, unchanged 14rem desktop sidebar, common padding and min-width-zero content. Removed route-specific wide/narrow variants and reserve the scrollbar gutter across staff navigation. Product files: backend/src/app.ts; frontend/src/staff-auth.ts, main.tsx, BookingPlanner.tsx, StaffRoutes.tsx and styles.css. Restart the isolated launcher to load the new API capability response.
+
+No automated tests, builds, lint or typecheck were run, as explicitly requested. No hosted Supabase, commit or push. Manual source inspection only; owner performs functional/responsive inspection. No acceptance checkbox changed. Next action: owner checks isolated booking/payment/Hall and staff catalog/reschedule navigation.
+
+
+## Landing button feedback - 2026-11-22
+
+Owner requested static landing buttons with opacity-only hover feedback. Removed button lift/press scaling, animated arrow movement, hover shadow overlays, changing hover fills, hero-action entrance animation and menu-icon transition. Landing buttons, gallery arrows, menu toggle and the hero text action now use instantaneous 85% opacity on hover-capable fine pointers. Keyboard focus remains visible. Updated frontend/src/landing.css only for product behavior; no dependency or backend changes.
+
+Verification: CSS parsed with PostCSS; focused assertions confirmed the 85% hover rule and absence of button movement declarations; Prettier and diff whitespace checks pass. Browser/device inspection and broader builds/tests were not run for this small CSS change. No phase checkbox, commit or push. Next action: owner checks the landing hover behavior.
+
+
+## Unified Online Booking development implementation - 2026-11-21
+
+**Dependency:** existing accommodation and exclusive Hall inventory, guest OTP ownership, individual active staff, GCash proof/review/registry, immutable financial records and isolated development composition. Owner authorized UB-01 through UB-06 with targeted checks only and explicitly prohibited commit/push and hosted access.
+
+The implementation adds one parent online reservation for rooms/Hall/both, atomic common holds and confirmation, full single GCash payment with item allocations, protected proof review, independent item operations, Hall change requests and bounded manual refunds. Guest and staff screens expose the unified composition while room and Hall operations remain separate. Candidate 027 links Hall items and payment allocations; candidate 028 corrects combined financial statements. Both remain unapplied to hosted Supabase. No application dependency was added; the preexisting dirty lockfile/editor/Obsidian/prototype files are preserved.
+
+**Essential evidence:** 32 focused backend tests pass with zero failures/skips. The disposable targeted PostgreSQL runner applies all 28 local migrations and passes critical mixed/Hall-only, competing setup, atomic conflict/audit rollback, owner/staff denial, full payment, proof protection/expiry, confirmation retry, allocated reporting, independent cancellation/manual refund, Hall extension full funding and reduced-price reconciliation assertions. Local HTTP readiness, guest/staff reservation history, private Hall allocation statement and unauthorized denial pass. Schema types are regenerated from this disposable catalog. Latest frontend/static results and the in-scope file manifest are recorded in [[unified-online-booking-requirements-sync]]. Initial checks found and corrected a test SQL alias, null Hall-only room items, signed Hall price decreases and unpaid-hold utilization; final passing evidence is separate from those failed attempts.
+
+No phase/milestone acceptance checkbox is completed. Comprehensive suites, formal scanloop/greploop production gate, hosted migrations/services, real email/payments and browser/device acceptance were not performed. Work remains uncommitted for owner inspection. Next task: inspect the local composition and changes, then separately instruct comprehensive integration/UI/UX acceptance. Canonical implementation report: [[unified-online-booking-requirements-sync]].
+
+
+**Final UI/static evidence - 2026-11-22:** 44 distinct targeted frontend tests verified (first 43/44, then affected payment 4/4 after an obsolete text assertion correction); final frontend bundle/typecheck, root typecheck/lint and final frontend lint pass. Targeted formatting passes. Existing approximately 729 kB bundle warning remains. 32 focused backend tests and the final disposable PostgreSQL/local HTTP regression pass. No full suite, formal quality gate, browser/device/hosted acceptance, real transaction/email, commit or push. Full file manifest and limits: [[unified-online-booking-requirements-sync]].
+
+
+## Unified Online Booking requirements checkpoint ‚Äî 2026-11-21
+
+Documentation-only synchronization: approved room-only, hall-only, multiple-room and mixed customer booking in one planner; separate inventory, availability and pricing; combined summary and itemized payment breakdown. See [[unified-online-booking-requirements-sync]] for affected code/docs and unresolved payment, hold, confirmation, cancellation and refund policies. No implementation, migration, dependency, hosted change or automated test. Checklist acceptance remains open. Next task: finalize the pending lifecycle policies, then revise the detailed feature/phase spec before coding.
+
+## Booking planner wording cleanup ‚Äî 2026-11-21
+
+Removed the duplicate local hotel header from `BookingPlanner.tsx` and simplified visible room, stay-length, guest-count and total-price wording. Updated the focused booking planner UI selectors and [[11-pages-and-navigation]], [[17-decisions]], [[icm/PROJECT-CONTEXT]]. Existing per-room schedules, prices and backend rules are unchanged. Owner visual review and formal acceptance remain pending; next task is a guest walkthrough of the booking form.
+
+## Simplified guest navigation ‚Äî 2026-11-21
+
+The shared guest header now shows four customer destinations: Rooms & rates, Function Hall, My bookings and Book a room; the hotel name links Home. Removed top-level Reviews and Verify email links and the duplicate navigation inside the booking planner. Reviews and OTP remain available in their existing contextual flows and direct routes. Files: `frontend/src/App.tsx`, `frontend/src/BookingPlanner.tsx`, [[11-pages-and-navigation]], [[17-decisions]], this note and [[icm/PROJECT-CONTEXT]]. No dependency, migration or backend change. Focused frontend typecheck only; owner visual review and broader acceptance remain pending. Next task: review the customer navigation in booking, verification and reservation screens.
+
+## Function Hall online-booking decision ‚Äî 2026-11-21
+
+Documentation only. The owner confirmed future customer self-service hall booking, availability-safe rejection of unavailable slots and full verified payment before online confirmation. Updated [[future-function-hall-requirements]], [[02-requirements]], [[11-pages-and-navigation]], [[17-decisions]], [[18-backlog]] and [[icm/PROJECT-CONTEXT]]. Existing gated staff hall workflow and public information page were not changed. Online hall booking remains unimplemented, live transactions disabled, and payment-method/timing/refund decisions pending. No application code, migration, dependency or test was run for this decision. Next task when instructed: settle remaining hall policies and design the online booking/payment flow before implementation.
+
+## Guest room guidance simplification ‚Äî 2026-11-21
+
+Removed the public `/rooms` occupancy checker from `frontend/src/Catalog.tsx` while preserving the route's rate comparison and existing booking/server advisory. `frontend/src/LandingPage.tsx` and `frontend/src/landing.css` show usual occupancy beside each room description; `/rooms` cards show the same estimates. Double Standard is good for 2 people and Family Executive for 3, explicitly advisory. Updated [[11-pages-and-navigation]], [[17-decisions]] and [[icm/PROJECT-CONTEXT]]. No dependency, migration, backend rule or price change. Browser visual review and broad tests are deferred per the owner's current UI review preference; do not mark phase acceptance from this change. Next task: owner checks the simplified page and reports any visual issues.
+
+Owner screenshot review found duplicate guest headers and repeated occupancy text on `/rooms`. Removed that page's local header, kept the shared guest navigation, and changed card labels to ‚ÄúUsually comfortable for 2/3 guests‚Äù with one short advisory note. Landing room cards use the same softer wording. Focused frontend typecheck for this follow-up is recorded separately; broader acceptance remains pending.
+
 ## UI-01 compact navigation and booking guide checkpoint ‚Äî 2026-11-21
 
 **Dependency:** existing UI-01 landing page, booking planner and owner-approved portfolio sizing reference. No package dependency or migration added.
@@ -385,3 +485,59 @@ Build, typecheck, lint and formatting passed. All 152 application tests (108 bac
 ## Staff authentication navigation checkpoint - 2026-11-20
 
 Protected staff navigation keeps the verified session and layout mounted. Refreshing a protected URL shows a neutral status during verification. Expired or denied sessions and logout lead to staff sign-in. Build, typecheck, lint and targeted formatting passed. All 158 application tests passed (108 backend, 50 frontend), including staff restoration, navigation, deep-link serving, expiry, logout, denied access, invitations and feature gates. Vite reported a bundle-size warning. Hosted Supabase acceptance, the formal quality gate and UI/UX Refinement remain pending.
+
+### Customer booking button clarity - 2026-11-22
+
+Customer booking actions now share visible filled or outlined button styling, including email verification, added stay time, payment preview, reservation actions and expandable change requests. Labels were shortened while keeping their existing behavior and the Royal Horizon theme. Staff controls and booking/payment rules are unchanged. No dependencies added. Source inspection only; automated tests, builds, lint, typecheck and browser verification were not run. Acceptance remains pending owner inspection; no checklist marked complete. Next task: owner review of the customer booking flow.
+
+### Guest email OTP correction ó 2026-11-22
+
+`npm run dev` now reads only the public Supabase Auth URL/key from `backend/.env` (environment overrides supported) and passes that same pair to Express and Vite. Guest access/session use the real Supabase client independently of local fixture staff authentication; Express uses the existing confirmed-email `verifyGuest` implementation. The synthetic guest session endpoint is closed, and the normal guest notice is removed. Existing sessionStorage room/hall drafts and the validated booking return URL remain intact. No dependencies or migrations added; no database records changed by this task.
+
+Manual acceptance pending owner testing. No tests, build, lint, typecheck, commit or push performed, per request. No phase/feature checklist marked complete. Next task: owner tests delivery, code verification and return to the saved booking.
+
+### Real Supabase development startup correction ó 2026-11-22
+
+Normal npm run dev now starts source Express server.ts and Vite with backend/.env configuration; only the public Auth URL/key reach the frontend. Vite also resolves backend public Auth settings for standalone frontend development. The unavailable guest-verification text now describes missing authentication configuration rather than a preview. Staff Auth initializes to the real Supabase client; fixture access requires the explicit isolated API capability. The isolated harness remains a separately named command. No dependency or migration added; no database records changed.
+
+Source/config inspection only. Tests/build/lint/typecheck, actual OTP delivery, hosted database checks, migration application, commits and pushes were not performed. No checklist marked Done. Normal Express booking/payment/operational gates remain closed as documented: full hosted feature activation is outstanding, not achieved by startup wiring. Next: owner restarts npm run dev and checks email OTP; separately inventory/review hosted migration and provider readiness before enabling hosted transactions.
+
+### Hosted booking activation prepared ó 2026-11-22
+
+See [[hosted-booking-activation]] for exact scope and the 14 unapplied migrations. Read-only hosted inspection found 14 migrations applied through 013, zero physical rooms, two active staff accounts and both private payment buckets. Added real development runtime composition using existing Auth/Storage/transaction services, separate hosted/isolated capability reporting, hosted staff username sign-in, Hall capability and hold expiration wiring. Startup checks schema and bucket privacy and does not apply migrations or seed data. No tests/build/lint/typecheck or hosted mutations performed. No checkpoint, commit, push or acceptance checkbox completed. Owner approval of the exact hosted migration operation and actual 10/5 room identifiers are needed next; notification mail delivery remains separately pending.
+
+### Hosted development activation and physical-room registration ó 2026-11-22
+
+Owner explicitly approved the refined activation plan and all 14 pending migrations. Pinned Auth/database/linked project to D-040 ref pgbierfxeviouyjsmjnh. Saved an ignored application-scope backup of 36 existing tables, sequences and recorded schema statements; rebuilt it in fresh local PostgreSQL and matched all table digests before applying. Applied 014ñ028 excluding nonexistent 022 in one transaction; history now contains 28 migrations. Existing application-row digests matched before/after, including staff accounts. Read-only source readiness verified complete schema and private payment buckets; financial checks returned zero negative collected/refunded/refund-due projections and zero verified-payment total mismatches. One Hall exists, not Ready; no physical room rows were seeded.
+
+Implemented staff Rooms registration with category totals 10/5, case-insensitive duplicate prevention shared with renaming, transaction staff checks, actor audit and retry protection. Rooms start inactive/Unverified; current inspection and explicit activation use existing safeguards. Added guarded unused-room category correction, preserving booking history and shared online/walk-in capacity. No layout redesign.
+
+Completed the itemized confirmation snapshot bridge, real Resend API adapter/templates, development notification/reminder worker, optional configured staff escalation recipients and staff delivery-count visibility. No new dependencies or credentials. No Management API token was available: hosted Auth templates/SMTP remain untouched and exact Magic Link/Confirm Signup token-only changes are in [[hosted-booking-setup]]. Guest Auth code, first-time signup/returning verification and saved drafts are preserved. Provider credentials, actual room entry/inspection, real QR/payee, cancellation text and Hall settings remain owner configuration.
+
+Essential commands: ignored activate.mjs backup/recovery, activate.mjs --apply, and read-only source readiness/financial inventory. Sandbox process spawning initially failed; authorized escalated backup recovery and source loading subsequently succeeded. No full automated suite/build/lint/typecheck/browser acceptance, email send, guest booking/payment creation, commit or push. Acceptance and production gates remain pending; no feature checkbox marked Done. Next: owner follows [[hosted-booking-setup]] and manually tests the integrated flow.
+
+### Room administration and inspection feedback fix ó 2026-11-22
+
+Targeted `frontend/src/StaffRooms.tsx` change: clickable validation for missing identifier/reason and inspection confirmation; explicit inspect-before-activation guidance; persistent success/API error messages; stable administration panel identity with persisted field synchronization; uncached room-board refresh after successful writes; separate saved-but-refresh-failed message. Existing Express admin/inspection endpoints already write transactionally with actor checks, audit, inspection and availability protections; those paths remain unchanged. No dependency or migration added, no database records changed by this task. Source/diff inspection only; owner explicitly requested no automated tests/build/lint/typecheck/commit/push. Actual persistence, Unverified-to-Ready and online/walk-in eligibility require owner manual acceptance. No checklist marked Done. Next task: owner inspects, activates, reloads and verifies booking availability.
+
+### Customer payment preview confusion ó 2026-11-22
+
+Removed the customer-facing development Preview payment shortcut and synthetic PaymentPreview reservation (fixed PHP 2,700 and fresh demo countdown). Legacy /payment-preview redirects to /book without creating a hold. BookingPlanner now labels its existing real hold submission Continue to GCash payment. Real payment continues at /reservations/:id/payment using authenticated persisted reservation totals/item allocations and the staff-configured private QR signed URL. Added an explanation of the real 30-minute proof deadline; timely submitted proof remains protected pending staff review. No booking, payment, authorization, audit, pricing or capacity backend changes. Files: frontend/src/App.tsx, BookingPlanner.tsx and GuestPayment.tsx; no dependencies. Source inspection only, no automated tests/build/lint/typecheck/browser/database operations/commit/push. Actual QR rendering, persisted totals and end-to-end payment remain pending owner manual acceptance. No checklist marked Done. Next: choose items, verify email, Continue to GCash payment, and verify actual total, QR and hold deadline.
+
+### Booking policies collapse control ó 2026-11-22
+
+Added an accessible Show/Hide button in frontend/src/BookingPlanner.tsx, keeping the initial expanded view. It collapses the policy summary and full-policy disclosure together; acknowledgement and pending-approval notice stay visible. Button type prevents form submission; policy content and booking rules unchanged. No dependencies. Source inspection only; no automated tests/build/lint/typecheck/commit/push, per owner workflow preference. Manual acceptance pending; no checklist marked Done. Next: owner checks collapse/expand during booking.
+
+### Shared success toast notifications ó 2026-11-22
+
+Owner approved the shared guest/staff success-toast design. Added Sonner ^2.0.8, one root SuccessToasts display and notifications helper. Top-right, dismissible, 4.5-second notifications use Royal Horizon tokens; Sonner supplies accessible announcements, mobile positioning and reduced-motion support. Only short generic messages are passed; no credentials, proof links or guest details. Booking and guest-verification redirects use a one-time sessionStorage message with a 30-second expiry; storage restrictions do not block the action.
+
+Notification callers cover explicit guest email verification/sign-out, staff sign-in after successful Express staff verification, staff sign-out/password/recovery, booking quote/available result/hold, actual proof submission, room registration/inspection/administration/housekeeping/maintenance/reassignment, check-in/no-show/checkout, walk-in booking/receipts, payment-review decisions, cancellation/manual-refund records, schedule changes/extensions/charges, Hall actions/recovery, settings/private QR/catalog saves, reviews/private feedback/moderation/invitations and analytics export. Ordinary background loads do not emit success toasts. Proof submission remains pending staff verification; manual refund recording never claims the application sent money. Existing inline feedback and backend authorization/audit/availability rules remain in place. No backend, schema or database records changed.
+
+Changed files: frontend/src/{notifications.ts,SuccessToasts.tsx,main.tsx,StaffSession.tsx,StaffLogin.tsx,StaffRoutes.tsx,GuestSession.tsx,GuestAccess.tsx,BookingPlanner.tsx,GuestPayment.tsx,OperationalSettings.tsx,PaymentQrSettings.tsx,StaffCatalog.tsx,StaffRooms.tsx,RoomMaintenancePanel.tsx,CheckInDesk.tsx,StayMonitor.tsx,WalkInDesk.tsx,StaffPaymentReviews.tsx,GuestReservations.tsx,StayChangesDesk.tsx,RescheduleDesk.tsx,CancellationDesk.tsx,HallDesk.tsx,GuestReviewAccess.tsx,StaffReviewDesk.tsx,StaffAnalytics.tsx}, frontend/package.json and root package-lock.json. These milestone/decision/context notes record this task only; existing unrelated workspace edits preserved.
+
+Evidence: Sonner installation succeeded (one package added); source inspection traced success/error branches, root lifetime, redirect handoff and duplicate sign-in prevention. No automated tests/build/lint/typecheck/scans/browser acceptance/commit/push performed, following the owner's manual-testing workflow. No feature or phase checklist marked Done. Risks: runtime notification rendering/timing and action coverage remain unverified by execution; redirected notifications cannot survive a full document navigation when browser sessionStorage is blocked. Next task: owner manually verifies sign-in/out, a save, booking-to-payment redirect, pending proof, failed actions producing no success toast, dismissal and mobile/reduced-motion behavior.
+
+### Pre-commit review corrections ó 2026-11-22
+
+Owner authorized only three corrections: updated stale frontend action-label selectors (including current room-inspection validation assertions), staff success-toast detection on a guest-to-staff identity switch, and visible landing sections when IntersectionObserver is absent. Successful staff authorization remains required before the toast; normal observer animations and reduced-motion behavior remain intact. No dependency/backend/schema/data changes in this correction task. Source/diff inspection only; no automated tests/build/lint/typecheck, staging, commit or push. Acceptance/checklist items remain pending. Next: owner approves the proposed system-only commit file list; editor preferences, personal Obsidian vault files, skill downloads, unused prototype/reference media and ignored secrets/reports remain local and unstaged.

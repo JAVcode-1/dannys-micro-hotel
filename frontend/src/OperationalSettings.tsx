@@ -1,6 +1,7 @@
 import React from "react";
 import { apiBase } from "./staff-auth";
 import PaymentQrSettings from "./PaymentQrSettings";
+import { notifySuccess } from "./notifications";
 
 type Settings = {
   cleaningBufferMinutes: number | null;
@@ -48,6 +49,7 @@ export default function OperationalSettings({ token }: { token: string }) {
       });
       if (!response.ok) throw new Error();
       setMessage("Operational settings saved and audited.");
+      notifySuccess("Operational settings saved.");
     } catch {
       setMessage("Settings could not be saved.");
     } finally {

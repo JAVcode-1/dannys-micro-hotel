@@ -1,3 +1,4 @@
+import { unifiedInstalled } from "./unified-booking.js";
 import { databasePool } from "./database.js";
 
 const validTime = (value: number) =>
@@ -25,6 +26,10 @@ export async function expireClaims(
   pool = databasePool(),
 ): Promise<number> {
   if (!validTime(now)) throw new Error("Invalid cleanup time");
+  if (await unifiedInstalled(pool))
+    await pool.query("select staytrack.expire_online_holds($1)", [
+      new Date(now),
+    ]);
   const result = await pool.query(
     `update staytrack.inventory_claims set state = 'expired'
      where state = 'held' and proof_deadline_at <= $1`,

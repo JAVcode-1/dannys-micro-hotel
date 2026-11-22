@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
+import { notifySuccess } from "./notifications";
 import { apiBase } from "./staff-auth";
 
 export default function PaymentQrSettings({ token }: { token: string }) {
@@ -64,6 +65,7 @@ export default function PaymentQrSettings({ token }: { token: string }) {
         "QR configuration saved and audited. Guest payments remain disabled.",
       );
       setRefresh((value) => value + 1);
+      notifySuccess("GCash QR configuration saved.");
     } catch {
       setMessage(
         "QR could not be saved. Check private Storage setup and image format.",

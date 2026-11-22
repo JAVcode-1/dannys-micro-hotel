@@ -4,6 +4,11 @@ status: x01-x03-development-checkpoints-acceptance-pending
 ---
 # Phase 07 — Cancellations, Rescheduling, Extensions & Refunds
 
+## Unified item policies - 2026-11-21
+
+UB-05/UB-06 explicitly extend independent item changes to online Hall items. Cancellation eligibility ends strictly before confirmation plus one hour and before the selected item's actual check-in/event start. Siblings remain unchanged; release only the cancelled claim. Manual refunds must trace to the selected item's share of the one original verified GCash payment and subtract previous payouts/approvals. Do not duplicate the original receipt/reference or automate GCash transfers. Staff-approved rescheduling retains the original confirmation deadline. Room extension funding remains at least 50%; Hall extensions require full additional cost. Preserve price snapshots, capacity locks, audit and retry protections. See [[../unified-online-booking-requirements-sync]] for implemented versus deferred evidence; existing acceptance gaps remain open.
+
+
 
 ## Final Analytics scope revision - 2026-11-20
 

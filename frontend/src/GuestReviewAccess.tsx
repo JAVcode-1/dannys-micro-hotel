@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { apiBase } from "./staff-auth";
+import { notifySuccess } from "./notifications";
 
 type Purpose = "review" | "feedback" | "withdrawal" | "enrollment";
 
@@ -78,6 +79,7 @@ export default function GuestReviewAccess({
           });
           setGrant(result.token);
           setGrantPurpose("review");
+          notifySuccess("Review access verified.");
         } else if (!challenge) {
           const result =
             purpose === "enrollment"
@@ -91,6 +93,7 @@ export default function GuestReviewAccess({
                   purpose,
                 });
           setChallenge(result.challenge);
+          notifySuccess("Verification code requested. Check your email if the details match.");
           setMessage(
             "If the details match, a verification code will arrive by email.",
           );
@@ -103,9 +106,11 @@ export default function GuestReviewAccess({
           if (result.enrolled) {
             setChallenge("");
             setMessage("Email verified for this stay.");
+            notifySuccess("Email verified for this stay.");
           } else {
             setGrant(result.token);
             setGrantPurpose(purpose);
+            notifySuccess("Access verified.");
           }
         }
         return;
@@ -134,6 +139,7 @@ export default function GuestReviewAccess({
         );
       if (purpose === "withdrawal")
         await send("/reviews/withdrawal", access, requestKey);
+      notifySuccess(purpose === "review" ? "Review submitted." : purpose === "feedback" ? "Private feedback sent." : "Review withdrawn.");
       setMessage(
         purpose === "review"
           ? "Review submitted."
@@ -305,6 +311,7 @@ export default function GuestReviewAccess({
                 reservation,
                 consent: true,
               });
+              notifySuccess("Review invitation requested. Email delivery depends on stay eligibility.");
               setMessage(
                 "If the stay qualifies, an invitation will arrive at the verified booking email.",
               );

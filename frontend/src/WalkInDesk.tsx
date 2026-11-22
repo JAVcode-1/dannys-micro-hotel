@@ -1,3 +1,4 @@
+import { parsePesoInput } from "./peso-input";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type {
@@ -7,6 +8,7 @@ import type {
   WalkInPaymentInput,
 } from "@staytrack/shared";
 import { apiBase } from "./staff-auth";
+import { notifySuccess } from "./notifications";
 import { hotelTime, peso } from "./BookingPlanner";
 
 type Rate = {
@@ -206,6 +208,7 @@ function WalkInPlanner({
     setBusy(true);
     try {
       await onCreate(name.trim(), payload(), attempt.current!.key, contact);
+      if (!preview) notifySuccess("Walk-in booking recorded. Check-in is still required.");
       attempt.current = null;
       setQuote(null);
       setMessage(
@@ -513,7 +516,14 @@ export function WalkInLedger({
   async function submit(e: FormEvent) {
     e.preventDefault();
     setMessage("");
-    if (!/^\d+(?:\.\d{1,2})?$/.test(amount) || Number(amount) <= 0) {
+    let amountCentavos: number;
+    try {
+      amountCentavos = parsePesoInput(amount);
+    } catch (error) {
+      setMessage((error as Error).message);
+      return;
+    }
+    if (amountCentavos <= 0) {
       setMessage("Enter a positive amount with up to two decimal places.");
       return;
     }
@@ -528,7 +538,7 @@ export function WalkInLedger({
     }
     const body = JSON.stringify({
       method,
-      amountCentavos: Math.round(Number(amount) * 100),
+      amountCentavos,
       ...(method === "gcash"
         ? {
             verification: {
@@ -550,6 +560,7 @@ export function WalkInLedger({
         ...JSON.parse(body),
         requestKey: attempt.current!.key,
       });
+      if (!preview) notifySuccess("Collected payment recorded.");
       attempt.current = null;
       setAmount("");
       setMessage(

@@ -6,6 +6,10 @@ updated: 2026-11-17
 ---
 # 22 — Supabase Setup and Integration Plan
 
+## Hosted username sign-in - 2026-11-22
+
+The owner-designated hosted staff account now has application username admin in Supabase Auth app_metadata.staff_username. This field is server/admin-managed, not guest-editable user_metadata. Express POST /staff/sign-in resolves a unique active staff identity, verifies its password through Supabase and returns session tokens only after identity/active-staff validation and audit. All business routes continue to verify the token and staff rights. Supabase retains the email internally for Auth/recovery. No new schema, migration, permission tier or transaction activation was needed. Hosted username/password sign-in through the actual new backend function was observed; frontend/browser/deployment acceptance remains pending. Passwords and tokens must not be recorded in documentation.
+
 > [!important] Status
 > **Supabase platform is selected by the project requester** as of 2026-11-12. The hosted development project and approved F02 catalog migration were verified on 2026-11-17. Auth, Storage, a deployed application, fresh isolated migration/reset testing and seed execution are **not** evidenced here. Implement them in their documented phases; do not mark tasks done without observed evidence.
 
@@ -110,3 +114,15 @@ DATABASE_URL=SERVER_ONLY_POSTGRES_CONNECTION_STRING
 - [Supabase keys and privileges](https://supabase.com/docs/guides/getting-started/api-keys)
 
 See [[05-tech-stack]] · [[06-architecture]] · [[07-database-schema]] · [[21-before-coding-checklist]] · [[phases/01-foundation-and-tooling]].
+
+## Guest email OTP in local development � 2026-11-22
+
+Restart `npm run dev` after changing authentication configuration. The launcher reads `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` from `backend/.env`, with process environment overrides, and injects the identical values as `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY`. Only these public Auth settings are loaded from the file; the hosted database and secret key are not used by this launcher. Existing saved frontend/backend values were present and matched when inspected without printing credentials.
+
+Hosted configuration is **unverified**, not confirmed missing. For delivery to arbitrary customer addresses, configure Supabase Authentication custom SMTP with provider host, port, username, password and an authorized sender email/name (complete any sender/domain verification required by the chosen provider). Supabase's default mail service only sends to project-team addresses. Enable the Email provider and allow new-user signup for first-time OTP guests (`shouldCreateUser: true`); this must never grant staff membership. Set the Magic Link email template to include `{{ .Token }}` rather than only a link; also ensure the Confirm signup template includes the token for first-time users. Use a six-digit email OTP configuration compatible with the current input, and review expiration and sending limits. SMTP credentials belong in Supabase's dashboard, never Vite/browser configuration.
+
+Sources: [Supabase SMTP](https://supabase.com/docs/guides/auth/auth-smtp), [Supabase email OTP](https://supabase.com/docs/guides/auth/auth-email-passwordless). No hosted setting changed or email sent during this fix; owner manual acceptance remains pending.
+
+## Hosted activation execution and OTP dashboard step � 2026-11-22
+
+The owner approved and all 14 pending migrations were applied to the D-040 development target after application-backup recovery verification. Runtime pins that project, uses real Auth/private Storage and leaves production closed. No physical room numbers were invented: staff registers them through Rooms, inspects and explicitly activates them. Application confirmation/reminder delivery is implemented with backend-only Resend configuration, separate from Auth SMTP. No Management API token was available, so hosted Magic Link/Confirm Signup templates were not inspected/modified; the owner must replace their login link with the exact Token-only body and ensure six-digit OTP in [[hosted-booking-setup]]. Invite and Recovery templates must be preserved. Earlier unapplied/default-fixture startup descriptions are historical. No actual email-delivery acceptance or full test-suite evidence is claimed.

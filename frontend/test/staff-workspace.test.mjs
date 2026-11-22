@@ -138,3 +138,37 @@ test("closed production workspace explains why no assisted reschedule can be cre
     null,
   );
 });
+
+test("unified staff detail keeps Hall operations separate from room check-in", async () => {
+  globalThis.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      ...fixture,
+      reservation: { ...fixture.reservation, serviceKind: "combined" },
+      hallItems: [
+        {
+          id: "hall-event",
+          setup: "theater",
+          startAt: "2027-01-02T06:00:00Z",
+          endAt: "2027-01-02T09:00:00Z",
+          attendees: 60,
+          status: "confirmed",
+          totalCentavos: 300000,
+        },
+      ],
+    }),
+  });
+  view();
+  await waitFor(() =>
+    assert.ok(screen.getByText("Accommodation + Function Hall")),
+  );
+  assert.ok(screen.getByText(/Function Hall · Theater Type/));
+  assert.equal(
+    screen
+      .getByRole("link", { name: /Manage Hall event/ })
+      .getAttribute("href"),
+    "/staff/hall?item=hall-event",
+  );
+  assert.equal(screen.getAllByRole("link", { name: "Check-in" }).length, 2);
+  assert.match(screen.getByText(/60 attendees/).textContent, /3,000.00/);
+});

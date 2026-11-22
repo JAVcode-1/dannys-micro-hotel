@@ -1,3 +1,8 @@
+import {
+  onlineHallState,
+  onlineHallItems,
+  unifiedInstalled,
+} from "./unified-booking.js";
 import { createHash, randomUUID } from "node:crypto";
 import type { PaymentSession } from "@staytrack/shared";
 import type { GuestIdentity } from "./guest-auth.js";
@@ -137,6 +142,7 @@ export async function guestPaymentSession(
      join staytrack.room_bookings b on b.claim_id = i.id where b.reservation_id = $1 order by i.id`,
     [reservationId],
   );
+  rows.push(...(await onlineHallState(pool, reservationId)));
   if (!rows.length) throw new BookingError("Payment hold unavailable.", 409);
   const deadline = Math.min(
     ...rows.map((row) => row.proof_deadline_at.getTime()),
@@ -169,6 +175,18 @@ export async function guestPaymentSession(
   const qr = status === "awaiting_proof" ? await paymentQr(pool, store) : null;
   return {
     reservationId,
+    allocations: [
+      ...(
+        await pool.query(
+          `select category_code label,total_centavos::float8 as "amountCentavos" from staytrack.room_bookings where reservation_id=$1 order by item_index`,
+          [reservationId],
+        )
+      ).rows,
+      ...(await onlineHallItems(pool, reservationId)).map((h) => ({
+        label: `Function Hall (${h.setup})`,
+        amountCentavos: h.originalCentavos ?? h.totalCentavos,
+      })),
+    ],
     amountDueCentavos: Number(reservation.total_centavos),
     serverNow: new Date(now).toISOString(),
     proofDeadlineAt: new Date(deadline).toISOString(),
@@ -205,6 +223,10 @@ export async function submitPaymentProof(
   let cleanupSafe = false;
   try {
     const result = await claimTransaction(async (client) => {
+      if (await unifiedInstalled(client))
+        await client.query(
+          "select id from staytrack.hall_resource where id=1 for update",
+        );
       const reservation = await client.query<{ total_centavos: string }>(
         "select total_centavos from staytrack.reservations where id = $1 and owner_auth_user_id = $2 and verified_email = $3 for update",
         [reservationId, guest.id, guest.email.toLowerCase()],
@@ -232,13 +254,14 @@ export async function submitPaymentProof(
          join staytrack.room_bookings b on b.claim_id = i.id where b.reservation_id = $1 order by i.id for update of i`,
         [reservationId],
       );
+      const hallClaims = await onlineHallState(client, reservationId, true);
       const clock = await client.query<{ now: Date }>(
         "select clock_timestamp() as now",
       );
       const now = clock.rows[0].now;
       if (
-        !claims.rowCount ||
-        claims.rows.some(
+        !(claims.rowCount || hallClaims.length) ||
+        [...claims.rows, ...hallClaims].some(
           (row) =>
             row.state !== "held" ||
             row.proof_deadline_at.getTime() <= now.getTime(),
@@ -269,6 +292,11 @@ export async function submitPaymentProof(
         where id = any($1::bigint[])`,
         [claims.rows.map((row) => row.id), now],
       );
+      if (hallClaims.length)
+        await client.query(
+          "update staytrack.online_hall_items set state='proof_pending_review',proof_submitted_at=$2 where reservation_id=$1",
+          [reservationId, now],
+        );
       await client.query(
         "update staytrack.payment_reminders set state = 'cancelled' where reservation_id = $1 and state = 'scheduled'",
         [reservationId],

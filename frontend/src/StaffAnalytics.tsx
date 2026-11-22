@@ -1,5 +1,6 @@
 ﻿import React from "react";
 import { apiBase } from "./staff-auth";
+import { notifySuccess } from "./notifications";
 
 type Money = { gross: string; refunds: string; net: string };
 type Report = {
@@ -161,6 +162,7 @@ export default function StaffAnalytics({ token }: { token: string }) {
       link.href = url;
       link.download = "staytrack-analytics." + format;
       link.click();
+      notifySuccess("Analytics export download started.");
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (cause) {
       if (!controller.signal.aborted)

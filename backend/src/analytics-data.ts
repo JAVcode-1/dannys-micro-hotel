@@ -4,7 +4,7 @@ import { BookingError } from "./booking-quote.js";
 const clock = (expression: string) =>
   `to_char(${expression} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`;
 
-const receipts = `
+const legacyReceipts = `
   select 'online:'||v.submission_id id, p.reservation_id,
     null::uuid item, v.received_at at, v.verified_at recorded,
     v.amount_centavos amount, v.normalized_reference reference,
@@ -32,6 +32,19 @@ export async function loadAnalyticsRows(
   from: string,
   end: string,
 ) {
+  const unified =
+    (
+      await client.query(
+        "select to_regclass('staytrack.online_payment_allocations') is not null as installed",
+      )
+    ).rows[0]?.installed === true;
+  // Accommodation analytics use only the room share of the single online receipt.
+  const receipts = unified
+    ? legacyReceipts.replace(
+        "v.amount_centavos amount",
+        "(select coalesce(sum(a.amount_centavos),0) from staytrack.online_payment_allocations a where a.submission_id=v.submission_id and a.room_booking_id is not null) amount",
+      )
+    : legacyReceipts;
   const deadline = performance.now() + 5000;
   let remaining = 50000;
   async function read<T extends Record<string, unknown>>(
@@ -127,7 +140,7 @@ export async function loadAnalyticsRows(
     ${clock("r.online_confirmation_at")} confirmation,
     ${clock("i.checked_in_at")} check_in,${clock("c.decided_at")} cancellation,
     b.pricing_snapshot snapshot,b.base_centavos::text base,b.extra_bed_centavos::text extra,
-    r.total_centavos::text total,r.channel
+    ${unified ? "(select coalesce(sum(rb.total_centavos),0) from staytrack.room_bookings rb where rb.reservation_id=r.id)" : "r.total_centavos"}::text total,r.channel
     from staytrack.room_bookings b join staytrack.reservations r on r.id=b.reservation_id
     left join staytrack.walkin_ledger w on w.room_booking_id=b.id and w.kind='charge'
     left join staytrack.room_check_ins i on i.room_booking_id=b.id

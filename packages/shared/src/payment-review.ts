@@ -20,6 +20,8 @@ export type PaymentReviewInput = {
   };
 };
 export type StaffPaymentReview = {
+  hallItems?: import("./booking.js").OnlineHallItem[];
+  serviceKind?: "accommodation" | "hall" | "combined";
   id: string;
   reservationId: string;
   primaryName: string;

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { RescheduleInput, RescheduleRecord } from "@staytrack/shared";
 import { apiBase } from "./staff-auth";
+import { notifySuccess } from "./notifications";
 import { hotelTime, peso } from "./BookingPlanner";
 const field =
   "mt-1 min-h-11 w-full rounded-lg border border-subtle bg-white p-2 text-base";
@@ -88,6 +89,7 @@ export function GuestRescheduleForm({
             reason,
           });
           recorded.current = true;
+          notifySuccess("Schedule change requested. Your original schedule stays active until approved.");
           setMessage(
             "Request recorded. Your original schedule remains active until staff approves.",
           );
@@ -477,6 +479,7 @@ function DecisionCard({
               setBusy(true);
               try {
                 await decide(confirm, reason, retry.current);
+                notifySuccess("Reschedule decision recorded.");
                 close();
               } catch (e) {
                 setMessage(

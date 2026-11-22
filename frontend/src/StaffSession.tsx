@@ -1,7 +1,8 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { apiBase, staffAuth } from "./staff-auth";
+import { notifySuccess } from "./notifications";
 
 type StaffAccess =
   | { status: "loading" }
@@ -40,6 +41,8 @@ export function StaffSessionProvider({
   const [restorationMessage, setRestorationMessage] = useState("");
   const [recovering, setRecovering] = useState(false);
   const [verification, setVerification] = useState<Verification>();
+  const currentSession = useRef<Session | null | undefined>(undefined);
+  const signInPending = useRef(false);
   const token = session?.access_token;
   const expiresAt = session?.expires_at;
 
@@ -53,6 +56,14 @@ export function StaffSessionProvider({
       if (event === "INITIAL_SESSION" && eventSeen) return;
       if (event !== "INITIAL_SESSION" && event !== "SIGNED_OUT" && !next)
         return;
+      if (
+        event === "SIGNED_IN" &&
+        next &&
+        currentSession.current?.user.id !== next.user.id
+      )
+        signInPending.current = true;
+      if (!next) signInPending.current = false;
+      currentSession.current = next;
       eventSeen = true;
       setRestorationMessage("");
       setSession((current) =>
@@ -68,6 +79,7 @@ export function StaffSessionProvider({
       if (!active) return;
       if (!eventSeen) {
         eventSeen = !failed;
+        currentSession.current = next;
         setSession(next);
         setRestorationMessage(failed ? restoreError : "");
       }
@@ -116,9 +128,14 @@ export function StaffSessionProvider({
               ? expiredMessage
               : "Staff access is unavailable or denied.",
           );
-        const staff = (await response.json()) as { email: string | null };
-        if (!controller.signal.aborted)
-          setVerification({ token, identity: staff.email ?? "Staff member" });
+        const staff = (await response.json()) as { email: string | null; username?: string };
+        if (!controller.signal.aborted) {
+          setVerification({ token, identity: staff.username ?? staff.email ?? "Staff member" });
+          if (signInPending.current) {
+            signInPending.current = false;
+            notifySuccess("Signed in successfully.");
+          }
+        }
       })
       .catch((error: unknown) => {
         if (!controller.signal.aborted)

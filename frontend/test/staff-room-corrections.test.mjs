@@ -50,13 +50,17 @@ test("current inspection requires explicit physical checks and sends audited evi
   };
   render(createElement(StaffRooms, { token: "staff" }));
   const button = await screen.findByRole("button", {
-    name: "Record current legacy inspection",
+    name: "Inspect and mark Ready",
   });
-  assert.equal(button.disabled, true);
+  fireEvent.click(button);
+  assert.equal(sent, undefined);
+  assert.ok(screen.getByRole("alert"));
   fireEvent.change(
     screen.getByLabelText("Administration or inspection reason"),
     { target: { value: "Synthetic current inspection of clean room" } },
   );
+  fireEvent.click(button);
+  assert.equal(sent, undefined);
   fireEvent.click(
     screen.getByLabelText(/I physically inspected this room now/),
   );

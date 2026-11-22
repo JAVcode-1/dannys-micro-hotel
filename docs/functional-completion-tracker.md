@@ -1,5 +1,10 @@
 # C01–C20 functional completion tracker
 
+## Unified Online Booking follow-up - 2026-11-21
+
+Owner-authorized UB-01 through UB-06 extend the existing corrected system with room-only, Hall-only and mixed online reservations, one full GCash transaction and item allocations, atomic common hold/confirmation, independent changes and manual refunds. See [[unified-online-booking-requirements-sync]] for the implementation/file manifest and exact targeted evidence. Candidates 027/028 are local only and unapplied to hosted Supabase; normal production mutations remain closed. This does not mark C01-C20, phase acceptance or production readiness complete. The owner requested inspection before commit/push and deferred comprehensive system/UI/UX testing and the formal production gate.
+
+
 Owner-authorized sprint, 2026-11-21. All corrections below have implementation and automated regression evidence. **Browser/staff-device acceptance remains unverified**, so these are development checkpoints, not formal phase completion or a production gate. UI refinement stays paused. Production writes and hosted migrations remain closed.
 
 | ID | Implemented correction | Evidence |

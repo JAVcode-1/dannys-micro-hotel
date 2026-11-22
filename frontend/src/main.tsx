@@ -1,7 +1,12 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
-import { isolatedDevelopment } from "./staff-auth";
+import SuccessToasts from "./SuccessToasts";
+import {
+  initializeDevelopmentCapabilities,
+  isolatedDevelopment,
+  hallEnabled,
+} from "./staff-auth";
 import "./styles.css";
 import "./landing.css";
 
@@ -30,11 +35,16 @@ if (
   );
 }
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <App
-      hallEnabled={isolatedDevelopment}
-      reviewsEnabled={isolatedDevelopment}
-    />
-  </StrictMode>,
-);
+async function start() {
+  await initializeDevelopmentCapabilities();
+  createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+      <SuccessToasts />
+      <App
+        hallEnabled={hallEnabled}
+        reviewsEnabled={isolatedDevelopment}
+      />
+    </StrictMode>,
+  );
+}
+void start();

@@ -1,5 +1,17 @@
 import type { PoolConfig } from "pg";
 
+export function assertDevelopmentProject(env = process.env) {
+  const ref = "pgbierfxeviouyjsmjnh";
+  const auth = new URL(env.SUPABASE_URL || "http://invalid");
+  const db = new URL(env.DATABASE_URL || "http://invalid");
+  if (env.NODE_ENV !== "development" || auth.protocol !== "https:" ||
+    auth.hostname !== `${ref}.supabase.co` ||
+    !["postgres:", "postgresql:"].includes(db.protocol) ||
+    !(db.hostname === `db.${ref}.supabase.co` ||
+      (db.hostname.endsWith(".pooler.supabase.com") && decodeURIComponent(db.username) === `postgres.${ref}`)))
+    throw new Error("Hosted workflows are restricted to the approved D-040 development project.");
+}
+
 export function assertIsolatedTarget(
   options: PoolConfig,
   mode = process.env.NODE_ENV,
