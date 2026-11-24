@@ -1,3 +1,4 @@
+import TimePartInput, { hourPattern, manilaClock, minutePattern } from "./TimePartInput";
 import { useEffect, useState } from "react";
 import { notifySuccess } from "./notifications";
 import type { FormEvent } from "react";
@@ -67,9 +68,15 @@ function restoreHall(): HallDraft | null {
     ? newHall()
     : null;
 }
+const scheduleTime = ({
+  hour,
+  minute,
+  period,
+}: Pick<Draft, "hour" | "minute" | "period">) => manilaClock(hour, minute, period);
+
 const hallInput = (hall: HallDraft) => ({
   setup: hall.setup,
-  start: `${hall.date}T${String((Number(hall.hour) % 12) + (hall.period === "PM" ? 12 : 0)).padStart(2, "0")}:${hall.minute}`,
+  start: `${hall.date}T${scheduleTime(hall)}`,
   minutes: hall.minutes,
   attendees: hall.attendees,
   requests: hall.requests,
@@ -192,7 +199,7 @@ function restoreDraft(): Draft[] {
 const toInputs = (items: Draft[]) =>
   items.map((item) => ({
     category: item.category,
-    startAt: `${item.date}T${String((Number(item.hour) % 12) + (item.period === "PM" ? 12 : 0)).padStart(2, "0")}:${item.minute}:00+08:00`,
+    startAt: `${item.date}T${scheduleTime(item)}:00+08:00`,
     blocks: item.blocks,
     adults: item.adults,
     children: item.children,
@@ -221,8 +228,20 @@ export default function BookingPlanner({
   } | null>(null);
   const [primaryName, setPrimaryName] = useState("");
   const [phone, setPhone] = useState("");
+  const [scheduleAttempted, setScheduleAttempted] = useState(false);
+  const todayInManila = new Date(Date.now() + 8 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+  const isPastDate = (date: string) => date !== "" && date < todayInManila;
+  const [contactAttempted, setContactAttempted] = useState(false);
+  const [holdMessage, setHoldMessage] = useState("");
+  const nameMissing = !primaryName.trim();
+  const phoneMissing = !phone.trim();
+  const phoneInvalid =
+    !/^[+()0-9 -]{7,30}$/.test(phone.trim()) ||
+    (phone.match(/[0-9]/g)?.length ?? 0) < 7;
   const [acknowledged, setAcknowledged] = useState(false);
-  const [policiesExpanded, setPoliciesExpanded] = useState(true);
+  const [policiesExpanded, setPoliciesExpanded] = useState(false);
   const [availability, setAvailability] = useState<boolean | null>(null);
   const [request, setRequest] = useState<{ body: string; key: string } | null>(
     null,
@@ -360,7 +379,10 @@ export default function BookingPlanner({
       setBusy(false);
     }
   }
-  async function checkAvailability() {
+  async function checkAvailability(form: HTMLFormElement | null) {
+    setScheduleAttempted(true);
+    if (!form?.reportValidity()) return;
+    setHoldMessage("");
     setBusy(true);
     setMessage("");
     setAvailability(null);
@@ -380,11 +402,15 @@ export default function BookingPlanner({
         throw new Error(data.error ?? "Availability is unavailable.");
       setQuote(data.quote);
       setAvailability(data.available);
-      if (data.available) notifySuccess("Your selected schedules are available. Continue to reserve them.");
+      if (data.available)
+        notifySuccess(
+          "Your selected schedules are available. Continue to reserve them.",
+        );
       setMessage(
         data.available
           ? "Available now. Capacity is reserved only when your hold succeeds."
-          : data.reason ?? "These schedules are unavailable. Choose another time or category.",
+          : (data.reason ??
+              "These schedules are unavailable. Choose another time or category."),
       );
     } catch (error) {
       setMessage(
@@ -394,18 +420,31 @@ export default function BookingPlanner({
       setBusy(false);
     }
   }
-  async function hold(event: FormEvent) {
+  async function hold(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (
       !quote ||
       !policy ||
       guest?.access.status !== "authenticated" ||
-      !acknowledged ||
+      availability === false ||
       !bookingEnabled
     )
       return;
+    setContactAttempted(true);
+    const invalidField = nameMissing
+      ? "primaryName"
+      : phoneInvalid
+        ? "phone"
+        : !acknowledged
+          ? "policyAcknowledged"
+          : null;
+    if (invalidField) {
+      const input = event.currentTarget.elements.namedItem(invalidField);
+      if (input instanceof HTMLInputElement) input.focus();
+      return;
+    }
     setBusy(true);
-    setMessage("");
+    setHoldMessage("");
     const body = JSON.stringify({
       primaryName,
       ...selection(),
@@ -446,12 +485,15 @@ export default function BookingPlanner({
       window.sessionStorage.removeItem(draftKey);
       window.sessionStorage.removeItem(hallDraftKey);
       window.sessionStorage.removeItem(commandKey);
-      notifySuccess("Booking held. Submit payment proof before the deadline; staff confirmation is still required.", true);
+      notifySuccess(
+        "Booking held. Submit payment proof before the deadline; staff confirmation is still required.",
+        true,
+      );
       window.location.assign(
         `/reservations/${encodeURIComponent(result.id)}/payment`,
       );
     } catch (error) {
-      setMessage(
+      setHoldMessage(
         error instanceof Error
           ? error.message
           : "Booking unavailable. Retry to recover your result.",
@@ -468,12 +510,11 @@ export default function BookingPlanner({
             Plan your stay
           </p>
           <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">
-            Together, on your own time.
+            Book your stay or event
           </h1>
           <p className="mt-4 leading-7 text-muted">
-            Choose rooms, the Function Hall, or both. Each item has its own
-            schedule. All times are Philippine time; all selected items share
-            one payment.
+            Choose rooms, the Function Hall, or both. Set a schedule for each
+            and pay together. All times are Philippine time.
           </p>
           <p className="booking-notice mt-2 text-sm text-muted">
             {bookingEnabled
@@ -481,10 +522,64 @@ export default function BookingPlanner({
               : "Online booking is currently closed."}
           </p>
         </div>
+        <ol
+          aria-label="Booking steps"
+          className="mb-6 flex flex-wrap gap-x-5 gap-y-2 border-y border-subtle py-4 text-sm text-muted"
+        >
+          {[
+            "Choose services",
+            "Set schedules",
+            "Check availability & price",
+            "Guest details & email",
+            "Review & pay",
+          ].map((step, index) => (
+            <li key={step} className="inline-flex items-center">
+              <span className="mr-2 font-bold text-primary">{index + 1}.</span>
+              {step}
+            </li>
+          ))}
+        </ol>
         <div className="booking-columns grid items-start gap-8 lg:grid-cols-[1fr_320px]">
-          <form onSubmit={(event) => void submit(event)}>
+          <form
+            onSubmit={(event) => void submit(event)}
+            onInvalid={() => setScheduleAttempted(true)}
+          >
             <fieldset disabled={busy} className="space-y-6 disabled:opacity-70">
               <legend className="sr-only">Reservation items</legend>
+              <div className="booking-actions flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  className={secondary}
+                  disabled={items.length >= 15 || rates.length === 0}
+                  onClick={() => {
+                    setItems((current) => [
+                      ...current,
+                      newRoom(
+                        Math.max(0, ...current.map((room) => room.id)) + 1,
+                        rates,
+                      ),
+                    ]);
+                    setQuote(null);
+                    setAvailability(null);
+                  }}
+                >
+                  + Add room
+                </button>
+                {hallEnabled && (
+                  <button
+                    type="button"
+                    className={secondary}
+                    disabled={Boolean(hall)}
+                    onClick={() => {
+                      setHall(newHall());
+                      setQuote(null);
+                      setAvailability(null);
+                    }}
+                  >
+                    + Add Function Hall
+                  </button>
+                )}
+              </div>
               {items.map((item, index) => (
                 <section
                   key={item.id}
@@ -550,46 +645,53 @@ export default function BookingPlanner({
                         type="date"
                         required
                         className={inputClass}
+                        min={todayInManila}
+                        aria-invalid={
+                          isPastDate(item.date) || (scheduleAttempted && !item.date)
+                        }
+                        aria-describedby={
+                          isPastDate(item.date) ? `past-room-date-${item.id}` : undefined
+                        }
                         value={item.date}
                         onChange={(event) =>
                           update(item.id, { date: event.target.value })
                         }
                       />
+                      {isPastDate(item.date) && (
+                        <span
+                          id={`past-room-date-${item.id}`}
+                          className="mt-1 block text-sm text-red-700"
+                        >
+                          Choose today or a later date (Manila time).
+                        </span>
+                      )}
                     </label>
                   </div>
                   <fieldset className="mt-5">
                     <legend className="font-medium">Arrival time</legend>
                     <div className="mt-2 grid grid-cols-3 gap-3">
-                      <label className="text-sm text-muted">
+                      <div className="text-sm text-muted">
                         Hour
-                        <select
-                          className={inputClass}
+                        <TimePartInput
+                          part="hour"
+                          label="Hour"
                           value={item.hour}
-                          onChange={(event) =>
-                            update(item.id, { hour: event.target.value })
-                          }
-                        >
-                          {Array.from({ length: 12 }, (_, i) => (
-                            <option key={i + 1}>{i + 1}</option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="text-sm text-muted">
-                        Minute
-                        <select
+                          invalid={scheduleAttempted && !hourPattern.test(item.hour)}
+                          onChange={(value) => update(item.id, { hour: value })}
                           className={inputClass}
+                        />
+                      </div>
+                      <div className="text-sm text-muted">
+                        Minute
+                        <TimePartInput
+                          part="minute"
+                          label="Minute"
                           value={item.minute}
-                          onChange={(event) =>
-                            update(item.id, { minute: event.target.value })
-                          }
-                        >
-                          {Array.from({ length: 60 }, (_, i) => (
-                            <option key={i}>
-                              {String(i).padStart(2, "0")}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                          invalid={scheduleAttempted && !minutePattern.test(item.minute)}
+                          onChange={(value) => update(item.id, { minute: value })}
+                          className={inputClass}
+                        />
+                      </div>
                       <label className="text-sm text-muted">
                         AM/PM
                         <select
@@ -672,8 +774,7 @@ export default function BookingPlanner({
                       + Add time
                     </button>
                     <p className="text-sm text-muted">
-                      Added time begins when the previous stay length ends. The
-                      price updates with your choices.
+                      Added time continues from the previous package.
                     </p>
                   </div>
                   <div className="mt-5 grid grid-cols-2 gap-5">
@@ -686,7 +787,12 @@ export default function BookingPlanner({
                           step="1"
                           required
                           className={inputClass}
-                          value={item[field]}
+                          aria-invalid={
+                            scheduleAttempted &&
+                            (!Number.isInteger(item[field]) ||
+                              item[field] < (field === "adults" ? 1 : 0))
+                          }
+                          value={Number.isNaN(item[field]) ? "" : item[field]}
                           onChange={(event) =>
                             update(item.id, {
                               [field]: event.target.valueAsNumber,
@@ -710,8 +816,8 @@ export default function BookingPlanner({
                     </label>
                   )}
                   <p className="mt-4 text-sm text-muted">
-                    Occupancy is advisory. No per-person surcharge. Safety
-                    limits and extra-bed availability require staff review.
+                    No per-person surcharge. Staff review occupancy limits and
+                    extra-bed availability.
                   </p>
                 </section>
               ))}
@@ -723,7 +829,12 @@ export default function BookingPlanner({
                 >
                   <div className="mb-5 flex items-center justify-between gap-4">
                     <h2 className="text-xl font-bold">
-                      <span className="booking-item-number mr-3" aria-hidden="true">FH</span>
+                      <span
+                        className="booking-item-number mr-3"
+                        aria-hidden="true"
+                      >
+                        FH
+                      </span>
                       Function Hall
                     </h2>
                     <button
@@ -740,8 +851,7 @@ export default function BookingPlanner({
                     </button>
                   </div>
                   <p className="mb-5 text-sm text-muted">
-                    One exclusive hall, with two alternative setups. Preparation
-                    and cleanup time are protected separately.
+                    Choose one setup for the exclusive hall.
                   </p>
                   <div className="grid gap-5 sm:grid-cols-2">
                     <label className="font-medium">
@@ -769,42 +879,51 @@ export default function BookingPlanner({
                         required
                         type="date"
                         className={inputClass}
+                        min={todayInManila}
+                        aria-invalid={
+                          isPastDate(hall.date) || (scheduleAttempted && !hall.date)
+                        }
+                        aria-describedby={
+                          isPastDate(hall.date) ? "past-hall-date" : undefined
+                        }
                         value={hall.date}
                         onChange={(e) => updateHall({ date: e.target.value })}
                       />
+                      {isPastDate(hall.date) && (
+                        <span
+                          id="past-hall-date"
+                          className="mt-1 block text-sm text-red-700"
+                        >
+                          Choose today or a later date (Manila time).
+                        </span>
+                      )}
                     </label>
                   </div>
                   <fieldset className="mt-5">
                     <legend className="font-medium">Event start time</legend>
                     <div className="grid grid-cols-3 gap-3">
-                      <label className="text-sm text-muted">
+                      <div className="text-sm text-muted">
                         Hour
-                        <select
-                          className={inputClass}
+                        <TimePartInput
+                          part="hour"
+                          label="Hour"
                           value={hall.hour}
-                          onChange={(e) => updateHall({ hour: e.target.value })}
-                        >
-                          {Array.from({ length: 12 }, (_, i) => (
-                            <option key={i + 1}>{i + 1}</option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="text-sm text-muted">
-                        Minute
-                        <select
+                          invalid={scheduleAttempted && !hourPattern.test(hall.hour)}
+                          onChange={(value) => updateHall({ hour: value })}
                           className={inputClass}
+                        />
+                      </div>
+                      <div className="text-sm text-muted">
+                        Minute
+                        <TimePartInput
+                          part="minute"
+                          label="Minute"
                           value={hall.minute}
-                          onChange={(e) =>
-                            updateHall({ minute: e.target.value })
-                          }
-                        >
-                          {Array.from({ length: 60 }, (_, i) => (
-                            <option key={i}>
-                              {String(i).padStart(2, "0")}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                          invalid={scheduleAttempted && !minutePattern.test(hall.minute)}
+                          onChange={(value) => updateHall({ minute: value })}
+                          className={inputClass}
+                        />
+                      </div>
                       <label className="text-sm text-muted">
                         AM/PM
                         <select
@@ -823,22 +942,21 @@ export default function BookingPlanner({
                     </div>
                   </fieldset>
                   <div className="mt-5 grid gap-5 sm:grid-cols-2">
-                    <label className="font-medium">
-                      Event duration
-                      <select
+                    <div className="font-medium">
+                      Event duration (hours)
+                      <TimePartInput
+                        part="duration"
+                        label="Event duration (hours)"
                         className={inputClass}
-                        value={hall.minutes}
-                        onChange={(e) =>
-                          updateHall({ minutes: Number(e.target.value) })
+                        value={Number.isNaN(hall.minutes) ? "" : String(hall.minutes / 60)}
+                        invalid={scheduleAttempted && Number.isNaN(hall.minutes)}
+                        onChange={(hours) =>
+                          updateHall({
+                            minutes: hours === "" ? NaN : Number(hours) * 60,
+                          })
                         }
-                      >
-                        {Array.from({ length: 12 }, (_, i) => (
-                          <option key={i} value={(i + 3) * 60}>
-                            {i + 3} hours
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                      />
+                    </div>
                     <label className="font-medium">
                       Number of attendees
                       <input
@@ -848,7 +966,13 @@ export default function BookingPlanner({
                         max={hall.setup === "theater" ? 70 : 50}
                         step="1"
                         className={inputClass}
-                        value={hall.attendees}
+                        aria-invalid={
+                          scheduleAttempted &&
+                          (!Number.isInteger(hall.attendees) ||
+                            hall.attendees < 1 ||
+                            hall.attendees > (hall.setup === "theater" ? 70 : 50))
+                        }
+                        value={Number.isNaN(hall.attendees) ? "" : hall.attendees}
                         onChange={(e) =>
                           updateHall({ attendees: e.target.valueAsNumber })
                         }
@@ -865,66 +989,41 @@ export default function BookingPlanner({
                       onChange={(e) => updateHall({ requests: e.target.value })}
                     />
                   </label>
-                  <p className="mt-4 text-sm leading-6 text-muted">
-                    First 3 hours: ₱3,000.00 for starts from 8:00 AM to before
-                    5:00 PM; ₱5,000.00 from 5:00 PM. Each additional full hour:
-                    ₱1,000.00. The event must fit within configured hours and
-                    notice requirements. The server checks the final price and
-                    availability.
-                  </p>
+                  <details className="mt-4 text-sm leading-6 text-muted">
+                    <summary className="min-h-11 cursor-pointer font-semibold text-primary">
+                      Hall rates & booking conditions
+                    </summary>
+                    <p>
+                      Three-hour package: ₱3,000 for starts from 8:00 AM to
+                      before 5:00 PM, or ₱5,000 for other start times. Each
+                      additional full hour is ₱1,000. Same-day and overnight
+                      events are subject to availability, including setup and cleanup.
+                    </p>
+                  </details>
                 </section>
               )}
               <div className="booking-actions flex flex-wrap gap-3">
                 <button
                   type="button"
-                  className={secondary}
-                  disabled={items.length >= 15 || rates.length === 0}
-                  onClick={() => {
-                    setItems((current) => [
-                      ...current,
-                      newRoom(
-                        Math.max(0, ...current.map((room) => room.id)) + 1,
-                        rates,
-                      ),
-                    ]);
-                    setQuote(null);
-                    setAvailability(null);
-                  }}
-                >
-                  + Add room
-                </button>
-                {hallEnabled && (
-                  <button
-                    type="button"
-                    className={secondary}
-                    disabled={Boolean(hall)}
-                    onClick={() => {
-                      setHall(newHall());
-                      setQuote(null);
-                      setAvailability(null);
-                    }}
-                  >
-                    + Add Function Hall
-                  </button>
-                )}
-                <button
-                  disabled={!items.length && !hall}
                   className="min-h-11 rounded-xl bg-booking px-6 font-bold text-main disabled:opacity-50"
-                >
-                  {busy ? "Calculating…" : "Get total"}
-                </button>
-                <button
-                  type="button"
-                  className={secondary}
                   disabled={!items.length && !hall}
-                  onClick={() => void checkAvailability()}
+                  onClick={(event) =>
+                    void checkAvailability(event.currentTarget.form)
+                  }
                 >
-                  Check availability
+                  {busy ? "Checking…" : "Check availability & price"}
                 </button>
               </div>
             </fieldset>
             {message && (
-              <p role="alert" className="mt-5 text-red-700">
+              <p
+                role={availability === true ? "status" : "alert"}
+                className={
+                  availability === true
+                    ? "mt-5 rounded-lg bg-selected p-4 text-sm text-main"
+                    : "mt-5 text-red-700"
+                }
+              >
                 {message}
               </p>
             )}
@@ -941,9 +1040,7 @@ export default function BookingPlanner({
                 ? `${items.length} ${items.length === 1 ? "room" : "rooms"}`
                 : ""}
               {hall ? `${items.length ? " + " : ""}Function Hall` : ""}
-              {!items.length && !hall
-                ? "Choose your items"
-                : ", one reservation."}
+              {!items.length && !hall ? "Choose your items" : ""}
             </h2>
             <div className="mt-5 rounded-xl bg-lavender p-4 text-sm leading-6">
               <strong>
@@ -951,7 +1048,7 @@ export default function BookingPlanner({
               </strong>
               <p>
                 {bookingEnabled
-                  ? "Review your total and terms before holding all selected items together for 30 minutes."
+                  ? "Continue to payment to hold your choices for 30 minutes. Staff verify payment before confirmation."
                   : "Online booking and payments are not open. Seeing a price does not reserve capacity."}
               </p>
             </div>
@@ -1000,7 +1097,7 @@ export default function BookingPlanner({
                       {quote.hall.attendees} attendees ·{" "}
                       {quote.hall.minutes / 60} hours
                     </p>
-                    <p>First 3 hours: {peso(quote.hall.base)}</p>
+                    <p>Three-hour package: {peso(quote.hall.base)}</p>
                     {quote.hall.additional > 0 && (
                       <p>Additional hours: {peso(quote.hall.additional)}</p>
                     )}
@@ -1018,7 +1115,7 @@ export default function BookingPlanner({
               </div>
             ) : (
               <p className="mt-5 text-sm leading-6 text-muted">
-                Choose your items and schedules, then check the current total
+                Select your services and schedules, then check availability &
                 price.
               </p>
             )}
@@ -1026,6 +1123,7 @@ export default function BookingPlanner({
               <div className="mt-6 space-y-4">
                 {guest?.access.status === "authenticated" ? (
                   <form
+                    noValidate
                     onSubmit={(event) => void hold(event)}
                     className="space-y-4"
                   >
@@ -1035,10 +1133,25 @@ export default function BookingPlanner({
                         className={inputClass}
                         required
                         maxLength={120}
+                        name="primaryName"
                         autoComplete="name"
+                        aria-invalid={contactAttempted && nameMissing}
+                        aria-describedby={
+                          contactAttempted && nameMissing
+                            ? "booking-name-error"
+                            : undefined
+                        }
                         value={primaryName}
                         onChange={(event) => setPrimaryName(event.target.value)}
                       />
+                      {contactAttempted && nameMissing && (
+                        <span
+                          id="booking-name-error"
+                          className="mt-1 block text-sm text-red-700"
+                        >
+                          Enter the primary guest name.
+                        </span>
+                      )}
                     </label>
                     <label className="block font-medium">
                       Contact number
@@ -1047,56 +1160,129 @@ export default function BookingPlanner({
                         required
                         type="tel"
                         autoComplete="tel"
-                        pattern="[+()0-9 -]{7,30}"
+                        name="phone"
+                        aria-invalid={contactAttempted && phoneInvalid}
+                        aria-describedby={
+                          contactAttempted && phoneInvalid
+                            ? "booking-phone-error"
+                            : undefined
+                        }
                         maxLength={30}
                         value={phone}
                         onChange={(event) => setPhone(event.target.value)}
                       />
+                      {contactAttempted && phoneInvalid && (
+                        <span
+                          id="booking-phone-error"
+                          className="mt-1 block text-sm text-red-700"
+                        >
+                          {phoneMissing
+                            ? "Enter a contact number."
+                            : "Enter a valid contact number with at least seven digits."}
+                        </span>
+                      )}
                     </label>
                     {policy && (
                       <>
-                        <section aria-label="Booking policies" className="rounded-xl border border-subtle bg-canvas p-4">
+                        <section
+                          aria-label="Booking policies"
+                          className="rounded-xl border border-subtle bg-canvas p-4"
+                        >
                           <div className="flex items-center justify-between gap-3">
-                            <h3 className="font-bold text-main">Booking policies</h3>
+                            <h3 className="font-bold text-main">
+                              Booking policies
+                            </h3>
                             <button
                               type="button"
                               className="min-h-11 rounded-lg border border-subtle px-3 text-sm font-semibold text-primary"
                               aria-expanded={policiesExpanded}
                               aria-controls="booking-policy-content"
-                              onClick={() => setPoliciesExpanded((expanded) => !expanded)}
+                              onClick={() =>
+                                setPoliciesExpanded((expanded) => !expanded)
+                              }
                             >
                               {policiesExpanded ? "Hide" : "Show"}
                               <span className="sr-only"> booking policies</span>
                             </button>
                           </div>
-                          <div id="booking-policy-content" hidden={!policiesExpanded}>
-                          <ul className="mt-4 space-y-4">
-                            {[
-                              { title: "Payment", text: "Pay the full amount via GCash. Submit proof and reference number within 30 minutes.", icon: "M3 7h18v13H3z M3 7V4h14v3 M16 12h5v4h-5z" },
-                              { title: "Confirmation", text: "Your booking is confirmed after staff verifies your payment. Timely proof submission protects your reservation.", icon: "M9 12l2 2 4-4 M12 3l8 3v6c0 5-8 9-8 9s-8-4-8-9V6z" },
-                              { title: "Cancellation", text: "Free cancellation within one hour of confirmation or before check-in/event start, whichever comes first. Rescheduling does not reset this period.", icon: "M8 2v4 M16 2v4 M3 10h18 M3 4h18v17H3z M9 13l6 5 M15 13l-6 5" },
-                              { title: "Late arrival", text: "Your scheduled checkout or event end time remains unchanged.", icon: "M12 8v4l3 2 M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0" },
-                              { title: "No-show", text: "Subject to staff review and generally non-refundable.", icon: "M12 8v5 M12 16h.01 M12 3L2 21h20z" },
-                              { title: "Refunds", text: "Eligible refunds are processed manually.", icon: "M4 10h10a6 6 0 0 1 0 12 M4 10l5-5 M4 10l5 5" },
-                              { title: "Hotel rules", text: "No smoking. Occupancy and minor eligibility are subject to staff review and safety requirements.", icon: "M4 21V3h16v18 M2 21h20 M8 7h2 M14 7h2 M8 11h2 M14 11h2 M10 21v-6h4v6" },
-                            ].map(({ title, text, icon }) => (
-                              <li key={title} className="flex items-start gap-3">
-                                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-selected text-primary">
-                                  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d={icon} />
-                                  </svg>
-                                </span>
-                                <div className="min-w-0 text-sm leading-6">
-                                  <p className="font-semibold text-main">{title}</p>
-                                  <p className="text-muted">{text}</p>
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                          <details className="mt-5 border-t border-subtle pt-4">
-                            <summary className="text-sm font-semibold text-primary">Read the full policy</summary>
-                            <p className="mt-3 text-sm leading-6 text-muted">{policy.text}</p>
-                          </details>
+                          <div
+                            id="booking-policy-content"
+                            hidden={!policiesExpanded}
+                          >
+                            <ul className="mt-4 space-y-4">
+                              {[
+                                {
+                                  title: "Payment",
+                                  text: "Pay the full amount via GCash. Submit proof and reference number within 30 minutes.",
+                                  icon: "M3 7h18v13H3z M3 7V4h14v3 M16 12h5v4h-5z",
+                                },
+                                {
+                                  title: "Confirmation",
+                                  text: "Your booking is confirmed after staff verifies your payment. Timely proof submission protects your reservation.",
+                                  icon: "M9 12l2 2 4-4 M12 3l8 3v6c0 5-8 9-8 9s-8-4-8-9V6z",
+                                },
+                                {
+                                  title: "Cancellation",
+                                  text: "Free cancellation within one hour of confirmation or before check-in/event start, whichever comes first. Rescheduling does not reset this period.",
+                                  icon: "M8 2v4 M16 2v4 M3 10h18 M3 4h18v17H3z M9 13l6 5 M15 13l-6 5",
+                                },
+                                {
+                                  title: "Late arrival",
+                                  text: "Your scheduled checkout or event end time remains unchanged.",
+                                  icon: "M12 8v4l3 2 M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0",
+                                },
+                                {
+                                  title: "No-show",
+                                  text: "Subject to staff review and generally non-refundable.",
+                                  icon: "M12 8v5 M12 16h.01 M12 3L2 21h20z",
+                                },
+                                {
+                                  title: "Refunds",
+                                  text: "Eligible refunds are processed manually.",
+                                  icon: "M4 10h10a6 6 0 0 1 0 12 M4 10l5-5 M4 10l5 5",
+                                },
+                                {
+                                  title: "Hotel rules",
+                                  text: "No smoking. Occupancy and minor eligibility are subject to staff review and safety requirements.",
+                                  icon: "M4 21V3h16v18 M2 21h20 M8 7h2 M14 7h2 M8 11h2 M14 11h2 M10 21v-6h4v6",
+                                },
+                              ].map(({ title, text, icon }) => (
+                                <li
+                                  key={title}
+                                  className="flex items-start gap-3"
+                                >
+                                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-selected text-primary">
+                                    <svg
+                                      aria-hidden="true"
+                                      width="18"
+                                      height="18"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="1.7"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    >
+                                      <path d={icon} />
+                                    </svg>
+                                  </span>
+                                  <div className="min-w-0 text-sm leading-6">
+                                    <p className="font-semibold text-main">
+                                      {title}
+                                    </p>
+                                    <p className="text-muted">{text}</p>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                            <details className="mt-5 border-t border-subtle pt-4">
+                              <summary className="text-sm font-semibold text-primary">
+                                Read the full policy
+                              </summary>
+                              <p className="mt-3 text-sm leading-6 text-muted">
+                                {policy.text}
+                              </p>
+                            </details>
                           </div>
                         </section>
                         {policy.pendingOwnerApproval && (
@@ -1109,6 +1295,13 @@ export default function BookingPlanner({
                           <input
                             className="mt-1 size-5 shrink-0"
                             type="checkbox"
+                            name="policyAcknowledged"
+                            aria-invalid={contactAttempted && !acknowledged}
+                            aria-describedby={
+                              contactAttempted && !acknowledged
+                                ? "booking-policy-error"
+                                : undefined
+                            }
                             required
                             checked={acknowledged}
                             onChange={(event) =>
@@ -1117,6 +1310,14 @@ export default function BookingPlanner({
                           />
                           I have read and acknowledge the booking policies.
                         </label>
+                        {contactAttempted && !acknowledged && (
+                          <p
+                            id="booking-policy-error"
+                            className="text-sm text-red-700"
+                          >
+                            Acknowledge the booking policies to continue.
+                          </p>
+                        )}
                       </>
                     )}
                     <button
@@ -1124,13 +1325,17 @@ export default function BookingPlanner({
                         busy ||
                         !quote ||
                         !policy ||
-                        !acknowledged ||
                         availability === false
                       }
                       className="guest-primary-action min-h-11 w-full rounded-xl bg-booking px-4 font-semibold text-main disabled:opacity-50"
                     >
                       {busy ? "Creating hold…" : "Continue to GCash payment"}
                     </button>
+                    {quote && holdMessage && (
+                      <p role="alert" className="text-red-700">
+                        {holdMessage}
+                      </p>
+                    )}
                   </form>
                 ) : (
                   <a

@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import type { ComponentType } from "react";
-import { notifySuccess } from "./notifications";
+import StaffLayout from "./StaffWorkspaceLayout";
 import {
-  NavLink,
   Navigate,
-  Outlet,
   Route,
   useLocation,
   useMatch,
@@ -67,7 +65,7 @@ const primaryPages: Page[] = [
     label: "Payments",
     component: StaffPaymentReviews,
   },
-  { path: "/staff", label: "Today", component: StaffDashboard },
+  { path: "/staff", label: "Today", component: StaffDashboardPage },
   {
     path: "/staff/reservations",
     label: "Reservations",
@@ -128,121 +126,16 @@ const hallPage: Page = {
   component: HallDesk,
 };
 
-function StaffPage({ component: Component }: Pick<Page, "component">) {
-  return <Component token={useOutletContext<string>()} />;
+function StaffDashboardPage({ token }: { token: string }) {
+  const { hallEnabled } = useOutletContext<{
+    token: string;
+    hallEnabled: boolean;
+  }>();
+  return <StaffDashboard token={token} hallEnabled={hallEnabled} />;
 }
 
-function StaffLayout({
-  authClient,
-  identity,
-  token,
-  pages,
-  reviewsEnabled,
-  hallEnabled,
-  notice,
-}: {
-  authClient: NonNullable<typeof staffAuth>;
-  identity: string;
-  token: string;
-  pages: Page[];
-  reviewsEnabled: boolean;
-  hallEnabled: boolean;
-  notice: string;
-}) {
-  const [message, setMessage] = useState("");
-  const groups = [
-    ["Today", ["/staff", "/staff/check-ins"]],
-    [
-      "Reservations",
-      [
-        "/staff/reservations",
-        "/staff/walkins",
-        "/staff/cancellations",
-        "/staff/reschedules",
-      ],
-    ],
-    ["Active Stays", ["/staff/stays", "/staff/stay-changes"]],
-    ["Payments", ["/staff/payments"]],
-    ["Rooms", ["/staff/rooms"]],
-    ["Function Hall", hallEnabled ? ["/staff/hall"] : []],
-    [
-      "Management",
-      [
-        "/staff/analytics",
-        "/staff/audit",
-        "/staff/settings",
-        "/staff/settings/catalog",
-        ...(reviewsEnabled ? ["/staff/reviews", "/staff/feedback"] : []),
-      ],
-    ],
-  ] as const;
-
-  async function signOut() {
-    setMessage("");
-    try {
-      const { error } = await authClient.auth.signOut();
-      if (error) throw error;
-      notifySuccess("Signed out successfully.");
-    } catch {
-      setMessage("Sign-out failed. Please try again.");
-    }
-  }
-
-  return (
-    <section
-      className="mx-auto w-full min-w-0 max-w-6xl rounded-2xl border border-subtle bg-white p-4 shadow-sm sm:p-7"
-    >
-      <h1 className="text-2xl font-bold text-main">Staff workspace</h1>
-      <p className="mt-3 [overflow-wrap:anywhere]">Signed in as {identity}</p>
-      <div className="mt-6 grid gap-6 md:grid-cols-[14rem_minmax(0,1fr)]">
-        <aside className="border-subtle md:border-r md:pr-4 print:hidden">
-          <nav
-            aria-label="Staff navigation"
-            className="grid gap-5 sm:grid-cols-2 md:grid-cols-1"
-          >
-            {groups
-              .filter(([, paths]) => paths.length)
-              .map(([group, paths]) => (
-                <div key={group}>
-                  <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted">
-                    {group}
-                  </p>
-                  {paths.map((path) => {
-                    const page = pages.find((p) => p.path === path);
-                    return page ? (
-                      <NavLink
-                        key={path}
-                        to={path}
-                        end
-                        className={({ isActive }) =>
-                          `flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold text-primary ${isActive ? "bg-selected" : ""}`
-                        }
-                      >
-                        {page.label}
-                      </NavLink>
-                    ) : null;
-                  })}
-                </div>
-              ))}
-          </nav>
-        </aside>
-        <div className="w-full min-w-0">
-          <Outlet context={token} />
-          <button
-            className="mt-4 rounded-lg bg-primary px-4 py-2 text-white"
-            onClick={() => void signOut()}
-          >
-            Sign out
-          </button>
-        </div>
-      </div>
-      {(message || notice) && (
-        <p role="status" className="mt-4 text-sm text-muted">
-          {message || notice}
-        </p>
-      )}
-    </section>
-  );
+function StaffPage({ component: Component }: Pick<Page, "component">) {
+  return <Component token={useOutletContext<{ token: string }>().token} />;
 }
 
 type StaffOptions = {
@@ -285,6 +178,7 @@ function StaffRouteGuard({
       <StaffLogin
         authClient={authClient}
         passwordMode={invited ? "invite" : "recovery"}
+        reviewsEnabled={layout.reviewsEnabled}
         onPasswordUpdated={() => {
           setNotice(
             invited
@@ -319,6 +213,7 @@ function StaffRouteGuard({
         authClient={authClient}
         onPasswordUpdated={finishRecovery}
         sessionMessage={notice || access.message}
+        reviewsEnabled={layout.reviewsEnabled}
       />
     );
   }

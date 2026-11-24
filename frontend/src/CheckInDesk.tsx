@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
+import { readableLabel } from "./presentation";
 
 type Item = {
   id: string;
+  primary_name?: string;
+  reservation_room_number?: number | null;
   channel: "online" | "walk_in";
   category: string;
   start_at: string;
@@ -22,7 +25,8 @@ const time = (value: string) =>
     timeStyle: "short",
     hour12: true,
   }).format(new Date(value));
-const button = "rounded-lg bg-primary px-4 py-2 text-white disabled:opacity-50";
+const button =
+  "min-h-11 rounded-lg bg-primary px-4 py-2 text-white disabled:opacity-50";
 const demoKey = "staytrack-w02-preview";
 
 function fixtures(): Item[] {
@@ -30,6 +34,7 @@ function fixtures(): Item[] {
   return [
     {
       id: "fixture-walk-in",
+      primary_name: "Sample walk-in guest",
       channel: "walk_in",
       category: "double_standard",
       late: false,
@@ -38,6 +43,7 @@ function fixtures(): Item[] {
     },
     {
       id: "fixture-online",
+      primary_name: "Sample online guest",
       channel: "online",
       category: "double_standard",
       late: true,
@@ -195,9 +201,7 @@ export default function CheckInDesk({ token }: { token?: string }) {
   }
   return (
     <section className="mx-auto max-w-4xl space-y-4 rounded-2xl border border-subtle bg-white p-6">
-      <h1 className="text-2xl font-semibold text-primary">
-        Room assignment and check-in
-      </h1>
+      <h1 className="text-2xl font-semibold text-primary">Check-in</h1>
       {!token && (
         <p>
           Synthetic preview. Fixture payments are verified and only Ready
@@ -206,132 +210,179 @@ export default function CheckInDesk({ token }: { token?: string }) {
       )}
       {token && !enabled && <p>Live check-in is closed pending acceptance.</p>}
       {message && <p role="alert">{message}</p>}
-      {items.map((item) => (
-        <article
-          key={item.id}
-          className="space-y-2 rounded-lg border border-subtle p-4"
+      {[
+        {
+          label: "Arriving guests",
+          items: items.filter((item) => !item.checked_in_at),
+        },
+        {
+          label: "Checked in",
+          items: items.filter((item) => item.checked_in_at),
+        },
+      ].map((group) => (
+        <section
+          key={group.label}
+          className="space-y-3"
+          aria-label={group.label}
         >
-          <h2 className="font-semibold">
-            {item.channel === "walk_in" ? "Walk-in" : "Online"} ·{" "}
-            {item.category.replaceAll("_", " ")}
+          <h2 className="text-lg font-semibold">
+            {group.label}{" "}
+            <span className="text-sm text-muted">({group.items.length})</span>
           </h2>
-          <p className="break-all text-sm">{item.id}</p>
-          <p>
-            Scheduled arrival {time(item.start_at)} · Checkout{" "}
-            {time(item.end_at)}
-          </p>
-          {item.late && (
-            <p className="font-semibold text-primary">
-              Past the one-hour arrival grace period. Review with staff.
+          {!group.items.length && (
+            <p className="text-sm text-muted">
+              {group.label === "Arriving guests"
+                ? "No guests awaiting check-in."
+                : "No check-ins recorded in this list."}
             </p>
           )}
-          {item.no_show_review && (
-            <p>
-              Last arrival review:{" "}
-              {item.no_show_review.decision === "no_show"
-                ? "No-show"
-                : "Guest expected"}{" "}
-              · {item.no_show_review.note}. Capacity remains protected.
-            </p>
-          )}
-          {token && item.late && !item.checked_in_at && (
-            <div className="space-y-2">
-              <label className="grid gap-1">
-                Arrival review note
-                <input
-                  maxLength={1000}
-                  value={reviewNotes[item.id] ?? ""}
-                  onChange={(e) =>
-                    setReviewNotes({
-                      ...reviewNotes,
-                      [item.id]: e.target.value,
-                    })
-                  }
-                  className="rounded-lg border border-subtle p-2"
-                />
-              </label>
-              <button
-                className={button}
-                disabled={!enabled || busy || !reviewNotes[item.id]?.trim()}
-                onClick={() =>
-                  void reviewNoShow(
-                    item,
-                    item.no_show_review?.decision === "no_show"
-                      ? "expected"
-                      : "no_show",
-                  )
-                }
-              >
-                {item.no_show_review?.decision === "no_show"
-                  ? "Reopen as expected"
-                  : "Record reviewed no-show"}
-              </button>
-              <p className="text-sm">
-                This records the review only. It does not release capacity,
-                charge a penalty or issue a refund.
+          {group.items.map((item) => (
+            <article
+              key={item.id}
+              className="space-y-2 rounded-lg border border-subtle p-4"
+            >
+              <h3 className="break-words font-semibold">
+                {item.primary_name || "Guest name unavailable"}
+              </h3>
+              <p className="text-sm text-muted">
+                {item.channel === "walk_in" ? "Walk-in" : "Online"} ·{" "}
+                {readableLabel(item.category)}
+                {item.reservation_room_number != null &&
+                  ` · Booked room ${item.reservation_room_number}`}
               </p>
-            </div>
-          )}
-          {item.checked_in_at && item.checkout_at ? (
-            <p>
-              {item.assigned_room} occupied · In {time(item.checked_in_at)} ·
-              Out {time(item.checkout_at)}
-            </p>
-          ) : (
-            <div className="flex flex-wrap items-end gap-3">
-              <label className="grid gap-1">
-                Ready room
-                <select
-                  className="rounded-lg border border-subtle p-2"
-                  value={selected[item.id] ?? ""}
-                  onChange={(e) =>
-                    setSelected({ ...selected, [item.id]: e.target.value })
-                  }
-                >
-                  <option value="">Select a room</option>
-                  {item.rooms.map((room) => (
-                    <option key={room.id} value={room.id}>
-                      {room.code}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                className={button}
-                disabled={
-                  !enabled ||
-                  busy ||
-                  item.no_show_review?.decision === "no_show" ||
-                  (item.channel === "online" &&
-                    Date.parse(item.start_at) > Date.now() &&
-                    !earlyReasons[item.id]?.trim()) ||
-                  !item.rooms.some(({ id }) => id === selected[item.id])
-                }
-                onClick={() => void submit(item)}
-              >
-                Check in
-              </button>
-              {item.channel === "online" &&
-                Date.parse(item.start_at) > Date.now() && (
+              <p>
+                Scheduled arrival {time(item.start_at)} · Checkout{" "}
+                {time(item.end_at)}
+              </p>
+              {item.late && (
+                <p className="font-semibold text-primary">
+                  Past the one-hour arrival grace period. Review with staff.
+                </p>
+              )}
+              {item.no_show_review && (
+                <p>
+                  Last arrival review:{" "}
+                  {item.no_show_review.decision === "no_show"
+                    ? "No-show"
+                    : "Guest expected"}{" "}
+                  · {item.no_show_review.note}. Capacity remains protected.
+                </p>
+              )}
+              {token && item.late && !item.checked_in_at && (
+                <div className="space-y-2">
                   <label className="grid gap-1">
-                    Early check-in approval reason · purchased duration stays
-                    unchanged; checkout moves earlier
+                    Arrival review note
                     <input
                       maxLength={1000}
-                      value={earlyReasons[item.id] ?? ""}
+                      value={reviewNotes[item.id] ?? ""}
                       onChange={(e) =>
-                        setEarlyReasons({
-                          ...earlyReasons,
+                        setReviewNotes({
+                          ...reviewNotes,
                           [item.id]: e.target.value,
                         })
                       }
                       className="rounded-lg border border-subtle p-2"
                     />
                   </label>
-                )}
-            </div>
-          )}
-        </article>
+                  <button
+                    className={button}
+                    disabled={!enabled || busy || !reviewNotes[item.id]?.trim()}
+                    onClick={() =>
+                      void reviewNoShow(
+                        item,
+                        item.no_show_review?.decision === "no_show"
+                          ? "expected"
+                          : "no_show",
+                      )
+                    }
+                  >
+                    {item.no_show_review?.decision === "no_show"
+                      ? "Reopen as expected"
+                      : "Record reviewed no-show"}
+                  </button>
+                  <p className="text-sm">
+                    This records the review only. It does not release capacity,
+                    charge a penalty or issue a refund.
+                  </p>
+                </div>
+              )}
+              {item.checked_in_at && item.checkout_at ? (
+                <p>
+                  {item.assigned_room} occupied · In {time(item.checked_in_at)}{" "}
+                  · Out {time(item.checkout_at)}
+                </p>
+              ) : (
+                <div className="flex flex-wrap items-end gap-3">
+                  <label className="grid gap-1">
+                    Ready room
+                    <select
+                      className="rounded-lg border border-subtle p-2"
+                      value={selected[item.id] ?? ""}
+                      onChange={(e) =>
+                        setSelected({ ...selected, [item.id]: e.target.value })
+                      }
+                    >
+                      <option value="">Select a room</option>
+                      {[...item.rooms]
+                        .sort((a, b) =>
+                          a.code.localeCompare(b.code, "en", {
+                            numeric: true,
+                            sensitivity: "base",
+                          }),
+                        )
+                        .map((room) => (
+                          <option key={room.id} value={room.id}>
+                            {room.code}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  {!item.rooms.length && (
+                    <p role="status" className="text-sm text-amber-800">
+                      No Ready rooms available. Refresh before assigning a room.
+                    </p>
+                  )}
+                  <button
+                    className={button}
+                    disabled={
+                      !enabled ||
+                      busy ||
+                      item.no_show_review?.decision === "no_show" ||
+                      (item.channel === "online" &&
+                        Date.parse(item.start_at) > Date.now() &&
+                        !earlyReasons[item.id]?.trim()) ||
+                      !item.rooms.some(({ id }) => id === selected[item.id])
+                    }
+                    onClick={() => void submit(item)}
+                  >
+                    Check in
+                  </button>
+                  {item.channel === "online" &&
+                    Date.parse(item.start_at) > Date.now() && (
+                      <label className="grid gap-1">
+                        Early check-in approval reason
+                        <span className="text-sm text-muted">
+                          Purchased duration stays unchanged; checkout moves
+                          earlier.
+                        </span>
+                        <input
+                          maxLength={1000}
+                          value={earlyReasons[item.id] ?? ""}
+                          onChange={(e) =>
+                            setEarlyReasons({
+                              ...earlyReasons,
+                              [item.id]: e.target.value,
+                            })
+                          }
+                          className="rounded-lg border border-subtle p-2"
+                        />
+                      </label>
+                    )}
+                </div>
+              )}
+            </article>
+          ))}
+        </section>
       ))}
       {!token && (
         <button

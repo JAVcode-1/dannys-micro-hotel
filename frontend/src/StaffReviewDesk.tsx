@@ -1,4 +1,5 @@
-﻿import { useEffect, useState } from "react";
+import { readableLabel } from "./presentation";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
@@ -104,7 +105,11 @@ export default function StaffReviewDesk({
       if (!response.ok) throw new Error((await response.json()).error);
       if (pairingRequest) setPairing((await response.json()).pairing);
       else setMessage("Invitation request accepted.");
-      notifySuccess(pairingRequest ? "Review pairing code created." : "Invitation request accepted.");
+      notifySuccess(
+        pairingRequest
+          ? "Review pairing code created."
+          : "Invitation request accepted.",
+      );
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -164,7 +169,7 @@ export default function StaffReviewDesk({
       {!entries ? (
         !message && <p role="status">Loading…</p>
       ) : !entries.length ? (
-        <p>No records on this page.</p>
+        <p className="staff-empty">No records on this page.</p>
       ) : (
         entries.map((entry) => {
           const actions = feedback
@@ -199,74 +204,79 @@ export default function StaffReviewDesk({
             >
               <h3 className="font-semibold">
                 {feedback
-                  ? entry.status.replaceAll("_", " ")
+                  ? readableLabel(entry.status)
                   : entry.alias +
                     " · " +
                     entry.stars +
                     " out of 5 · " +
-                    entry.status}
+                    readableLabel(entry.status)}
               </h3>
               <p className="whitespace-pre-wrap break-words">
                 {entry.message ?? entry.comment}
               </p>
               {entry.reply && <p>Hotel reply: {entry.reply}</p>}
               {actions.length > 0 && (
-                <form
-                  className="space-y-3"
-                  onSubmit={(event) => void action(event, entry.id)}
-                >
-                  <label className="block">
-                    Action{" "}
-                    <select
-                      name="action"
-                      className="rounded border border-subtle p-2"
-                    >
-                      {actions.map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  {!feedback && (
-                    <>
-                      <label className="block">
-                        Policy reason{" "}
-                        <select
-                          name="reasonCode"
-                          className="rounded border border-subtle p-2"
-                        >
-                          <option value="">Select for moderation</option>
-                          <option value="spam_fraud">Spam or fraud</option>
-                          <option value="abuse">
-                            Threat, harassment or abuse
-                          </option>
-                          <option value="private_information">
-                            Private information
-                          </option>
-                          <option value="prohibited_content">
-                            Unrelated or prohibited content
-                          </option>
-                        </select>
-                      </label>
-                      <label className="block">
-                        Reason or public reply
-                        <textarea
-                          name="reason"
-                          maxLength={2000}
-                          required
-                          className="block w-full rounded border border-subtle p-2"
-                        />
-                      </label>
-                    </>
-                  )}
-                  <button
-                    disabled={busy}
-                    className="min-h-11 rounded bg-primary px-4 text-white"
+                <details>
+                  <summary className="min-h-11 cursor-pointer font-semibold text-primary">
+                    {feedback ? "Update feedback" : "Manage review"}
+                  </summary>
+                  <form
+                    className="space-y-3"
+                    onSubmit={(event) => void action(event, entry.id)}
                   >
-                    Record action
-                  </button>
-                </form>
+                    <label className="block">
+                      Action{" "}
+                      <select
+                        name="action"
+                        className="rounded border border-subtle p-2"
+                      >
+                        {actions.map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {!feedback && (
+                      <>
+                        <label className="block">
+                          Policy reason{" "}
+                          <select
+                            name="reasonCode"
+                            className="rounded border border-subtle p-2"
+                          >
+                            <option value="">Select for moderation</option>
+                            <option value="spam_fraud">Spam or fraud</option>
+                            <option value="abuse">
+                              Threat, harassment or abuse
+                            </option>
+                            <option value="private_information">
+                              Private information
+                            </option>
+                            <option value="prohibited_content">
+                              Unrelated or prohibited content
+                            </option>
+                          </select>
+                        </label>
+                        <label className="block">
+                          Reason or public reply
+                          <textarea
+                            name="reason"
+                            maxLength={2000}
+                            required
+                            className="block w-full rounded border border-subtle p-2"
+                          />
+                        </label>
+                      </>
+                    )}
+                    <button
+                      disabled={busy}
+                      className="min-h-11 rounded bg-primary px-4 text-white"
+                    >
+                      Record action
+                    </button>
+                  </form>
+                </details>
               )}
             </article>
           );

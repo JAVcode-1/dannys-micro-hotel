@@ -9,7 +9,7 @@ import {
   quoteInput,
   type HallCommand,
 } from "./hall-reservations.js";
-import { quoteHall } from "./hall-scheduling.js";
+import { hallPackagePrice, quoteHall } from "./hall-scheduling.js";
 import { hallReport } from "./hall-reports.js";
 
 export function registerHall(app: Express, staff: RequestHandler, pool?: Pool) {
@@ -43,11 +43,14 @@ export function registerHall(app: Express, staff: RequestHandler, pool?: Pool) {
     handle(async (req, res) => {
       const {
         rows: [clock],
-      } = await pool.query<{ now: Date }>("select clock_timestamp() now");
+      } = await pool.query<{ now: Date; ready: boolean }>(
+        "select clock_timestamp() as now, ready from staytrack.hall_resource where id=1",
+      );
       const quote = quoteHall(
         quoteInput(req.body ?? {}),
         await hallSettings(pool),
         +clock.now,
+        clock.ready,
       );
       const { rowCount } = await pool.query(
         `select 1 from staytrack.hall_claims where released_at is null
@@ -68,6 +71,7 @@ export function registerHall(app: Express, staff: RequestHandler, pool?: Pool) {
       const { rows } = await pool.query(
         `select r.id,r.claim_id,r.channel,r.organizer,r.requests,r.status,r.payment_resolution,r.actual_start,r.actual_end,
       ${unified ? "(select reservation_id from staytrack.online_hall_items where hall_reservation_id=r.id)" : "null::uuid"} as "unifiedReservationId",
+      ${unified ? "(select state from staytrack.online_hall_items where hall_reservation_id=r.id)" : "null::text"} as "onlineState",
       r.quote_input, q.quote,c.released_at,h.ready,
       (r.status='confirmed' and c.preparation_start<=clock_timestamp() and exists(
         select 1 from staytrack.hall_reservations occupied where occupied.status='in_progress' and occupied.id<>r.id
@@ -83,7 +87,7 @@ export function registerHall(app: Express, staff: RequestHandler, pool?: Pool) {
       left join lateral(select sum(a.amount_centavos) amount from staytrack.hall_refund_approvals a
         join staytrack.hall_refund_transfers t on t.approval_id=a.id where a.reservation_id=r.id) f on true
       left join staytrack.hall_overtime_charges o on o.reservation_id=r.id
-      order by coalesce(c.event_start,r.created_at) desc,r.id limit 50 offset $1`,
+      order by (r.status='in_progress') desc,coalesce(c.event_start,r.created_at) desc,r.id limit 50 offset $1`,
         [(page - 1) * 50],
       );
       if (unified)
@@ -94,7 +98,21 @@ export function registerHall(app: Express, staff: RequestHandler, pool?: Pool) {
               [row.id],
             )
           ).rows;
-      res.json({ entries: rows });
+      for (const row of rows) {
+        if (row.status === "inquiry" && !row.unifiedReservationId) {
+          const { start, minutes } = row.quote_input;
+          const price = hallPackagePrice(start, minutes).total;
+          const net = Math.max(0, Number(row.collected) - Number(row.refunded));
+          row.inquiryPrice = price;
+          row.depositDue = Math.max(0, Math.ceil(price / 2) - net);
+        }
+      }
+      const { rows: [hall] } = await pool.query<{ ready: boolean; occupied: boolean }>(
+        `select ready, exists (
+          select 1 from staytrack.hall_reservations where status='in_progress'
+        ) as occupied from staytrack.hall_resource where id=1`,
+      );
+      res.json({ entries: rows, hall });
     }),
   );
   app.get(

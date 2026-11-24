@@ -16,10 +16,18 @@ export const hallDefaults: Readonly<HallSettings> = Object.freeze({
   reminder: 15,
 });
 
+export function hallPackagePrice(start: string, duration: number) {
+  const hour = Number(start.slice(11, 13));
+  const base = hour >= 8 && hour < 17 ? 300000 : 500000;
+  const additional = ((duration - 180) / 60) * 100000;
+  return { base, additional, total: base + additional };
+}
+
 export function quoteHall(
   input: HallQuoteInput,
   settings: HallSettings,
   now: number,
+  ready = false,
 ) {
   const cap = input.setup === "theater" ? 70 : input.setup === "room" ? 50 : 0;
   if (
@@ -46,21 +54,16 @@ export function quoteHall(
     iso(local).slice(0, 16) !== input.start
   )
     throw new BookingError("Choose a valid Manila start time.");
-  const time = (local % day) / minute;
-  if (
-    time < Math.max(480, settings.opening) ||
-    time + input.minutes > settings.closing ||
-    time + input.minutes >= 1440
-  )
-    throw new BookingError(
-      "The event must fit within priced operating hours on one day.",
-    );
   const start = local - manila;
   const end = start + input.minutes * minute;
-  const protectedStart = start - settings.preparation * minute;
+  const plannedPreparation = start - settings.preparation * minute;
+  if (start <= now) throw new BookingError("Choose a future event start time.");
+  if (plannedPreparation < now && !ready)
+    throw new BookingError(
+      "Choose a later start so staff have time to prepare the Hall.",
+    );
+  const protectedStart = Math.max(plannedPreparation, now);
   const protectedEnd = end + settings.cleanup * minute;
-  if (start <= now || protectedStart < now)
-    throw new BookingError("The preparation window has already started.");
   if (
     Math.floor(local / day) - Math.floor((now + manila) / day) >
     settings.horizon
@@ -69,10 +72,6 @@ export function quoteHall(
   const noticeReason = input.noticeReason?.trim();
   if (noticeReason && noticeReason.length > 1000)
     throw new BookingError("Shorten the notice override reason.");
-  if (start - now < settings.notice * minute && !noticeReason)
-    throw new BookingError("Minimum notice requires a documented override.");
-  const base = time < 1020 ? 300000 : 500000;
-  const additional = ((input.minutes - 180) / 60) * 100000;
   return {
     setup: input.setup,
     attendees: input.attendees,
@@ -81,9 +80,7 @@ export function quoteHall(
     end: iso(end),
     protectedStart: iso(protectedStart),
     protectedEnd: iso(protectedEnd),
-    base,
-    additional,
-    total: base + additional,
+    ...hallPackagePrice(input.start, input.minutes),
     settings: { ...settings },
     noticeReason: noticeReason ?? null,
   };

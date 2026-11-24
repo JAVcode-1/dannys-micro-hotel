@@ -189,10 +189,19 @@ async function applyCommand(
   now: number,
 ): Promise<HallResult> {
   if (action === "settings") {
+    const current = await hallSettings(c);
     const result = await c.query<{ id: string }>(
       `insert into staytrack.hall_settings(actor,opening,closing,notice,horizon,preparation,cleanup,no_show_grace,reminder)
       values($1,$2,$3,$4,$5,$6,$7,$8,$9) returning id::text`,
-      [actor, ...settingsInput(input)],
+      [
+        actor,
+        ...settingsInput({
+          ...input,
+          opening: current.opening,
+          closing: current.closing,
+          notice: current.notice,
+        }),
+      ],
     );
     return { id: result.rows[0].id };
   }
@@ -211,7 +220,7 @@ async function applyCommand(
   }
   if (action === "inquiry") {
     const quote = quoteInput(input);
-    quoteHall(quote, await hallSettings(c), now);
+    quoteHall(quote, await hallSettings(c), now, ready);
     const inserted = await c.query<{ id: string }>(
       `insert into staytrack.hall_reservations(channel,organizer,requests,quote_input)
       values($1,$2,$3,$4) returning id`,
@@ -284,8 +293,17 @@ async function applyCommand(
   switch (action) {
     case "receipt": {
       const money = normalizeHallReceipt(input);
-      const evidence = str(input.evidence);
-      const received = transactionDate(input.receivedAt, now);
+      const evidence =
+        input.evidence === undefined ||
+        (typeof input.evidence === "string" && !input.evidence.trim())
+          ? money.method === "cash"
+            ? "Staff confirmed cash received."
+            : "Staff verified the transfer in the receiving GCash account."
+          : str(input.evidence);
+      const received =
+        money.method === "cash" && (input.receivedAt === undefined || input.receivedAt === "")
+          ? new Date(now).toISOString()
+          : transactionDate(input.receivedAt, now);
       const receipt = await c.query<{ id: string }>(
         `insert into staytrack.hall_receipts(reservation_id,actor,method,amount_centavos,normalized_reference,evidence,received_at)
         values($1,$2,$3,$4,$5,$6,$7) returning id`,
@@ -340,18 +358,6 @@ async function applyCommand(
         if (action === "extend" && current) {
           const hours = integer(input.hours, 1, 24);
           const end = Date.parse(current.end) + hours * 3600000;
-          const local = new Date(end + 28800000);
-          if (
-            local.toISOString().slice(0, 10) !==
-              new Date(Date.parse(current.start) + 28800000)
-                .toISOString()
-                .slice(0, 10) ||
-            local.getUTCHours() * 60 + local.getUTCMinutes() >
-              settings.closing ||
-            (Date.parse(current.start) + 28800000) % 86400000 <
-              settings.opening * 60000
-          )
-            fail("The extension exceeds operating hours.");
           quote = {
             ...current,
             end: new Date(end).toISOString(),
@@ -367,6 +373,7 @@ async function applyCommand(
             action === "confirm" ? r.quote_input : quoteInput(input),
             settings,
             now,
+            ready,
           );
         }
       } catch (error) {

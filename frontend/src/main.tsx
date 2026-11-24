@@ -8,7 +8,10 @@ import {
   hallEnabled,
 } from "./staff-auth";
 import "./styles.css";
+import "./guest-booking.css";
+import "./sign-in.css";
 import "./landing.css";
+import "./staff-workspace.css";
 
 const navigation = performance.getEntriesByType("navigation")[0] as
   PerformanceNavigationTiming | undefined;

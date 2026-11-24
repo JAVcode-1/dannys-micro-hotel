@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
+import { bookingReference, readableLabel } from "./presentation";
 import { countdown, serverTime, type ClockAnchor } from "./stay-clock";
 type Item = {
   id: string;
@@ -63,50 +64,73 @@ export default function StayMonitor({ token }: { token?: string }) {
     receivedMs: performance.now(),
   });
   const [tick, setTick] = useState(performance.now());
-  const [synced, setSynced] = useState(!token);
+  const [syncState, setSyncState] = useState<"loading" | "ready" | "error">(
+    token ? "loading" : "ready",
+  );
+  const synced = syncState === "ready";
+  const [hasLoaded, setHasLoaded] = useState(!token);
   const [enabled, setEnabled] = useState(!token);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const keys = useRef(new Map<string, { key: string; reason: string }>());
   const refresh = useRef<() => Promise<void>>(async () => {});
+  const clockNow = serverTime(anchor, tick);
+  const hasRunningCountdown = items.some(
+    (item) => !item.checked_out_at && Date.parse(item.checkout_at) > clockNow,
+  );
+  useEffect(() => {
+    if (!hasRunningCountdown) return;
+    const timer = setInterval(() => setTick(performance.now()), 1000);
+    return () => clearInterval(timer);
+  }, [hasRunningCountdown]);
   useEffect(() => {
     let active = true;
+    let inFlight = false;
+    const controller = new AbortController();
+    setSyncState(token ? "loading" : "ready");
+    setHasLoaded(!token);
     async function load() {
       if (!token) {
         setTick(performance.now());
         return;
       }
-      setSynced(false);
+      if (inFlight || !active) return;
+      inFlight = true;
       try {
         const response = await fetch(`${apiBase}/staff/stays`, {
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
+          signal: controller.signal,
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error);
+        const serverMs = Date.parse(data.serverNow);
+        if (!Number.isFinite(serverMs)) throw new Error("Invalid server time");
         if (active) {
           setItems(data.items);
           setWarnings(data.warningMinutes);
           setAnchor({
-            serverMs: Date.parse(data.serverNow),
+            serverMs,
             receivedMs: performance.now(),
           });
           setTick(performance.now());
-          setSynced(true);
+          setSyncState("ready");
+          setHasLoaded(true);
           setEnabled(data.enabled);
           setMessage("");
         }
       } catch {
         if (active) {
+          setSyncState("error");
           setEnabled(false);
-          setMessage("Server time unavailable. Refresh before checkout.");
         }
+      } finally {
+        inFlight = false;
       }
     }
     refresh.current = load;
     void load();
-    const timer = setInterval(() => setTick(performance.now()), 1000);
     const poll = setInterval(() => void load(), 15000);
     const resume = () => {
       if (document.visibilityState !== "hidden") void load();
@@ -115,7 +139,7 @@ export default function StayMonitor({ token }: { token?: string }) {
     document.addEventListener("visibilitychange", resume);
     return () => {
       active = false;
-      clearInterval(timer);
+      controller.abort();
       clearInterval(poll);
       window.removeEventListener("focus", resume);
       document.removeEventListener("visibilitychange", resume);
@@ -189,7 +213,7 @@ export default function StayMonitor({ token }: { token?: string }) {
   return (
     <section className="mx-auto max-w-5xl space-y-5 rounded-2xl border border-subtle bg-white p-6 text-main">
       <h1 className="text-2xl font-semibold text-primary">
-        Stay countdown and checkout
+        Stays and checkout
       </h1>
       {!token && (
         <p>
@@ -197,98 +221,165 @@ export default function StayMonitor({ token }: { token?: string }) {
           identifiers. No booking or payment network writes.
         </p>
       )}
-      <p>
-        Timer zero means overdue. Staff must record departure; no automatic
-        checkout or overtime charges.
-      </p>
-      <p>
-        Warning thresholds:{" "}
-        {warnings.length ? warnings.join(" / ") + " minutes" : "not configured"}
-        .{" "}
-        {token
-          ? "Configured in operational settings."
-          : "Synthetic examples only."}
-      </p>
-      {token && !enabled && <p>Live checkout is closed pending acceptance.</p>}
-      {message && <p role="status">{message}</p>}
-      {!synced && (
-        <p role="alert">Time is not synchronized. Countdown may be stale.</p>
+      <details className="text-sm text-muted">
+        <summary className="min-h-11 cursor-pointer font-semibold text-primary">
+          Countdown rules and alerts
+        </summary>
+        <p>
+          When the package expires, the countdown stops. Staff record departure manually.
+        </p>
+        <p>
+          Warning thresholds:{" "}
+          {warnings.length
+            ? warnings.join(" / ") + " minutes"
+            : "not configured"}
+          .{" "}
+          {token
+            ? "Configured in operational settings."
+            : "Synthetic examples only."}
+        </p>
+      </details>
+      {token && synced && !enabled && (
+        <p>Live checkout is closed pending acceptance.</p>
       )}
-      {items.map((item) => {
-        const clock = countdown(
-          Date.parse(item.checkout_at),
-          serverTime(anchor, tick),
-          warnings,
-        );
-        const seconds = Math.ceil(Math.abs(clock.remainingMs) / 1000);
-        return (
-          <article
-            key={item.id}
-            className="space-y-2 rounded-xl border border-subtle p-4"
-          >
-            <h2 className="font-semibold">
-              {item.room_code} �{" "}
-              {item.channel === "online" ? "Online" : "Walk-in"}
-            </h2>
-            <p>
-              Reservation {item.reservation_id} �{" "}
-              {item.category_code.replaceAll("_", " ")}
+      {message && <p role="status">{message}</p>}
+      {syncState === "loading" && (
+        <p role="status">Loading stays and synchronizing server time…</p>
+      )}
+      {syncState === "error" && (
+        <div className="space-y-3">
+          <p role="alert">
+            Server time could not be refreshed. Countdown may be stale.
+            Checkout is paused until the connection is restored.
+          </p>
+          <button type="button" onClick={() => void refresh.current()}>
+            Retry synchronization
+          </button>
+        </div>
+      )}
+      {hasLoaded && [
+        {
+          label: "Active stays",
+          items: items.filter((item) => !item.checked_out_at),
+        },
+        {
+          label: "Completed stays",
+          items: items.filter((item) => item.checked_out_at),
+        },
+      ].map((group) => (
+        <section
+          key={group.label}
+          className="space-y-3"
+          aria-label={group.label}
+        >
+          <h2 className="text-lg font-semibold">
+            {group.label}{" "}
+            <span className="text-sm text-muted">({group.items.length})</span>
+          </h2>
+          {!group.items.length && (
+            <p className="staff-empty text-sm text-muted">
+              {group.label === "Active stays"
+                ? "No active stays."
+                : "No completed stays in this list."}
             </p>
-            <p>
-              Checked in {time(item.checked_in_at)} � Scheduled checkout{" "}
-              {time(item.checkout_at)}
-              {item.original_checkout_at &&
-                item.original_checkout_at !== item.checkout_at && (
-                  <span className="block text-sm text-muted">
-                    Original checkout: {time(item.original_checkout_at)}
-                  </span>
-                )}
-            </p>
-            {item.checked_out_at ? (
-              <p>
-                Departed {time(item.checked_out_at)} � Needs Cleaning
-                {item.exception_reason
-                  ? " � Unpaid-departure exception recorded"
-                  : ""}
-              </p>
-            ) : (
-              <>
-                <p className="font-semibold text-primary">
-                  {clock.state === "overdue"
-                    ? "Overdue"
-                    : clock.state === "warning"
-                      ? `Checkout warning (${clock.warningMinutes}m)`
-                      : "Time remaining"}{" "}
-                  � {Math.floor(seconds / 3600)}h{" "}
-                  {Math.floor(seconds / 60) % 60}m {seconds % 60}s
+          )}
+          {group.items.map((item) => {
+            const clock = countdown(
+              Date.parse(item.checkout_at),
+              clockNow,
+              warnings,
+            );
+            const seconds = Math.ceil(Math.max(0, clock.remainingMs) / 1000);
+            return (
+              <article
+                key={item.id}
+                className="space-y-2 rounded-xl border border-subtle p-4"
+              >
+                <h3 className="font-semibold">
+                  {item.room_code} ·{" "}
+                  {item.channel === "online" ? "Online" : "Walk-in"}
+                </h3>
+                <p>
+                  {bookingReference(item.reservation_id)} ·{" "}
+                  {readableLabel(item.category_code)}
                 </p>
                 <p>
-                  Reservation balance (shared across room items):{" "}
-                  {money(item.balance_centavos)}
+                  Checked in {time(item.checked_in_at)} · Scheduled checkout{" "}
+                  {time(item.checkout_at)}
+                  {item.original_checkout_at &&
+                    item.original_checkout_at !== item.checkout_at && (
+                      <span className="block text-sm text-muted">
+                        Original checkout: {time(item.original_checkout_at)}
+                      </span>
+                    )}
                 </p>
-                <label className="grid gap-1">
-                  Unpaid-departure exception reason � {item.room_code}
-                  <textarea
-                    className="rounded-lg border border-subtle p-2"
-                    maxLength={1000}
-                    value={reasons[item.id] ?? ""}
-                    onChange={(e) =>
-                      setReasons({ ...reasons, [item.id]: e.target.value })
-                    }
-                  />
-                </label>
-                <button
-                  className="rounded-lg bg-primary px-4 py-2 text-white disabled:opacity-50"
-                  disabled={!enabled || !synced || busy}
-                  onClick={() => void depart(item)}
-                >
-                  Record checkout � {item.room_code}
-                </button>
-              </>
-            )}
-          </article>
-        );
-      })}
+                {item.checked_out_at ? (
+                  <p>
+                    Departed {time(item.checked_out_at)} · Checkout recorded
+                    {item.exception_reason
+                      ? " · Unpaid-departure exception recorded"
+                      : ""}
+                  </p>
+                ) : (
+                  <>
+                    <p
+                      className={`rounded-xl p-3 text-xl font-bold tabular-nums ${clock.state === "overdue" ? "bg-red-50 text-red-800" : clock.state === "warning" ? "bg-amber-50 text-amber-900" : "bg-selected text-primary"}`}
+                    >
+                      <span role="status">
+                        {clock.state === "overdue" ? "Package expired" : ""}
+                      </span>
+                      {clock.state !== "overdue" && (
+                        <>
+                          {clock.state === "warning"
+                            ? `Checkout warning (${clock.warningMinutes}m)`
+                            : "Time remaining"}{" "}
+                          · {Math.floor(seconds / 3600)}h{" "}
+                          {Math.floor(seconds / 60) % 60}m {seconds % 60}s
+                        </>
+                      )}
+                    </p>
+                    <p>
+                      Remaining balance (whole reservation):{" "}
+                      {money(item.balance_centavos)}
+                    </p>
+                    {item.balance_centavos > 0 && (
+                      <label className="grid gap-1">
+                        Unpaid-departure exception reason · {item.room_code}
+                        <textarea
+                          className="rounded-lg border border-subtle p-2"
+                          maxLength={1000}
+                          value={reasons[item.id] ?? ""}
+                          onChange={(e) =>
+                            setReasons({
+                              ...reasons,
+                              [item.id]: e.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                    )}
+                    <button
+                      className="min-h-11 rounded-lg bg-primary px-4 py-2 text-white disabled:opacity-50"
+                      disabled={!enabled || !synced || busy}
+                      onClick={() => void depart(item)}
+                    >
+                      Record checkout · {item.room_code}
+                    </button>
+                    {token && (
+                      <a
+                        href="/staff/stay-changes"
+                        className="ml-3 inline-flex min-h-11 items-center font-semibold text-primary"
+                      >
+                        Extensions and stay changes
+                      </a>
+                    )}
+                  </>
+                )}
+              </article>
+            );
+          })}
+        </section>
+      ))}
       {!token && (
         <button
           className="rounded-lg bg-selected px-4 py-2 text-primary"

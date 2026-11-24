@@ -105,7 +105,11 @@ export async function recordHousekeeping(
       await db.query("select pg_advisory_xact_lock($1::bigint)", [
         room.category_id,
       ]);
-      await db.query("lock table staytrack.room_blocks in share mode");
+      await db.query(
+        body.action === "ready"
+          ? "lock table staytrack.room_blocks in share row exclusive mode"
+          : "lock table staytrack.room_blocks in share mode",
+      );
       await db.query("select 1 from staytrack.rooms where id=$1 for update", [
         roomId,
       ]);

@@ -2031,6 +2031,7 @@ export type Database = {
           room_id: number;
           start_at: string;
           end_at: string | null;
+          planned_turnover_end_at: string | null;
           reason: string;
         };
         Insert: {
@@ -2038,6 +2039,7 @@ export type Database = {
           room_id: number;
           start_at: string;
           end_at?: string | null;
+          planned_turnover_end_at?: string | null;
           reason: string;
         };
         Update: {
@@ -2045,6 +2047,7 @@ export type Database = {
           room_id?: number;
           start_at?: string;
           end_at?: string | null;
+          planned_turnover_end_at?: string | null;
           reason?: string;
         };
         Relationships: [

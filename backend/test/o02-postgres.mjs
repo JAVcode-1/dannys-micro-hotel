@@ -181,7 +181,7 @@ export async function o02Postgres(t, pool) {
         submitPaymentProof(
           other,
           hold.id,
-          "TEST-REF",
+          "0200000001",
           png,
           "image/png",
           pool,
@@ -198,7 +198,7 @@ export async function o02Postgres(t, pool) {
         submitPaymentProof(
           guest,
           hold.id,
-          "TEST-REF",
+          "0200000001",
           Buffer.from("bad"),
           "image/png",
           pool,
@@ -213,7 +213,7 @@ export async function o02Postgres(t, pool) {
         submitPaymentProof(
           guest,
           hold.id,
-          "TEST-REF",
+          "0200000001",
           png,
           "image/png",
           pool,
@@ -272,7 +272,7 @@ export async function o02Postgres(t, pool) {
           headers: {
             Authorization: "Bearer owner",
             "Content-Type": "image/png",
-            "X-Transaction-Reference": "TEST-REF",
+            "X-Transaction-Reference": "0200000001",
           },
           body: png,
         });
@@ -288,7 +288,7 @@ export async function o02Postgres(t, pool) {
         await submitPaymentProof(
           guest,
           hold.id,
-          "TEST-REF",
+          "0200000001",
           png,
           "image/png",
           pool,
@@ -300,7 +300,7 @@ export async function o02Postgres(t, pool) {
         submitPaymentProof(
           guest,
           hold.id,
-          "OTHER-REF",
+          "0200000002",
           png,
           "image/png",
           pool,
@@ -349,7 +349,7 @@ export async function o02Postgres(t, pool) {
         submitPaymentProof(
           guest,
           late.id,
-          "LATE-REF",
+          "0200000003",
           png,
           "image/png",
           pool,

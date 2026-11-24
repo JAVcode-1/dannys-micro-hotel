@@ -22,7 +22,7 @@ export function parseOnlineHall(value: unknown): OnlineHallInput {
     throw new BookingError("Select a Hall setup and schedule.");
   const input = value as Record<string, unknown>;
   if (input.noticeReason !== undefined)
-    throw new BookingError("Short-notice exceptions require staff assistance.");
+    throw new BookingError("Staff-only Hall fields cannot be supplied online.");
   const quote = quoteInput(input);
   if (
     input.requests !== undefined &&
@@ -70,11 +70,14 @@ export async function quoteUnified(
     Array.isArray(items) && items.length === 0
       ? { items: [], totalCentavos: 0 }
       : await quoteBooking(items, db);
-  const now = (await db.query<{ now: Date }>("select clock_timestamp() now"))
-    .rows[0].now;
+  const clock = (
+    await db.query<{ now: Date; ready: boolean }>(
+      "select clock_timestamp() as now, ready from staytrack.hall_resource where id=1",
+    )
+  ).rows[0];
   const settings = await hallSettings(db);
   if (!settings) throw new BookingError("Hall settings are unavailable.", 503);
-  const hallQuote = quoteHall(input, settings, +now);
+  const hallQuote = quoteHall(input, settings, +clock.now, clock.ready);
   return {
     ...roomQuote,
     hall: hallQuote,

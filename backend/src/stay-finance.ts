@@ -135,10 +135,19 @@ export function parseStayReceipt(value: unknown) {
     "receivedAt",
     "cashReceived",
     "verification",
+    "extensionRequestId",
   ]);
-  const b = stayBase(v);
-  const amount = stayMoney(v.amountCentavos, true),
-    receivedAt = stayInstant(v.receivedAt);
+  const b = {
+    ...stayBase(v),
+    ...(v.extensionRequestId !== undefined && {
+      extensionRequestId: stayId(v.extensionRequestId),
+    }),
+  };
+  const amount = stayMoney(v.amountCentavos, true);
+  const receivedAt =
+    v.method === "cash" && v.receivedAt === undefined
+      ? null
+      : stayInstant(v.receivedAt);
   if (v.method === "cash") {
     if (v.cashReceived !== true || v.verification !== undefined)
       throw new BookingError("Staff cash-received attestation required.");
@@ -185,6 +194,46 @@ export function parseStayReceipt(value: unknown) {
     },
   };
 }
+export async function readStayPayee(db: Pick<PoolClient, "query">) {
+  const result = await db.query<{ payee: string }>(
+    "select trim(payee_label) as payee from staytrack.payment_qr where id=true for share",
+  );
+  return result.rows[0]?.payee || null;
+}
+
+async function insertStayAllocation(
+  db: PoolClient,
+  allocation: {
+    receiptId: string;
+    itemId: string;
+    actor: string;
+    requestKey: string;
+    requestHash: string;
+    reason: string;
+    extensionRequestId: string | null;
+    chargeId: string | null;
+    amountCentavos: number;
+  },
+) {
+  const result = await db.query(
+    `insert into staytrack.stay_receipt_allocations
+      (receipt_id,room_booking_id,actor_auth_user_id,request_key,request_hash,reason,kind,extension_request_id,charge_id,amount_centavos)
+      values($1,$2,$3,$4,$5,$6,'allocate',$7,$8,$9) returning id`,
+    [
+      allocation.receiptId,
+      allocation.itemId,
+      allocation.actor,
+      allocation.requestKey,
+      allocation.requestHash,
+      allocation.reason,
+      allocation.extensionRequestId,
+      allocation.chargeId,
+      allocation.amountCentavos,
+    ],
+  );
+  return result.rows[0].id;
+}
+
 export async function recordStayReceipt(
   actor: string,
   item: string,
@@ -200,9 +249,14 @@ export async function recordStayReceipt(
     v,
     async (db, h) => {
       const p = "verification" in v ? v.verification : undefined;
-      return (
+      if (p && (await readStayPayee(db)) !== p.recipient)
+        throw new BookingError(
+          "The verified GCash account changed or is missing. Refresh and check the account again.",
+          409,
+        );
+      const receiptId = (
         await db.query(
-          `insert into staytrack.stay_receipts(room_booking_id,reservation_id,actor_auth_user_id,request_key,request_hash,reason,method,amount_centavos,received_at,cash_received,normalized_reference,recipient,ledger_checked,receiving_account_checked,time_checked) values($1,(select reservation_id from staytrack.room_bookings where id=$1),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) returning id`,
+          `insert into staytrack.stay_receipts(room_booking_id,reservation_id,actor_auth_user_id,request_key,request_hash,reason,method,amount_centavos,received_at,cash_received,normalized_reference,recipient,ledger_checked,receiving_account_checked,time_checked) values($1,(select reservation_id from staytrack.room_bookings where id=$1),$2,$3,$4,$5,$6,$7,coalesce($8::timestamptz,clock_timestamp()),$9,$10,$11,$12,$13,$14) returning id`,
           [
             item,
             actor,
@@ -221,6 +275,19 @@ export async function recordStayReceipt(
           ],
         )
       ).rows[0].id;
+      if (v.extensionRequestId)
+        await insertStayAllocation(db, {
+          receiptId,
+          itemId: item,
+          actor,
+          requestKey: h,
+          requestHash: h,
+          reason: v.reason,
+          extensionRequestId: v.extensionRequestId,
+          chargeId: null,
+          amountCentavos: v.amountCentavos,
+        });
+      return receiptId;
     },
     pool,
   );
@@ -255,23 +322,18 @@ export async function allocateStayReceipt(
     b,
     "stay_receipt_allocations",
     { receiptId, ...v },
-    async (db, h) =>
-      (
-        await db.query(
-          `insert into staytrack.stay_receipt_allocations(receipt_id,room_booking_id,actor_auth_user_id,request_key,request_hash,reason,kind,extension_request_id,charge_id,amount_centavos) values($1,$2,$3,$4,$5,$6,'allocate',$7,$8,$9) returning id`,
-          [
-            receiptId,
-            source.room_booking_id,
-            actor,
-            b.requestKey,
-            h,
-            b.reason,
-            v.extensionRequestId ? target : null,
-            v.chargeId ? target : null,
-            amount,
-          ],
-        )
-      ).rows[0].id,
+    (db, h) =>
+      insertStayAllocation(db, {
+        receiptId,
+        itemId: source.room_booking_id,
+        actor,
+        requestKey: b.requestKey,
+        requestHash: h,
+        reason: b.reason,
+        extensionRequestId: v.extensionRequestId ? target : null,
+        chargeId: v.chargeId ? target : null,
+        amountCentavos: amount,
+      }),
     pool,
   );
 }

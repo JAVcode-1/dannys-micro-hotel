@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
+import StaffIcon from "./StaffIcon";
+import { bookingReference, readableLabel } from "./presentation";
 import type { StayFinancials } from "@staytrack/shared";
 import { apiBase } from "./staff-auth";
 import { GuestRescheduleForm } from "./RescheduleDesk";
@@ -131,8 +133,11 @@ export default function StaffReservations({ token }: { token: string }) {
     return () => controller.abort();
   }, [token, query, page]);
   return (
-    <section className="mt-6 min-w-0">
+    <section className="staff-reservation-index mt-6 min-w-0">
       <h2 className="text-xl font-bold">All reservations</h2>
+      <p className="mt-2 text-sm text-muted">
+        Find a booking, review its details and manage each stay.
+      </p>
       <form
         className="my-4 flex flex-wrap gap-2"
         onSubmit={(event) => {
@@ -142,11 +147,12 @@ export default function StaffReservations({ token }: { token: string }) {
         }}
       >
         <label className="min-w-0 flex-1">
-          Search name, email or reservation ID
+          Guest name, email or full booking ID
           <input
             className="block w-full rounded border p-3 text-base"
             value={search}
             maxLength={120}
+            placeholder="Search reservations…"
             onChange={(e) => setSearch(e.target.value)}
           />
         </label>
@@ -158,41 +164,65 @@ export default function StaffReservations({ token }: { token: string }) {
       {!data && !error && <p role="status">Loading reservations…</p>}
       {data && (
         <>
-          <ul className="space-y-3">
+          <ul className="staff-reservation-list">
             {data.reservations.map((r) => (
               <li
                 key={r.id}
-                className="rounded border border-subtle p-4 [overflow-wrap:anywhere]"
+                className="staff-reservation-row [overflow-wrap:anywhere]"
               >
-                <Link
-                  className="font-bold text-primary underline"
-                  to={`/staff/reservations/${r.id}`}
-                >
-                  {r.primaryName}
-                </Link>
-                <p>
-                  {r.channel === "online" ? "Online" : "Walk-in"} ·{" "}
-                  {serviceLabel(r.serviceKind)} · {r.roomCount ?? 0} rooms
-                  {r.hallCount ? ` · ${r.hallCount} Hall event` : ""} ·{" "}
+                <div className="staff-reservation-guest">
+                  <span className="staff-reservation-avatar" aria-hidden="true">
+                    <StaffIcon name="reservations" />
+                  </span>
+                  <div>
+                    <Link
+                      className="staff-reservation-name"
+                      to={`/staff/reservations/${r.id}`}
+                    >
+                      {r.primaryName}
+                    </Link>
+                    <p className="text-sm font-semibold text-primary">
+                      {bookingReference(r.id)}
+                    </p>
+                  </div>
+                </div>
+                <div className="staff-reservation-summary">
+                  <p className="text-sm text-muted">
+                    {r.channel === "online" ? "Online" : "Walk-in"} ·{" "}
+                    {serviceLabel(r.serviceKind)} · {r.roomCount ?? 0} rooms
+                    {r.hallCount ? ` · ${r.hallCount} Hall event` : ""}
+                  </p>
+                  <div className="staff-status-list">
+                    {r.states?.map((s, index) => (
+                      <span
+                        className="staff-status"
+                        data-state={s}
+                        key={`${s}:${index}`}
+                      >
+                        {s === "proof_pending_review"
+                          ? "Awaiting staff payment review"
+                          : readableLabel(s)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <strong className="staff-reservation-amount">
                   {money(r.totalCentavos)}
-                </p>
-
-                <p>
-                  {r.states
-                    ?.map((s) =>
-                      s === "proof_pending_review"
-                        ? "Awaiting staff payment review"
-                        : s.replaceAll("_", " "),
-                    )
-                    .join(" · ")}
-                </p>
+                </strong>
+                <Link
+                  className="staff-reservation-open"
+                  to={`/staff/reservations/${r.id}`}
+                  aria-label={`View reservation for ${r.primaryName}`}
+                >
+                  View <StaffIcon name="arrow" />
+                </Link>
               </li>
             ))}
           </ul>
           {!data.reservations.length && (
-            <p>No reservations match this search.</p>
+            <p className="staff-empty">No reservations match this search.</p>
           )}
-          <div className="mt-4 flex gap-4">
+          <div className="staff-pagination mt-4 flex gap-4">
             <button disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
               Previous
             </button>
@@ -238,30 +268,28 @@ export function StaffReservationDetail({ token }: { token: string }) {
   if (error) return <p role="alert">{error}</p>;
   if (!data) return <p role="status">Loading reservation…</p>;
   return (
-    <section className="mt-6 min-w-0 [overflow-wrap:anywhere]">
+    <section className="staff-reservation-detail mt-6 min-w-0 [overflow-wrap:anywhere]">
       <div className="print:hidden">
         <Link to="/staff/reservations" className="text-primary underline">
           All reservations
         </Link>
-        <button
-          className="ml-4 rounded border p-3"
-          onClick={() => window.print()}
-        >
-          Print internal statement
-        </button>
       </div>
       <h2 className="mt-4 text-2xl font-bold">
         {data.reservation.primaryName}
       </h2>
       <p className="mt-2 font-semibold text-primary">
+        {bookingReference(data.reservation.id)} -{" "}
         {serviceLabel(data.reservation.serviceKind)}
       </p>
       <p>
         {data.reservation.email || data.contact?.email || "No email recorded"} ·{" "}
-        {data.reservation.channel}
+        {readableLabel(data.reservation.channel)}
       </p>
       {data.contact && (
-        <div className="my-3 text-sm">
+        <details className="my-3 text-sm">
+          <summary className="cursor-pointer font-semibold">
+            Contact and policy records
+          </summary>
           <p>Contact phone: {data.contact.phone}</p>
           {data.contact.email && (
             <p>Walk-in email is unverified until separately verified.</p>
@@ -273,7 +301,7 @@ export function StaffReservationDetail({ token }: { token: string }) {
           {data.contact.minor_id_status && (
             <p>
               Minor ID check metadata:{" "}
-              {data.contact.minor_id_status.replaceAll("_", " ")}
+              {readableLabel(data.contact.minor_id_status)}
               {data.contact.minor_id_checked_at
                 ? ` · ${time(data.contact.minor_id_checked_at)}`
                 : ""}
@@ -281,38 +309,60 @@ export function StaffReservationDetail({ token }: { token: string }) {
               stored.
             </p>
           )}
-        </div>
+        </details>
       )}
-      <h3 className="mt-6 font-bold">
-        Internal reservation and financial statement
-      </h3>
+      <h3 className="mt-6 font-bold">Charges and payments</h3>
       <p className="font-semibold">Not an official fiscal receipt.</p>
-      <dl className="my-4 grid grid-cols-2 gap-2">
+      <dl className="staff-financial-summary my-4 grid grid-cols-2 gap-2">
         {(
           [
-            ["Net charges", data.financials.netChargeCentavos],
-            ["Verified collections", data.financials.collectedCentavos],
-            ["Balance due", data.financials.settlementDueCentavos],
+            ["Total amount", data.financials.netChargeCentavos],
+            ["Amount paid", data.financials.collectedCentavos],
+            ["Remaining balance", data.financials.settlementDueCentavos],
             ["Refund due", data.financials.refundDueCentavos],
           ] as const
-        ).map(([label, value]) => (
-          <div key={label}>
-            <dt>{label}</dt>
-            <dd className="font-bold tabular-nums">{money(value)}</dd>
-          </div>
-        ))}
+        )
+          .filter(([label, value]) => label !== "Refund due" || value > 0)
+          .map(([label, value]) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd className="font-bold tabular-nums">{money(value)}</dd>
+            </div>
+          ))}
       </dl>
       {data.items.length > 0 && <h3 className="font-bold">Accommodation</h3>}
       {data.items.map((item) => (
         <article className="my-3 rounded border p-4" key={item.id}>
           <h4 className="font-semibold">
-            {item.category.replaceAll("_", " ")} ·{" "}
+            {readableLabel(item.category)} ·{" "}
             {item.roomCode || "Room assignment pending"}
           </h4>
-          <p>{item.status}</p>
+          <p
+            className="staff-status"
+            data-state={
+              item.checkedOutAt
+                ? "checked_out"
+                : item.checkedInAt
+                  ? "checked_in"
+                  : (item.state ?? item.status)
+            }
+          >
+            {item.checkedOutAt
+              ? "Checked out"
+              : item.checkedInAt
+                ? "Checked in"
+                : readableLabel(item.state ?? item.status)}
+          </p>
           <p>
             {time(item.startAt)} – {time(item.checkoutAt || item.endAt)}
           </p>
+          {item.checkedInAt && <p>Checked in: {time(item.checkedInAt)}</p>}
+          {item.checkedOutAt && <p>Checked out: {time(item.checkedOutAt)}</p>}
+          {item.checkoutAt && item.checkoutAt !== item.endAt && (
+            <p className="text-sm text-muted">
+              Originally scheduled departure: {time(item.endAt)}
+            </p>
+          )}
           <p>
             {item.adults} adults · {item.children} children
           </p>
@@ -320,15 +370,42 @@ export function StaffReservationDetail({ token }: { token: string }) {
             aria-label={`Actions for room item ${item.id}`}
             className="mt-3 flex flex-wrap gap-4 text-primary print:hidden"
           >
-            <Link to={`/staff/check-ins?item=${item.id}`}>Check-in</Link>
-            <Link to={`/staff/stays?item=${item.id}`}>Stay and checkout</Link>
-            <Link to={`/staff/reschedules?item=${item.id}`}>Reschedule</Link>
-            <Link to={`/staff/cancellations?item=${item.id}`}>
-              Cancellation and refund
-            </Link>
-            <Link to={`/staff/stay-changes?item=${item.id}`}>
-              Extensions and charges
-            </Link>
+            {!item.checkedInAt &&
+              !item.checkedOutAt &&
+              item.status !== "cancelled" &&
+              (item.state === "confirmed" ||
+                item.state === "walkin_reserved") && (
+                <Link to={`/staff/check-ins?item=${item.id}`}>Check-in</Link>
+              )}
+            {item.checkedInAt && !item.checkedOutAt && (
+              <>
+                <Link to={`/staff/stays?item=${item.id}`}>
+                  Stay and checkout
+                </Link>
+                <Link to={`/staff/stay-changes?item=${item.id}`}>
+                  Extensions and charges
+                </Link>
+              </>
+            )}
+            {!item.checkedInAt &&
+              !item.checkedOutAt &&
+              item.status !== "cancelled" && (
+                <>
+                  {item.state === "confirmed" && (
+                    <Link to={`/staff/reschedules?item=${item.id}`}>
+                      Reschedule
+                    </Link>
+                  )}
+                  <Link to={`/staff/cancellations?item=${item.id}`}>
+                    Cancellation and refund
+                  </Link>
+                </>
+              )}
+            {(item.checkedOutAt || item.status === "cancelled") && (
+              <Link to={`/staff/cancellations?item=${item.id}`}>
+                Refund records
+              </Link>
+            )}
           </nav>
           <StaffAssistedReschedule
             token={token}
@@ -348,7 +425,9 @@ export function StaffReservationDetail({ token }: { token: string }) {
             Function Hall ·{" "}
             {hall.setup === "theater" ? "Theater Type" : "Room Type"}
           </h3>
-          <p>{hall.status.replaceAll("_", " ")}</p>
+          <p className="staff-status" data-state={hall.status}>
+            {readableLabel(hall.status)}
+          </p>
           <p>
             {time(hall.startAt)} – {time(hall.endAt)}
           </p>
@@ -369,28 +448,40 @@ export function StaffReservationDetail({ token }: { token: string }) {
           </Link>
         </article>
       ))}
-      <h3 className="mt-6 font-bold">Verified payment history</h3>
-      {data.payments.length ? (
-        data.payments.map((p) => (
-          <p key={`${p.source}:${p.id}`}>
-            {time(p.recordedAt)} · {p.method} · {money(p.amountCentavos)}
-          </p>
-        ))
-      ) : (
-        <p>No verified collections recorded.</p>
-      )}
-      <h3 className="mt-6 font-bold">Refund history</h3>
-      {data.refunds.length ? (
-        data.refunds.map((r) => (
-          <p key={r.id ?? r.roomBookingId ?? r.hallReservationId}>
-            {r.hallReservationId ? "Function Hall" : "Accommodation"} ·{" "}
-            {money(r.amountCentavos)} · {r.status}
-            {r.transferredAt ? ` · ${time(r.transferredAt)}` : ""}
-          </p>
-        ))
-      ) : (
-        <p>No approved refunds recorded.</p>
-      )}
+      <details className="mt-6">
+        <summary className="cursor-pointer font-semibold">
+          Payment and refund history
+        </summary>
+        <h3 className="mt-3 font-bold">Verified payments</h3>
+        {data.payments.length ? (
+          data.payments.map((p) => (
+            <p key={`${p.source}:${p.id}`}>
+              {time(p.recordedAt)} · {p.method} · {money(p.amountCentavos)}
+            </p>
+          ))
+        ) : (
+          <p>No verified collections recorded.</p>
+        )}
+        <h3 className="mt-6 font-bold">Refund history</h3>
+        {data.refunds.length ? (
+          data.refunds.map((r) => (
+            <p key={r.id ?? r.roomBookingId ?? r.hallReservationId}>
+              {r.hallReservationId ? "Function Hall" : "Accommodation"} ·{" "}
+              {money(r.amountCentavos)} · {r.status}
+              {r.transferredAt ? ` · ${time(r.transferredAt)}` : ""}
+            </p>
+          ))
+        ) : (
+          <p>No approved refunds recorded.</p>
+        )}
+      </details>
+      <details className="mt-4 text-sm">
+        <summary className="cursor-pointer font-semibold">
+          Booking records
+        </summary>
+        <p className="mt-2">Full booking ID: {data.reservation.id}</p>
+        <p>Created {time(data.reservation.createdAt)}</p>
+      </details>
     </section>
   );
 }
@@ -408,6 +499,7 @@ function StaffAssistedReschedule({
   enabled: boolean;
   item: Detail["items"][number];
 }) {
+  if (item.checkedOutAt || item.status === "cancelled") return null;
   if (!enabled)
     return (
       <p className="mt-3 text-sm text-muted print:hidden">
@@ -508,12 +600,70 @@ function StaffAssistedReschedule({
   );
 }
 
-export function StaffDashboard({ token }: { token: string }) {
+export function StaffDashboard({
+  token,
+  hallEnabled = false,
+}: {
+  token: string;
+  hallEnabled?: boolean;
+}) {
   const [counts, setCounts] = useState<Record<string, number>>();
   const [message, setMessage] = useState("");
+  const [updatedAt, setUpdatedAt] = useState<Date>();
+  const [availableRooms, setAvailableRooms] = useState<number>();
+  const [upcomingCheckouts, setUpcomingCheckouts] = useState<{
+    count: number;
+    next?: string;
+  }>();
   useEffect(() => {
     const controller = new AbortController();
     async function refresh() {
+      void fetch(`${apiBase}/staff/stays`, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
+        cache: "no-store",
+      })
+        .then(async (response) => {
+          if (!response.ok) throw new Error();
+          const data = (await response.json()) as {
+            serverNow: string;
+            items: { checkout_at: string; checked_out_at?: string | null }[];
+          };
+          const upcoming = data.items
+            .filter(
+              (item) =>
+                !item.checked_out_at &&
+                Date.parse(item.checkout_at) > Date.parse(data.serverNow),
+            )
+            .sort(
+              (a, b) => Date.parse(a.checkout_at) - Date.parse(b.checkout_at),
+            );
+          if (!controller.signal.aborted)
+            setUpcomingCheckouts({
+              count: upcoming.length,
+              next: upcoming[0]?.checkout_at,
+            });
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) setUpcomingCheckouts(undefined);
+        });
+      // The room board owns availability; readiness alone is not availability.
+      void fetch(`${apiBase}/staff/rooms`, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
+        cache: "no-store",
+      })
+        .then(async (response) => {
+          if (!response.ok) throw new Error();
+          const rooms = (await response.json()) as { available_now: boolean }[];
+          if (!controller.signal.aborted)
+            setAvailableRooms(
+              rooms.filter((room) => room.available_now).length,
+            );
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) setAvailableRooms(undefined);
+        });
       try {
         const response = await fetch(`${apiBase}/staff/dashboard`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -523,11 +673,13 @@ export function StaffDashboard({ token }: { token: string }) {
         const next = await response.json();
         if (!controller.signal.aborted) {
           setCounts(next);
+          setUpdatedAt(new Date());
           setMessage("");
         }
       } catch {
         if (!controller.signal.aborted) {
           setCounts(undefined);
+          setUpdatedAt(undefined);
           setMessage(
             "Live summary unavailable. Open the individual operational queues.",
           );
@@ -535,6 +687,9 @@ export function StaffDashboard({ token }: { token: string }) {
       }
     }
     setCounts(undefined);
+    setAvailableRooms(undefined);
+    setUpcomingCheckouts(undefined);
+    setUpdatedAt(undefined);
     void refresh();
     const timer = window.setInterval(() => void refresh(), 30000);
     return () => {
@@ -542,58 +697,247 @@ export function StaffDashboard({ token }: { token: string }) {
       window.clearInterval(timer);
     };
   }, [token]);
+  const value = (key: string) => counts?.[key]?.toLocaleString("en-PH") ?? "—";
   return (
-    <section className="mt-6">
-      <h2 className="text-2xl font-bold">Today’s operations</h2>
-      <p className="mt-2">
-        Use the live operational queues to review arrivals, occupied stays,
-        payment proofs and room readiness.
-      </p>
+    <section
+      className="staff-dashboard"
+      aria-labelledby="staff-dashboard-heading"
+    >
+      <div className="staff-dashboard-intro">
+        <div>
+          <p className="staff-eyebrow">THE FRONT DESK</p>
+          <h2 id="staff-dashboard-heading">Today at a glance</h2>
+        </div>
+        <div className="staff-refresh-note">
+          <StaffIcon name="clock" />
+          <span>
+            {updatedAt
+              ? `Last updated ${updatedAt.toLocaleTimeString("en-PH", { timeZone: "Asia/Manila", hour: "numeric", minute: "2-digit", hour12: true })}`
+              : "Refreshes every 30 seconds"}
+          </span>
+        </div>
+      </div>
       {message && (
-        <p role="status" className="mt-3">
+        <p role="status" className="staff-notice">
           {message}
         </p>
       )}
-      {counts && (
-        <dl
-          aria-label="Current operational queues"
-          className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3"
-        >
-          {[
-            ["arrivals", "Arrivals today"],
-            ["paymentReviews", "Payment proofs to review"],
-            ["occupied", "Active stays"],
-            ["overdue", "Overdue stays"],
-            ["needsCleaning", "Rooms to clean"],
-            ["maintenance", "Rooms in maintenance"],
-          ].map(([key, label]) => (
-            <div className="rounded border border-subtle p-3" key={key}>
-              <dt className="text-sm">{label}</dt>
-              <dd className="text-2xl font-bold tabular-nums">
-                {counts[key]?.toLocaleString("en-PH") ?? "Unavailable"}
-              </dd>
-            </div>
-          ))}
-        </dl>
+      {!counts && !message && (
+        <p role="status" className="staff-loading">
+          Loading operational summary…
+        </p>
       )}
-      <nav className="mt-5 grid gap-3 sm:grid-cols-2">
+      <dl
+        aria-label="Current operational queues"
+        className="staff-metrics"
+        aria-busy={!counts && !message}
+      >
         {[
-          ["/staff/check-ins", "Arrivals and no-show review"],
-          ["/staff/stays", "Active stays and overdue checkout"],
-          ["/staff/payments", "GCash verification queue"],
-          ["/staff/rooms", "Cleaning and maintenance"],
-          ["/staff/reservations", "Search all reservations"],
-          ["/staff/hall", "Function Hall operations"],
-        ].map(([to, label]) => (
-          <Link
-            className="rounded border border-subtle bg-selected p-4 font-semibold text-primary"
-            key={to}
-            to={to}
-          >
-            {label}
-          </Link>
+          ["arrivals", "Arrivals today", "arrivals", "Expected room check-ins"],
+          ["occupied", "Active stays", "stays", "Currently checked in"],
+          [
+            "paymentReviews",
+            "Payment reviews",
+            "payments",
+            "Awaiting GCash verification",
+          ],
+          ["overdue", "Expired stay packages", "clock", "Requires staff review"],
+          ...(hallEnabled
+            ? [
+                [
+                  "hallArrivals",
+                  "Hall events today",
+                  "hall",
+                  "Confirmed events scheduled today",
+                ],
+              ]
+            : []),
+        ].map(([key, label, icon, description]) => (
+          <div className="staff-metric" key={key} title={description}>
+            <dt>
+              <span>{label}</span>
+              <span
+                className={`staff-metric-icon ${key === "overdue" && (counts?.overdue ?? 0) > 0 ? "is-urgent" : ""}`}
+              >
+                <StaffIcon name={icon} />
+              </span>
+            </dt>
+            <dd>{value(key)}</dd>
+          </div>
         ))}
-      </nav>
+        <div className="staff-metric">
+          <dt>
+            <Link to="/staff/stays">Upcoming checkouts</Link>
+            <span className="staff-metric-icon">
+              <StaffIcon name="clock" />
+            </span>
+          </dt>
+          <dd>{upcomingCheckouts?.count ?? "—"}</dd>
+          {upcomingCheckouts?.next && (
+            <p>Next: {time(upcomingCheckouts.next)}</p>
+          )}
+        </div>
+      </dl>
+      <div className="staff-dashboard-columns">
+        <section
+          className="staff-panel staff-attention"
+          aria-labelledby="staff-attention-heading"
+        >
+          <div className="staff-panel-heading">
+            <div>
+              <p className="staff-eyebrow">YOUR WORK QUEUES</p>
+              <h3 id="staff-attention-heading">Needs attention</h3>
+            </div>
+            <span className="staff-panel-symbol">
+              <StaffIcon name="today" />
+            </span>
+          </div>
+          <nav aria-label="Front desk work queues">
+            {[
+              [
+                "paymentReviews",
+                "Review GCash payments",
+                "Check the actual transaction before confirming.",
+                "/staff/payments",
+                "payments",
+              ],
+              [
+                "arrivals",
+                "Prepare for arrivals",
+                "Assign a Ready room and record check-in.",
+                "/staff/check-ins",
+                "arrivals",
+              ],
+              [
+                "overdue",
+                "Review Expired stay packages",
+                "Checkout and extensions need a staff action.",
+                "/staff/stays",
+                "clock",
+              ],
+            ].map(([key, label, description, to, icon]) => (
+              <Link
+                className="staff-queue-row"
+                to={to}
+                key={key}
+                title={description}
+              >
+                <span
+                  className={`staff-queue-icon ${key === "overdue" && (counts?.overdue ?? 0) > 0 ? "is-urgent" : ""}`}
+                >
+                  <StaffIcon name={icon} />
+                </span>
+                <span className="staff-queue-copy">
+                  <strong>{label}</strong>
+                </span>
+                <span
+                  className="staff-queue-count"
+                  aria-label={`${label}: ${value(key)}`}
+                >
+                  {value(key)}
+                </span>
+                <StaffIcon name="arrow" />
+              </Link>
+            ))}
+          </nav>
+        </section>
+        <section
+          className="staff-panel staff-property"
+          aria-labelledby="staff-property-heading"
+        >
+          <div className="staff-panel-heading">
+            <div>
+              <p className="staff-eyebrow">THE PROPERTY</p>
+              <h3 id="staff-property-heading">Room readiness</h3>
+            </div>
+            <span className="staff-panel-symbol">
+              <StaffIcon name="rooms" />
+            </span>
+          </div>
+          <div className="staff-property-total">
+            <strong>{availableRooms ?? "—"}</strong>
+            <div>
+              <span>Available now</span>
+              <small>
+                {availableRooms === undefined
+                  ? "Availability unavailable"
+                  : "Current room-board availability"}
+              </small>
+            </div>
+          </div>
+          <div className="staff-category-line">
+            <span>Double Standard</span>
+            <strong>10 rooms</strong>
+          </div>
+          <div className="staff-category-line">
+            <span>Family Executive</span>
+            <strong>5 rooms</strong>
+          </div>
+          <dl className="staff-room-states">
+            <div>
+              <dt>
+                <span className="staff-state-dot cleaning" />
+                To clean
+              </dt>
+              <dd>{value("needsCleaning")}</dd>
+            </div>
+            <div>
+              <dt>
+                <span className="staff-state-dot maintenance" />
+                Maintenance
+              </dt>
+              <dd>{value("maintenance")}</dd>
+            </div>
+          </dl>
+          <Link className="staff-outline-action" to="/staff/rooms">
+            Open room board
+            <StaffIcon name="arrow" />
+          </Link>
+          <p className="staff-property-note">
+            Ready status and booking availability are checked separately.
+          </p>
+        </section>
+      </div>
+      <section
+        className="staff-shortcuts"
+        aria-labelledby="staff-shortcuts-heading"
+      >
+        <h3 id="staff-shortcuts-heading">Quick actions</h3>
+        <nav aria-label="Staff shortcuts">
+          {[
+            [
+              "/staff/reservations",
+              "Find a reservation",
+              "Search bookings and guest details",
+              "reservations",
+            ],
+            [
+              "/staff/stays",
+              "Upcoming checkouts",
+              "Check balances, extensions and checkout",
+              "stays",
+            ],
+            ...(hallEnabled
+              ? [
+                  [
+                    "/staff/hall",
+                    "Upcoming Hall events",
+                    "Schedules and event management",
+                    "hall",
+                  ],
+                ]
+              : []),
+          ].map(([to, label, description, icon]) => (
+            <Link key={to} to={to} title={description}>
+              <StaffIcon name={icon} />
+              <span>
+                <strong>{label}</strong>
+              </span>
+              <StaffIcon name="arrow" />
+            </Link>
+          ))}
+        </nav>
+      </section>
     </section>
   );
 }

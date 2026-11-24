@@ -1,3 +1,4 @@
+import TimePartInput, { manilaClock } from "./TimePartInput";
 import { parsePesoInput } from "./peso-input";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
@@ -10,6 +11,7 @@ import type {
 import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
 import { hotelTime, peso } from "./BookingPlanner";
+import WalkInPolicies from "./WalkInPolicies";
 
 type Rate = {
   code: BookingItemInput["category"];
@@ -47,8 +49,10 @@ const arrival = (offset = 120000): Arrival => {
     period: d.getUTCHours() < 12 ? "AM" : "PM",
   };
 };
-const instant = (value: Arrival) =>
-  `${value.date}T${String((Number(value.hour) % 12) + (value.period === "PM" ? 12 : 0)).padStart(2, "0")}:${value.minute}:00+08:00`;
+const instant = (value: Arrival) => {
+  const clock = manilaClock(value.hour, value.minute, value.period);
+  return value.date && clock ? `${value.date}T${clock}:00+08:00` : "";
+};
 const draft = (rates: Rate[]): Draft => ({
   ...arrival(),
   category: rates[0].code,
@@ -61,17 +65,20 @@ function ArrivalFields({
   value,
   onChange,
   label,
+  shortLabels = false,
 }: {
   value: Arrival;
   onChange: (patch: Partial<Arrival>) => void;
   label: string;
+  shortLabels?: boolean;
 }) {
   return (
     <fieldset className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       <legend className="mb-2 text-sm font-semibold">{label} · Manila</legend>
       <label className="text-sm">
-        {label} date
+        {shortLabels ? "Date" : `${label} date`}
         <input
+          aria-label={`${label} date`}
           type="date"
           required
           value={value.date}
@@ -79,35 +86,30 @@ function ArrivalFields({
           className={inputClass}
         />
       </label>
-      <label className="text-sm">
-        {label} hour
-        <select
+      <div className="text-sm">
+        {shortLabels ? "Hour" : `${label} hour`}
+        <TimePartInput
+          part="hour"
+          label={`${label} hour`}
           value={value.hour}
-          onChange={(e) => onChange({ hour: e.target.value })}
+          onChange={(value) => onChange({ hour: value })}
           className={inputClass}
-        >
-          {Array.from({ length: 12 }, (_, i) => String(i + 1)).map((n) => (
-            <option key={n}>{n}</option>
-          ))}
-        </select>
-      </label>
-      <label className="text-sm">
-        {label} minute
-        <select
+        />
+      </div>
+      <div className="text-sm">
+        {shortLabels ? "Minute" : `${label} minute`}
+        <TimePartInput
+          part="minute"
+          label={`${label} minute`}
           value={value.minute}
-          onChange={(e) => onChange({ minute: e.target.value })}
+          onChange={(value) => onChange({ minute: value })}
           className={inputClass}
-        >
-          {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0")).map(
-            (n) => (
-              <option key={n}>{n}</option>
-            ),
-          )}
-        </select>
-      </label>
+        />
+      </div>
       <label className="text-sm">
-        {label} AM/PM
+        {shortLabels ? "AM/PM" : `${label} AM/PM`}
         <select
+          aria-label={`${label} AM/PM`}
           value={value.period}
           onChange={(e) => onChange({ period: e.target.value })}
           className={inputClass}
@@ -208,7 +210,8 @@ function WalkInPlanner({
     setBusy(true);
     try {
       await onCreate(name.trim(), payload(), attempt.current!.key, contact);
-      if (!preview) notifySuccess("Walk-in booking recorded. Check-in is still required.");
+      if (!preview)
+        notifySuccess("Walk-in booking recorded. Check-in is still required.");
       attempt.current = null;
       setQuote(null);
       setMessage(
@@ -228,11 +231,12 @@ function WalkInPlanner({
     <section className="rounded-xl border border-subtle bg-white p-5">
       <h2 className="text-xl font-bold">New walk-in</h2>
       <p className="mt-2 text-sm text-muted">
-        Planned arrivals reserve capacity. The actual stay starts only at staff
-        check-in in W02.
+        Add guest details and rooms, review the total, then record payment. The
+        stay starts at staff check-in.
       </p>
       <form onSubmit={(e) => void quoteItems(e)} className="mt-5 space-y-4">
         <fieldset disabled={busy} className="space-y-4">
+          <legend className="font-semibold">Guest details</legend>
           <label className="block font-medium">
             Primary guest name
             <input
@@ -246,7 +250,7 @@ function WalkInPlanner({
           {!preview && (
             <div className="space-y-3 rounded border border-subtle p-4">
               <label className="block">
-                Primary contact phone
+                Contact number
                 <input
                   type="tel"
                   autoComplete="tel"
@@ -267,10 +271,13 @@ function WalkInPlanner({
                   onChange={(event) => setEmail(event.target.value)}
                 />
               </label>
-              <p className="text-sm">
-                {policy?.text ??
-                  "Booking policy is unavailable. Creation remains blocked."}
-              </p>
+              {policy ? (
+                <WalkInPolicies text={policy.text} />
+              ) : (
+                <p role="status" className="text-sm">
+                  Booking policy is unavailable. Creation remains blocked.
+                </p>
+              )}
               {policy?.pendingOwnerApproval && (
                 <p className="text-sm text-muted">
                   Development disclosure; owner/legal approval remains pending.
@@ -290,7 +297,7 @@ function WalkInPlanner({
                   checked={minorIdChecked}
                   onChange={(event) => setMinorIdChecked(event.target.checked)}
                 />
-                Staff checked minor ID where applicable (metadata only)
+                Staff checked minor ID where applicable
               </label>
               <p className="text-sm text-muted">
                 No ID photographs, ID numbers or birth dates are stored.
@@ -304,9 +311,7 @@ function WalkInPlanner({
               key={index}
               className="space-y-4 rounded-lg border border-subtle p-4"
             >
-              <legend className="px-2 font-semibold">
-                Room item {index + 1}
-              </legend>
+              <legend className="px-2 font-semibold">Room {index + 1}</legend>
               <label className="block text-sm">
                 Category — room {index + 1}
                 <select
@@ -331,7 +336,8 @@ function WalkInPlanner({
               <ArrivalFields
                 value={item}
                 onChange={(patch) => update(index, patch)}
-                label={`Arrival ${index + 1}`}
+                label="Arrival"
+                shortLabels
               />
               {item.blocks.map((duration, blockIndex) => (
                 <div key={blockIndex} className="flex items-end gap-2">
@@ -426,8 +432,7 @@ function WalkInPlanner({
                       update(index, { extraBed: e.target.checked })
                     }
                   />
-                  One Family extra bed · ₱100 once per continuous item (stock
-                  acceptance pending)
+                  One Family extra bed · ₱100 once per stay (stock pending)
                 </label>
               )}
               {items.length > 1 && (
@@ -457,7 +462,7 @@ function WalkInPlanner({
               Add room
             </button>
             <button className={buttonClass}>
-              Calculate {preview ? "fixture" : "server"} quote
+              {preview ? "Preview total" : "Review total"}
             </button>
           </div>
         </fieldset>
@@ -466,7 +471,7 @@ function WalkInPlanner({
         <div className="mt-5 rounded-lg bg-selected p-4" aria-live="polite">
           {quote.items.map((item, index) => (
             <p key={index} className="mb-2 text-sm">
-              Item {index + 1}: {hotelTime(item.startAt)} →{" "}
+              Room {index + 1}: {hotelTime(item.startAt)} →{" "}
               {hotelTime(item.endAt)} · {peso(item.totalCentavos)}
             </p>
           ))}
@@ -529,7 +534,10 @@ export function WalkInLedger({
     }
     if (
       method === "gcash" &&
-      (!checks.every(Boolean) || !reference.trim() || !recipient.trim())
+      (!checks.every(Boolean) ||
+        !reference.trim() ||
+        !recipient.trim() ||
+        !instant(received))
     ) {
       setMessage(
         "Verify actual GCash receipt, recipient, time and reference first.",
@@ -583,11 +591,11 @@ export function WalkInLedger({
       <h2 className="break-words text-xl font-bold">{booking.primaryName}</h2>
       <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
         <div>
-          <dt>Journal charges</dt>
+          <dt>Total amount</dt>
           <dd className="text-xl font-bold">{peso(booking.totalCentavos)}</dd>
         </div>
         <div>
-          <dt>Collected</dt>
+          <dt>Amount paid</dt>
           <dd className="text-xl font-bold">
             {peso(booking.collectedCentavos)}
           </dd>
@@ -597,32 +605,31 @@ export function WalkInLedger({
           <dd>{peso(booking.balanceCentavos)} (original booking)</dd>
           {booking.settlementDueCentavos !== undefined && (
             <>
-              <dt>Required settlement including additional stays</dt>
+              <dt>Remaining balance including additions</dt>
               <dd>{peso(booking.settlementDueCentavos)}</dd>
-              <dt>Additional net charges</dt>
+              <dt>Additional charges</dt>
               <dd>{peso(booking.additionalNetCentavos ?? 0)}</dd>
             </>
           )}
         </div>
         <div>
-          <dt>50% minimum</dt>
+          <dt>Minimum deposit (50%)</dt>
           <dd>{peso(booking.minimumCentavos)}</dd>
         </div>
       </dl>
       <p className="mt-4 rounded-lg bg-selected p-3 font-semibold text-primary">
         {booking.paymentMinimumMet
           ? "Payment minimum met"
-          : "Below normal check-in payment minimum"}
+          : "Deposit required before check-in"}
       </p>
       <p className="mt-2 text-sm text-muted">
-        Payment eligibility only. Final Ready-room assignment, check-in and the
-        stay clock belong to W02; no room access is granted here.
+        Assign a Ready room and record check-in before giving room access.
       </p>
       <ul className="mt-4 space-y-2 text-sm">
         {booking.items.map((item, index) => (
           <li key={item.id} className="rounded-lg border border-subtle p-3">
             <strong>
-              Item {index + 1} ·{" "}
+              Room {index + 1} ·{" "}
               {item.category === "family_executive"
                 ? "Family Executive"
                 : "Double Standard"}
@@ -630,58 +637,68 @@ export function WalkInLedger({
             <p>
               {hotelTime(item.startAt)} → {hotelTime(item.endAt)}
             </p>
-            <p>
-              Provisional capacity: {item.provisionalRoomCode} ·{" "}
-              {item.claimState}
-            </p>
+            <details className="mt-2">
+              <summary className="min-h-11 cursor-pointer font-semibold text-primary">
+                Reservation details
+              </summary>
+              <p>
+                Capacity held against {item.provisionalRoomCode} ·{" "}
+                {item.claimState.replaceAll("_", " ")}. Physical room assignment
+                is separate.
+              </p>
+            </details>
             <p>{peso(item.totalCentavos)}</p>
           </li>
         ))}
       </ul>
-      <h3 className="mb-2 mt-5 font-semibold">Append-only journal</h3>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr>
-              <th className="p-2">Entry</th>
-              <th className="p-2">Amount</th>
-              <th className="p-2">Staff / recorded time</th>
-            </tr>
-          </thead>
-          <tbody>
-            {booking.ledger.map((entry) => (
-              <tr key={entry.id} className="border-t border-subtle">
-                <td className="p-2">
-                  {entry.kind === "charge" ? "Room charge" : entry.method}
-                  <span className="block break-all text-xs text-muted">
-                    {entry.transactionReference}
-                  </span>
-                </td>
-                <td className="whitespace-nowrap p-2">
-                  {peso(entry.amountCentavos)}
-                </td>
-                <td className="p-2">
-                  <span className="block break-all text-xs">
-                    {entry.actorId}
-                  </span>
-                  {hotelTime(entry.recordedAt)}
-                  {entry.receivedAt && (
-                    <span className="block text-xs">
-                      GCash received: {hotelTime(entry.receivedAt)}
-                    </span>
-                  )}
-                </td>
+      <details className="mt-5 border-t border-subtle pt-3">
+        <summary className="min-h-11 cursor-pointer font-semibold text-primary">
+          Charges and payment history
+        </summary>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr>
+                <th className="p-2">Entry</th>
+                <th className="p-2">Amount</th>
+                <th className="p-2">Staff / recorded time</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {booking.ledger.map((entry) => (
+                <tr key={entry.id} className="border-t border-subtle">
+                  <td className="p-2">
+                    {entry.kind === "charge" ? "Room charge" : entry.method}
+                    <span className="block break-all text-xs text-muted">
+                      {entry.transactionReference}
+                    </span>
+                  </td>
+                  <td className="whitespace-nowrap p-2">
+                    {peso(entry.amountCentavos)}
+                  </td>
+                  <td className="p-2">
+                    <span className="block break-all text-xs">
+                      {entry.actorId}
+                    </span>
+                    {hotelTime(entry.recordedAt)}
+                    {entry.receivedAt && (
+                      <span className="block text-xs">
+                        GCash received: {hotelTime(entry.receivedAt)}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
       <form onSubmit={(e) => void submit(e)} className="mt-5">
         <fieldset
           disabled={!enabled || busy || booking.balanceCentavos <= 0}
           className="space-y-3"
         >
-          <legend className="font-semibold">Record collected payment</legend>
+          <legend className="font-semibold">Record payment</legend>
           <div className="grid grid-cols-2 gap-3">
             <label>
               Method
@@ -706,9 +723,7 @@ export function WalkInLedger({
           </div>
           {method === "gcash" && (
             <fieldset className="space-y-3 rounded-lg border border-subtle p-3">
-              <legend className="font-semibold">
-                Actual receiving-account record
-              </legend>
+              <legend className="font-semibold">Verify GCash receipt</legend>
               <label className="block">
                 GCash reference
                 <input
@@ -719,7 +734,7 @@ export function WalkInLedger({
                 />
               </label>
               <label className="block">
-                Receiving payee label
+                Receiving account name
                 <input
                   value={recipient}
                   maxLength={120}
@@ -755,13 +770,18 @@ export function WalkInLedger({
             </fieldset>
           )}
           <button className="min-h-11 rounded-lg bg-primary px-4 py-2 font-semibold text-white disabled:opacity-50">
-            {preview ? "Record synthetic payment" : "Record collected payment"}
+            {preview ? "Record synthetic payment" : "Record payment"}
           </button>
         </fieldset>
       </form>
-      <button disabled className={`${buttonClass} mt-4`}>
-        Check-in is W02
-      </button>
+      {!preview && (
+        <a
+          href="/staff/check-ins"
+          className={`${buttonClass} mt-4 inline-flex items-center`}
+        >
+          Open check-in desk
+        </a>
+      )}
       {message && (
         <p role="status" className="mt-3 text-sm text-primary">
           {message}
@@ -992,8 +1012,13 @@ export default function WalkInDesk({
       <p className="mb-5 rounded-lg bg-selected p-4 text-sm text-primary">
         {preview
           ? "Synthetic preview · fixture prices and slots only; no network booking, payment or real money."
-          : "Live walk-in transactions remain gated. Quotes use server prices; provisional allocation does not admit a guest."}
+          : "Room access requires payment eligibility, a Ready room and recorded staff check-in."}
       </p>
+      {!preview && !enabled && (
+        <p role="status" className="mb-4 text-sm text-muted">
+          Walk-in transactions are currently unavailable.
+        </p>
+      )}
       {message && (
         <p role="status" className="mb-4 text-muted">
           {message}
@@ -1058,12 +1083,9 @@ export default function WalkInDesk({
           <div className="rounded-xl border border-subtle bg-white p-5">
             <h2 className="font-bold">Select or create a walk-in</h2>
             <p className="mt-3 text-sm text-muted">
-              Room charges and collected payments will appear in an append-only
-              journal.
+              Choose a guest above to view charges, payments and remaining
+              balance.
             </p>
-            <button disabled className={`${buttonClass} mt-4`}>
-              Check-in is W02
-            </button>
           </div>
         )}
       </div>

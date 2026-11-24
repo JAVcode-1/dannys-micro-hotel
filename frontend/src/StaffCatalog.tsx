@@ -164,8 +164,10 @@ export default function StaffCatalog({ token }: { token: string }) {
   return (
     <section className="mt-8 border-t border-subtle pt-6">
       <h2 className="text-lg font-bold">Package rates</h2>
-      <div className="my-5 space-y-3">
-        <h3 className="font-semibold">Room categories</h3>
+      <details className="my-5 space-y-3">
+        <summary className="min-h-11 cursor-pointer font-semibold">
+          Manage room categories
+        </summary>
         {history
           .filter(
             (item, index, rows) =>
@@ -210,9 +212,9 @@ export default function StaffCatalog({ token }: { token: string }) {
               </button>
             </form>
           ))}
-      </div>
+      </details>
       <p className="mt-1 text-sm text-muted">
-        Changes create a new price version. Earlier versions remain stored.
+        New rates apply to future purchases. Previous rates stay on record.
       </p>
       <form onSubmit={(event) => void save(event)} className="mt-5 space-y-4">
         <label className="block text-sm font-medium">
@@ -260,43 +262,47 @@ export default function StaffCatalog({ token }: { token: string }) {
           {busy ? "Saving…" : "Save price"}
         </button>
       </form>
-      <h3 className="mt-8 font-bold">Catalog versions</h3>
-      <ul className="mt-3 divide-y divide-subtle text-sm">
-        {history.map((item) => (
-          <li
-            key={`${item.code}:${item.duration_minutes}:${item.version}`}
-            className="flex flex-wrap items-center justify-between gap-3 py-3"
-          >
-            <span>
-              {item.name} · {item.duration_minutes / 60} hours · v{item.version}{" "}
-              · ₱
-              {(item.price_centavos / 100).toLocaleString("en-PH", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}{" "}
-              · {item.active ? "Active" : "Inactive"}
-            </span>
-            {item.version ===
-              Math.max(
-                ...history
-                  .filter(
-                    (row) =>
-                      row.code === item.code &&
-                      row.duration_minutes === item.duration_minutes,
-                  )
-                  .map((row) => row.version ?? 0),
-              ) && (
-              <button
-                disabled={busy}
-                onClick={() => void toggle(item)}
-                className="min-h-11 rounded-lg border border-primary px-3 text-primary disabled:opacity-50"
-              >
-                {item.active ? "Deactivate" : "Activate"}
-              </button>
-            )}
-          </li>
-        ))}
-      </ul>
+      <details className="mt-8">
+        <summary className="min-h-11 cursor-pointer font-bold">
+          Rate history and package availability
+        </summary>
+        <ul className="mt-3 divide-y divide-subtle text-sm">
+          {history.map((item) => (
+            <li
+              key={`${item.code}:${item.duration_minutes}:${item.version}`}
+              className="flex flex-wrap items-center justify-between gap-3 py-3"
+            >
+              <span>
+                {item.name} · {item.duration_minutes / 60} hours · v
+                {item.version} · ₱
+                {(item.price_centavos / 100).toLocaleString("en-PH", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{" "}
+                · {item.active ? "Active" : "Inactive"}
+              </span>
+              {item.version ===
+                Math.max(
+                  ...history
+                    .filter(
+                      (row) =>
+                        row.code === item.code &&
+                        row.duration_minutes === item.duration_minutes,
+                    )
+                    .map((row) => row.version ?? 0),
+                ) && (
+                <button
+                  disabled={busy}
+                  onClick={() => void toggle(item)}
+                  className="min-h-11 rounded-lg border border-primary px-3 text-primary disabled:opacity-50"
+                >
+                  {item.active ? "Deactivate" : "Activate"}
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      </details>
       {message && (
         <p aria-live="polite" className="mt-3 text-sm text-muted">
           {message}

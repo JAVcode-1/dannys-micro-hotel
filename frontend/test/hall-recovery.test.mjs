@@ -118,13 +118,11 @@ test(
           createElement(HallDesk, { token: "invalid" }),
         ),
       );
-      await screen.findByRole("button", { name: "Manage this reservation" });
+      const more = await screen.findByText("More actions");
+      more.closest("details").open = true;
       fireEvent.click(
-        screen.getByRole("button", { name: "Manage this reservation" }),
+        screen.getByRole("button", { name: "Record completed refund" }),
       );
-      fireEvent.change(screen.getByLabelText("Action"), {
-        target: { value: "complete_refund" },
-      });
       const selector = await screen.findByLabelText("Pending refund approval");
       await waitFor(() =>
         assert.match(

@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type { FormEvent } from "react";
 import type { PaymentSession } from "@staytrack/shared";
 import { hotelTime, peso } from "./BookingPlanner";
 import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
+import { readableLabel } from "./presentation";
+
+const referencePattern = /^[0-9]{10,13}$/;
 
 export function PaymentPanel({
   session,
@@ -16,6 +19,7 @@ export function PaymentPanel({
 }) {
   const [elapsed, setElapsed] = useState(0);
   const [reference, setReference] = useState("");
+  const referenceHintId = useId();
   const [file, setFile] = useState<File | null>(null);
   const [pending, setPending] = useState(session.status === "pending_review");
   const [busy, setBusy] = useState(false);
@@ -34,8 +38,11 @@ export function PaymentPanel({
       Date.parse(session.serverNow) -
       elapsed,
   );
-  const expired = session.status === "expired" || remaining === 0;
+  const expired =
+    session.status === "expired" ||
+    (session.status === "awaiting_proof" && remaining === 0);
   const confirmed = session.status === "confirmed";
+  const received = session.receivedAmountCentavos;
   const canSubmit =
     !pending &&
     !expired &&
@@ -44,21 +51,24 @@ export function PaymentPanel({
   async function submit(event: FormEvent) {
     event.preventDefault();
     setMessage("");
+    if (!referencePattern.test(reference)) {
+      setMessage("Enter a GCash transaction reference with 10 to 13 digits.");
+      return;
+    }
     if (
       !file ||
       !["image/png", "image/jpeg"].includes(file.type) ||
       file.size === 0 ||
-      file.size > 5 * 1024 * 1024 ||
-      !reference.trim()
+      file.size > 5 * 1024 * 1024
     ) {
       setMessage(
-        "Choose a PNG or JPEG screenshot up to 5 MB and enter the transaction reference.",
+        "Choose a PNG or JPEG payment screenshot up to 5 MB.",
       );
       return;
     }
     setBusy(true);
     try {
-      await onSubmit(reference.trim(), file);
+      await onSubmit(reference, file);
       setPending(true);
       setFile(null);
       setReference("");
@@ -76,50 +86,94 @@ export function PaymentPanel({
     <section
       className="guest-payment mt-6 rounded-2xl border border-subtle bg-white"
       aria-label="GCash payment proof"
-      data-payment-state={confirmed ? "confirmed" : pending ? "pending" : session.status}
+      data-payment-state={
+        confirmed ? "confirmed" : pending ? "pending" : session.status
+      }
     >
       <div className="guest-payment-intro">
         <p className="text-xs font-bold uppercase tracking-[.16em] text-primary">
-          {preview ? "O02 development preview" : "GCash payment proof"}
+          {preview ? "Payment preview" : "GCash payment"}
         </p>
         <h2 className="mt-3 text-2xl font-bold">
           {confirmed
             ? "Payment verified"
             : pending
-              ? "Payment submitted — awaiting staff verification"
-              : "Your payment details"}
+              ? "Payment under review"
+              : expired
+                ? "Payment deadline passed"
+                : session.status === "unavailable"
+                  ? "Payment unavailable"
+                  : "Pay with GCash"}
         </h2>
         {preview && (
           <p className="mt-3 rounded-xl bg-lavender p-4 text-sm">
-            Sample reservation only. Do not pay. Files selected here stay in this
-            browser and are not uploaded.
+            Sample reservation only. Do not pay. Files selected here stay in
+            this browser and are not uploaded.
           </p>
         )}
-        <p className="mt-4 text-sm text-muted">Full reservation amount</p>
+        <p className="mt-4 text-sm text-muted">
+          {confirmed
+            ? "Amount verified"
+            : pending
+              ? "Amount due"
+              : expired || session.status === "unavailable"
+                ? "Reservation amount"
+                : "Total amount to pay"}
+        </p>
         <p className="text-3xl font-bold text-primary">
-          {peso(session.amountDueCentavos)}
+          {peso(
+            confirmed
+              ? (received ?? session.amountDueCentavos)
+              : session.amountDueCentavos,
+          )}
         </p>
-        <p className="mt-3 text-sm text-muted">
-          Make one GCash transaction for this full reservation. Submit one
-          reference and screenshot covering every selected item; staff verify the
-          actual receipt before confirmation.
-        </p>
-        {session.allocations && (
-          <ul className="mt-4 divide-y divide-subtle text-sm">
-            {session.allocations.map((allocation, index) => (
-              <li key={index} className="flex justify-between gap-4 py-2">
-                <span>{allocation.label}</span>
-                <strong>{peso(allocation.amountCentavos)}</strong>
+        {!confirmed && received != null && (
+          <p className="mt-3 rounded-xl bg-lavender p-4 text-sm">
+            Staff recorded {peso(received)} received. Contact the hotel to
+            resolve the difference before sending another payment.
+          </p>
+        )}
+        {!confirmed &&
+          !pending &&
+          !expired &&
+          session.status === "awaiting_proof" && (
+            <ol className="mt-4 list-decimal space-y-2 pl-5 text-sm">
+              <li>
+                <strong>Pay the full amount shown above.</strong> Scan the
+                hotel’s QR code in GCash to send your payment.
               </li>
-            ))}
-          </ul>
+              <li>
+                <strong>Submit your payment proof.</strong> Enter the GCash
+                transaction reference, upload your payment screenshot, and
+                select Submit proof before the deadline.
+              </li>
+              <li>
+                <strong>Wait for staff verification.</strong> Your booking is
+                confirmed only after staff verify your payment.
+              </li>
+            </ol>
+          )}
+        {!!session.allocations?.length && (
+          <details className="mt-4 text-sm">
+            <summary className="cursor-pointer font-semibold">
+              Payment breakdown
+            </summary>
+            <ul className="mt-2 divide-y divide-subtle">
+              {session.allocations.map((allocation, index) => (
+                <li key={index} className="flex justify-between gap-4 py-2">
+                  <span>{readableLabel(allocation.label)}</span>
+                  <strong>{peso(allocation.amountCentavos)}</strong>
+                </li>
+              ))}
+            </ul>
+          </details>
         )}
       </div>
       <div className="guest-payment-process">
         {confirmed ? (
           <p role="status" className="mt-5 rounded-xl bg-selected p-4">
-            Staff verified receipt of your payment. See your reservation for each
-            item's current status, schedule, refund details and available actions.
+            Your GCash payment is verified. Your booking details show the
+            current status of each room and event.
           </p>
         ) : session.status === "unavailable" ? (
           <p role="status" className="mt-5 rounded-xl bg-lavender p-4">
@@ -128,9 +182,9 @@ export function PaymentPanel({
           </p>
         ) : pending ? (
           <p role="status" className="mt-5 rounded-xl bg-selected p-4">
-            Staff must check the actual GCash transaction. All selected room and
-            Hall capacity remains protected while review is pending. This
-            submission does not confirm a booking.
+            Your proof was submitted. Your selected availability stays protected
+            while staff checks the actual transaction. Your booking is not
+            confirmed yet.
           </p>
         ) : (
           <>
@@ -142,17 +196,18 @@ export function PaymentPanel({
               Time remaining: {Math.floor(remaining / 60000)}m{" "}
               {String(Math.floor(remaining / 1000) % 60).padStart(2, "0")}s
             </p>
-            <p className="mt-2 text-sm text-muted">
-              Your selected availability is held for 30 minutes after you
-              continue to payment. Submit your GCash reference and screenshot
-              before this deadline. Timely proof keeps your reservation
-              protected while staff verifies payment.
-            </p>
+            {!expired && (
+              <p className="mt-2 text-sm text-muted">
+                Submit both proof and reference before the deadline. Timely
+                submission keeps your selected availability protected during
+                review.
+              </p>
+            )}
             {expired ? (
               <p role="status" className="mt-5 rounded-xl bg-lavender p-4">
-                The proof deadline has passed. If you already paid, contact staff
-                for reconciliation. Do not pay again. Availability must be checked
-                again.
+                The proof deadline has passed. If you already paid, contact
+                staff for reconciliation. Do not pay again. Availability must be
+                checked again.
               </p>
             ) : (
               <>
@@ -161,8 +216,8 @@ export function PaymentPanel({
                     role="status"
                     className="mt-4 text-sm font-semibold text-primary"
                   >
-                    Five-minute reminder: submit both your screenshot and
-                    reference before the deadline.
+                    Reminder: submit your screenshot and reference before the
+                    deadline.
                   </p>
                 )}
                 {session.qrUrl && !preview ? (
@@ -204,12 +259,17 @@ export function PaymentPanel({
                       Transaction reference
                       <input
                         required
-                        maxLength={100}
+                        inputMode="numeric"
+                        pattern={referencePattern.source}
+                        aria-describedby={referenceHintId}
                         value={reference}
                         onChange={(event) => setReference(event.target.value)}
                         className="mt-2 min-h-11 w-full rounded-xl border border-subtle px-3 text-base"
                       />
                     </label>
+                    <p id={referenceHintId} className="text-sm text-muted">
+                      Enter 10 to 13 digits.
+                    </p>
                     <label className="block text-sm font-semibold">
                       Payment screenshot (PNG/JPEG, up to 5 MB)
                       <input
@@ -233,14 +293,19 @@ export function PaymentPanel({
                 </form>
               </>
             )}
-            <p className="mt-5 text-sm text-muted">
-              Email reminder schedule:{" "}
-              {session.emailReminderAt.map(hotelTime).join(" and ")}. Email
-              delivery is{" "}
-              {session.emailDeliveryEnabled
-                ? "enabled."
-                : "not enabled in this environment."}
-            </p>
+            <details className="mt-5 text-sm text-muted">
+              <summary className="cursor-pointer font-semibold">
+                Payment reminders
+              </summary>
+              <p className="mt-2">
+                Email reminder schedule:{" "}
+                {session.emailReminderAt.map(hotelTime).join(" and ")}. Email
+                delivery is{" "}
+                {session.emailDeliveryEnabled
+                  ? "enabled."
+                  : "not enabled in this environment."}
+              </p>
+            </details>
           </>
         )}
         {message && (
@@ -317,7 +382,9 @@ export default function GuestPayment({
               const data = (await response.json()) as { error?: string };
               throw new Error(data.error || "Proof submission unavailable.");
             }
-            notifySuccess("Payment proof submitted. Awaiting staff verification.");
+            notifySuccess(
+              "Payment proof submitted. Awaiting staff verification.",
+            );
           }}
         />
       )}
@@ -330,4 +397,3 @@ export default function GuestPayment({
     </div>
   );
 }
-

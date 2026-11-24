@@ -1,6 +1,7 @@
+import TimePartInput, { manilaClock } from "./TimePartInput";
 import { GuestCancellationRequest } from "./CancellationDesk";
 import { GuestRescheduleRequest } from "./RescheduleDesk";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import type {
   GuestReservation,
   CancellationRow,
@@ -12,6 +13,28 @@ import GuestPayment from "./GuestPayment";
 import { notifySuccess } from "./notifications";
 import GuestReviewAccess from "./GuestReviewAccess";
 import { safeGuestReturnTo, useGuestSession } from "./GuestSession";
+
+import { bookingReference, readableLabel } from "./presentation";
+
+function bookingGroup(row: GuestReservation) {
+  const ongoing =
+    row.items.some((item) => item.checkedInAt && !item.checkedOutAt) ||
+    (row.hall?.actualStart &&
+      !["completed", "cancelled"].includes(row.hall.status));
+  if (ongoing) return "Ongoing";
+  const roomsEnded = row.items.every(
+    (item) =>
+      item.checkedOutAt ||
+      ["cancelled", "expired", "rejected", "released"].includes(
+        item.status ?? "",
+      ) ||
+      ["cancelled", "expired", "rejected", "released"].includes(item.state),
+  );
+  const hallEnded =
+    !row.hall ||
+    ["completed", "cancelled", "expired", "rejected"].includes(row.hall.status);
+  return roomsEnded && hallEnded ? "Past" : "Upcoming";
+}
 
 const action =
   "inline-flex min-h-11 items-center font-semibold text-primary disabled:opacity-50";
@@ -127,6 +150,11 @@ export default function GuestReservations({
     return () => controller.abort();
   }, [token, reservationId, offset, reload]);
   const visible = loadedToken === token ? rows : [];
+  const ordered = reservationId
+    ? visible
+    : ["Ongoing", "Upcoming", "Past"].flatMap((group) =>
+        visible.filter((row) => bookingGroup(row) === group),
+      );
   return (
     <section className="guest-reservations" aria-label="Your reservations">
       <p className="guest-eyebrow">Your time at Danny’s</p>
@@ -143,198 +171,298 @@ export default function GuestReservations({
           {message}
         </p>
       )}
-      {visible.map((row) => (
-        <article
-          key={row.id}
-          className="guest-reservation-card mt-5 rounded-2xl border border-subtle bg-white p-5 sm:p-7"
-        >
-          <h2 className="break-words text-xl font-bold">{row.primaryName}</h2>
-          <p className="mt-2 text-muted">
-            Created {hotelTime(row.createdAt)} · {peso(row.totalCentavos)}
-          </p>
-          {!reservationId ? (
-            <>
-              <p className="mt-2 text-sm">
-                {row.items.length > 0
-                  ? `${row.items.length} room${row.items.length === 1 ? "" : "s"}`
-                  : ""}
-                {row.hall
-                  ? `${row.items.length ? " + " : ""}Function Hall`
-                  : ""}{" "}
-                ·{" "}
-                {row.items
-                  .map((item) => item.state.replaceAll("_", " "))
-                  .join(", ")}
-              </p>
-              <a className={action} href={`/reservations/${row.id}`}>
-                View booking
-              </a>
-            </>
-          ) : (
-            <>
-              <p className="mt-3 text-sm font-semibold text-primary">
-                {row.hall
-                  ? row.items.length
-                    ? "Accommodation + Function Hall"
-                    : "Function Hall"
-                  : "Accommodation"}
-              </p>
-              {row.financials && (
-                <dl className="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-selected p-4 text-sm">
-                  <dt>Net charges</dt>
-                  <dd>{peso(row.financials.netChargeCentavos)}</dd>
-                  <dt>Collected</dt>
-                  <dd>{peso(row.financials.collectedCentavos)}</dd>
-                  <dt>Balance due</dt>
-                  <dd>{peso(row.financials.settlementDueCentavos)}</dd>
-                  <dt>Refund due</dt>
-                  <dd>{peso(row.financials.refundDueCentavos)}</dd>
-                </dl>
-              )}
-              {row.items.map((item, index) => {
-                const confirmed =
-                  item.state === "confirmed" && item.status !== "cancelled";
-                const cancelEligible =
-                  confirmed &&
-                  !item.checkedInAt &&
-                  !!item.confirmationAt &&
-                  Date.now() <= Date.parse(item.confirmationAt) + 3600000;
-                const rescheduleEligible =
-                  confirmed &&
-                  !item.checkedInAt &&
-                  !item.pendingReschedule &&
-                  !!item.blocks?.length;
-                return (
-                  <section
-                    key={item.id}
-                    className="mt-5 border-t border-subtle pt-5 text-sm leading-6"
-                  >
-                    <h3 className="text-base font-bold">
-                      Room {index + 1} ·{" "}
-                      {item.category === "double_standard"
-                        ? "Double Standard"
-                        : "Family Executive"}
-                    </h3>
-                    <p>
-                      {hotelTime(item.startAt)} →{" "}
-                      {hotelTime(item.effectiveCheckoutAt ?? item.endAt)}
-                    </p>
-                    <p>
-                      {item.adults} adults · {item.children} children ·{" "}
-                      {peso(item.totalCentavos)}
-                    </p>
-                    <p>
-                      Status:{" "}
-                      {item.checkedOutAt
+      {ordered.map((row, rowIndex) => (
+        <Fragment key={row.id}>
+          {!reservationId &&
+            (rowIndex === 0 ||
+              bookingGroup(ordered[rowIndex - 1]) !== bookingGroup(row)) && (
+              <h2 className="mt-6 text-lg font-bold">{bookingGroup(row)}</h2>
+            )}
+          <article
+            key={row.id}
+            className="guest-reservation-card mt-5 rounded-2xl border border-subtle bg-white p-5 sm:p-7"
+          >
+            <p className="text-sm font-semibold text-primary">
+              {bookingReference(row.id)}
+            </p>
+            <h2 className="mt-1 break-words text-xl font-bold">
+              {row.primaryName}
+            </h2>
+            <p className="mt-2 text-muted">
+              Total amount:{" "}
+              {peso(row.financials?.netChargeCentavos ?? row.totalCentavos)}
+            </p>
+            {!reservationId ? (
+              <>
+                <p className="mt-2 text-sm">
+                  {row.items.length > 0
+                    ? `${row.items.length} room${row.items.length === 1 ? "" : "s"}`
+                    : ""}
+                  {row.hall
+                    ? `${row.items.length ? " + " : ""}Function Hall`
+                    : ""}{" "}
+                  ·{" "}
+                  {row.items
+                    .map((item) =>
+                      item.checkedOutAt
                         ? "Checked out"
                         : item.checkedInAt
                           ? "Checked in"
-                          : item.status === "cancelled"
-                            ? "Cancelled"
-                            : item.state.replaceAll("_", " ")}
-                    </p>
-                    {item.additionalCharges?.map((charge, i) => (
-                      <p key={i}>
-                        {charge.kind.replaceAll("_", " ")}:{" "}
-                        {peso(charge.amountCentavos)} · Paid{" "}
-                        {peso(charge.paidCentavos)} · Credits{" "}
-                        {peso(charge.creditedCentavos)}
+                          : readableLabel(
+                              item.status === "cancelled"
+                                ? item.status
+                                : item.state,
+                            ),
+                    )
+                    .join(", ")}
+                </p>
+                {row.items.map((item, index) => (
+                  <p key={item.id} className="mt-2 text-sm text-muted">
+                    Room {index + 1}: {hotelTime(item.startAt)} to{" "}
+                    {hotelTime(item.effectiveCheckoutAt ?? item.endAt)}
+                  </p>
+                ))}
+                {row.hall && (
+                  <p className="mt-2 text-sm text-muted">
+                    Function Hall: {hotelTime(row.hall.startAt)} to{" "}
+                    {hotelTime(row.hall.endAt)} -{" "}
+                    {readableLabel(row.hall.status)}
+                  </p>
+                )}
+                <a className={action} href={`/reservations/${row.id}`}>
+                  View booking
+                </a>
+              </>
+            ) : (
+              <>
+                <p className="mt-3 text-sm font-semibold text-primary">
+                  {row.hall
+                    ? row.items.length
+                      ? "Accommodation + Function Hall"
+                      : "Function Hall"
+                    : "Accommodation"}
+                </p>
+                {row.financials && (
+                  <dl className="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-selected p-4 text-sm">
+                    <dt>Total amount</dt>
+                    <dd>{peso(row.financials.netChargeCentavos)}</dd>
+                    <dt>Amount paid</dt>
+                    <dd>{peso(row.financials.collectedCentavos)}</dd>
+                    <dt>Remaining balance</dt>
+                    <dd>{peso(row.financials.settlementDueCentavos)}</dd>
+                    {row.financials.refundDueCentavos > 0 && (
+                      <>
+                        <dt>Refund due</dt>
+                        <dd>{peso(row.financials.refundDueCentavos)}</dd>
+                      </>
+                    )}
+                  </dl>
+                )}
+                {row.items.map((item, index) => {
+                  const confirmed =
+                    item.state === "confirmed" && item.status !== "cancelled";
+                  const cancellationDeadline = item.confirmationAt
+                    ? Date.parse(item.confirmationAt) + 3600000
+                    : null;
+                  const cancelEligible =
+                    confirmed &&
+                    !item.checkedInAt &&
+                    cancellationDeadline !== null &&
+                    Date.now() <= cancellationDeadline;
+                  const rescheduleEligible =
+                    confirmed &&
+                    !item.checkedInAt &&
+                    !item.pendingReschedule &&
+                    !!item.blocks?.length;
+                  return (
+                    <section
+                      key={item.id}
+                      className="mt-5 border-t border-subtle pt-5 text-sm leading-6"
+                    >
+                      <h3 className="text-base font-bold">
+                        Room {index + 1} ·{" "}
+                        {item.category === "double_standard"
+                          ? "Double Standard"
+                          : "Family Executive"}
+                      </h3>
+                      <p>Scheduled arrival: {hotelTime(item.startAt)}</p>
+                      <p>
+                        Departure:{" "}
+                        {hotelTime(item.effectiveCheckoutAt ?? item.endAt)}
                       </p>
-                    ))}
-                    {cancelEligible ? (
-                      <GuestCancellationRequest
-                        token={token}
-                        itemId={item.id}
-                      />
+                      {item.checkedInAt && (
+                        <p>Checked in: {hotelTime(item.checkedInAt)}</p>
+                      )}
+                      {item.checkedOutAt && (
+                        <p>Checked out: {hotelTime(item.checkedOutAt)}</p>
+                      )}
+                      {item.effectiveCheckoutAt &&
+                        item.effectiveCheckoutAt !== item.endAt && (
+                          <p className="text-muted">
+                            Booked departure: {hotelTime(item.endAt)}
+                          </p>
+                        )}
+                      {item.originalCheckoutAt &&
+                        item.originalCheckoutAt !== item.endAt && (
+                          <p className="text-muted">
+                            Departure recorded at check-in:{" "}
+                            {hotelTime(item.originalCheckoutAt)}
+                          </p>
+                        )}
+                      <p>
+                        {item.adults} adults · {item.children} children ·{" "}
+                        {peso(item.totalCentavos)}
+                      </p>
+                      <p>
+                        Status:{" "}
+                        {item.checkedOutAt
+                          ? "Checked out"
+                          : item.checkedInAt
+                            ? "Checked in"
+                            : item.status === "cancelled"
+                              ? "Cancelled"
+                              : readableLabel(item.state)}
+                      </p>
+                      {!!item.additionalCharges?.length && (
+                        <details className="mt-3">
+                          <summary className="cursor-pointer font-semibold">
+                            Additional charges
+                          </summary>
+                          {item.additionalCharges.map((charge, i) => (
+                            <p key={i}>
+                              {readableLabel(charge.kind)}:{" "}
+                              {peso(charge.amountCentavos)} · Paid{" "}
+                              {peso(charge.paidCentavos)} · Credits{" "}
+                              {peso(charge.creditedCentavos)}
+                            </p>
+                          ))}
+                        </details>
+                      )}
+                      {cancelEligible ? (
+                        <GuestCancellationRequest
+                          token={token}
+                          itemId={item.id}
+                        />
+                      ) : null}
+                      {!item.checkedOutAt && item.status !== "cancelled" && (
+                        <details className="mt-3 text-muted">
+                          <summary className="cursor-pointer">
+                            Cancellation policy
+                          </summary>
+                          {confirmed && cancellationDeadline !== null && (
+                            <p>
+                              Original free-cancellation deadline:{" "}
+                              {hotelTime(new Date(cancellationDeadline).toISOString())}.
+                              A schedule change keeps this deadline. Free cancellation
+                              ends sooner if you check in before it.
+                            </p>
+                          )}
+                          {!cancelEligible && (
+                            <p>
+                              {item.checkedInAt
+                                ? "This room has checked in. Contact staff for stay changes."
+                                : !confirmed
+                                  ? "Cancellation requests become available after confirmation. Contact staff for reconciliation of other states."
+                                  : "The one-hour free cancellation window has ended. Contact staff for review."}
+                            </p>
+                          )}
+                        </details>
+                      )}
+                      {rescheduleEligible && item.blocks ? (
+                        <GuestRescheduleRequest
+                          token={token}
+                          itemId={item.id}
+                          revision={item.scheduleRevision ?? 0}
+                          startAt={item.startAt}
+                          blocks={item.blocks}
+                        />
+                      ) : item.pendingReschedule ? (
+                        <div role="status" className="mt-3 rounded-lg bg-selected p-3">
+                          <p className="font-semibold">Awaiting staff approval</p>
+                          <p>Your current booking stays active while staff check availability.</p>
+                        </div>
+                      ) : null}
+                    </section>
+                  );
+                })}
+                {row.hall && (
+                  <GuestHallItem
+                    hall={row.hall}
+                    token={token}
+                    onRefresh={() => setReload((value) => value + 1)}
+                  />
+                )}
+                <div className="mt-5 flex flex-wrap gap-5">
+                  <a
+                    className={action}
+                    href={`/reservations/${row.id}/payment`}
+                  >
+                    View payment
+                  </a>
+                  <button
+                    className={action}
+                    onClick={() => setReload((value) => value + 1)}
+                  >
+                    Refresh booking
+                  </button>
+                </div>
+                {payment && (
+                  <GuestPayment token={token} reservationId={row.id} />
+                )}
+                <details className="mt-5 text-sm">
+                  <summary className="cursor-pointer font-semibold">
+                    Booking records and refund history
+                  </summary>
+                  <p className="mt-2 break-all">Full booking ID: {row.id}</p>
+                  <p>Created {hotelTime(row.createdAt)}</p>
+                  <RefundHistory token={token} reservationId={row.id} />
+                </details>
+                {reviewsEnabled && (
+                  <section className="mt-5 border-t border-subtle pt-4">
+                    {row.reviewEligible ? (
+                      <button
+                        className={action}
+                        onClick={() => setReview("review")}
+                      >
+                        Review your completed stay
+                      </button>
                     ) : (
-                      <p className="mt-3 text-muted">
-                        {item.checkedInAt
-                          ? "This room has checked in. Contact staff for stay changes."
-                          : !confirmed
-                            ? "Cancellation requests become available after confirmation. Contact staff for reconciliation of other states."
-                            : "The one-hour free cancellation window has ended. Contact staff for review."}
+                      <p className="text-sm text-muted">
+                        A public review requires a recorded completed stay
+                        within the review window and no previous rating for this
+                        reservation.
                       </p>
                     )}
-                    {rescheduleEligible && item.blocks ? (
-                      <GuestRescheduleRequest
+                    {row.items.some(
+                      (item) => item.checkedInAt && item.checkedOutAt,
+                    ) && (
+                      <button
+                        className={`${action} ml-4`}
+                        onClick={() => setReview("feedback")}
+                      >
+                        Send private feedback
+                      </button>
+                    )}
+                    {review && (
+                      <GuestReviewAccess
+                        key={`${row.id}:${review}`}
                         token={token}
-                        itemId={item.id}
-                        revision={item.scheduleRevision ?? 0}
-                        startAt={item.startAt}
-                        endAt={item.endAt}
-                        blocks={item.blocks}
-                        confirmationAt={item.confirmationAt ?? null}
+                        reservation={row.id}
+                        initial={review}
                       />
-                    ) : (
-                      <p className="text-muted">
-                        {item.pendingReschedule
-                          ? "A schedule change is already awaiting staff review."
-                          : "Self-service rescheduling requires a confirmed room before arrival and check-in."}
-                      </p>
                     )}
                   </section>
-                );
-              })}
-              {row.hall && (
-                <GuestHallItem
-                  hall={row.hall}
-                  token={token}
-                  onRefresh={() => setReload((value) => value + 1)}
-                />
-              )}
-              <div className="mt-5 flex flex-wrap gap-5">
-                <a className={action} href={`/reservations/${row.id}/payment`}>
-                  View payment
-                </a>
-                <button
-                  className={action}
-                  onClick={() => setReload((value) => value + 1)}
-                >
-                  Refresh booking
-                </button>
-              </div>
-              {payment && <GuestPayment token={token} reservationId={row.id} />}
-              <RefundHistory token={token} reservationId={row.id} />
-              {reviewsEnabled && (
-                <section className="mt-5 border-t border-subtle pt-4">
-                  {row.reviewEligible ? (
-                    <button
-                      className={action}
-                      onClick={() => setReview("review")}
-                    >
-                      Review your completed stay
-                    </button>
-                  ) : (
-                    <p className="text-sm text-muted">
-                      A public review requires a recorded completed stay within
-                      the review window and no previous rating for this
-                      reservation.
-                    </p>
-                  )}
-                  {row.items.some(
-                    (item) => item.checkedInAt && item.checkedOutAt,
-                  ) && (
-                    <button
-                      className={`${action} ml-4`}
-                      onClick={() => setReview("feedback")}
-                    >
-                      Send private feedback
-                    </button>
-                  )}
-                  {review && (
-                    <GuestReviewAccess
-                      key={`${row.id}:${review}`}
-                      token={token}
-                      reservation={row.id}
-                      initial={review}
-                    />
-                  )}
-                </section>
-              )}
-            </>
-          )}
-        </article>
+                )}
+              </>
+            )}
+          </article>
+        </Fragment>
       ))}
+      {!reservationId && (
+        <p className="mt-4 text-sm text-muted">
+          Grouped within this page. Use Next for older bookings.
+        </p>
+      )}
       {!reservationId && (
         <nav aria-label="Reservation pages" className="mt-5 flex gap-6">
           <button
@@ -394,16 +522,16 @@ function RefundHistory({
       });
     return () => controller.abort();
   }, [token, reservationId]);
+  if (!message && rows.length === 0) return null;
   return (
     <section className="mt-5">
-      <h3 className="font-bold">Accommodation refund status</h3>
+      <h3 className="font-bold">Accommodation refunds</h3>
       {message ? (
         <p className="mt-2 text-sm text-muted">{message}</p>
       ) : rows.length ? (
         rows.map((row) => (
           <p key={row.id} className="mt-2 text-sm">
-            {row.refundStatus.replaceAll("_", " ")} ·{" "}
-            {peso(row.refundCentavos ?? 0)}
+            {readableLabel(row.refundStatus)} · {peso(row.refundCentavos ?? 0)}
             {row.transferredAt ? ` · ${hotelTime(row.transferredAt)}` : ""}
           </p>
         ))
@@ -461,7 +589,9 @@ function GuestHallItem({
       const result = (await response.json()) as { error?: string };
       if (!response.ok)
         throw new Error(result.error ?? "Cancellation could not be recorded.");
-      notifySuccess("Hall cancellation recorded. Eligible refunds are processed manually.");
+      notifySuccess(
+        "Hall cancellation recorded. Eligible refunds are processed manually.",
+      );
       setMessage(
         "Hall cancellation recorded. Eligible refunds are transferred manually by staff; your other reservation items are unchanged.",
       );
@@ -486,12 +616,14 @@ function GuestHallItem({
       <p>
         {hall.attendees} attendees · {peso(hall.totalCentavos)}
       </p>
-      <p>Status: {hall.status.replaceAll("_", " ")}</p>
+      <p>Status: {readableLabel(hall.status)}</p>
       {hall.actualStart && <p>Event started: {hotelTime(hall.actualStart)}</p>}
-      <p>
-        Hall refund due: {peso(hall.refundDueCentavos ?? 0)} · Refunded
-        manually: {peso(hall.refundedCentavos ?? 0)}
-      </p>
+      {(!!hall.refundDueCentavos || !!hall.refundedCentavos) && (
+        <p>
+          Hall refund due: {peso(hall.refundDueCentavos ?? 0)} · Refunded
+          manually: {peso(hall.refundedCentavos ?? 0)}
+        </p>
+      )}
       {confirmed && <GuestHallChange hall={hall} token={token} />}
       {cancelEligible ? (
         <form
@@ -517,18 +649,25 @@ function GuestHallItem({
             {busy ? "Cancelling..." : "Cancel hall"}
           </button>
         </form>
-      ) : (
-        <p className="mt-3 text-muted">
-          {hall.actualStart
-            ? "This event has started."
-            : confirmed
-              ? "The one-hour free cancellation window has ended."
-              : "Free cancellation is available after confirmation and before the event starts."}{" "}
-          Contact staff for review, independent rescheduling or an extension.
-          Hall extensions require full payment of the additional cost before
-          activation.
-        </p>
-      )}
+      ) : !["completed", "cancelled", "expired", "rejected"].includes(
+          hall.status,
+        ) ? (
+        <details className="mt-3 text-muted">
+          <summary className="cursor-pointer">
+            Changes and cancellation policy
+          </summary>
+          <p>
+            {hall.actualStart
+              ? "This event has started."
+              : confirmed
+                ? "The one-hour free cancellation window has ended."
+                : "Free cancellation is available after confirmation and before the event starts."}{" "}
+            Contact staff for review, independent rescheduling or an extension.
+            Hall extensions require full payment of the additional cost before
+            activation.
+          </p>
+        </details>
+      ) : null}
       {message && (
         <p role="status" className="mt-3">
           {message}
@@ -577,7 +716,7 @@ function GuestHallChange({
             minutes: Math.round(
               (Date.parse(hall.endAt) - Date.parse(hall.startAt)) / 60000,
             ),
-            start: `${date}T${String((Number(hour) % 12) + (period === "PM" ? 12 : 0)).padStart(2, "0")}:${minute}`,
+            start: `${date}T${manilaClock(hour, minute, period)}`,
           };
     const body = JSON.stringify(payload);
     const key =
@@ -658,30 +797,26 @@ function GuestHallChange({
                 />
               </label>
               <div className="grid grid-cols-3 gap-3">
-                <label>
+                <div>
                   Event hour
-                  <select
-                    className={input}
+                  <TimePartInput
+                    part="hour"
+                    label="Event hour"
                     value={hour}
-                    onChange={(e) => setHour(e.target.value)}
-                  >
-                    {Array.from({ length: 12 }, (_, i) => (
-                      <option key={i + 1}>{i + 1}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Event minute
-                  <select
+                    onChange={setHour}
                     className={input}
+                  />
+                </div>
+                <div>
+                  Event minute
+                  <TimePartInput
+                    part="minute"
+                    label="Event minute"
                     value={minute}
-                    onChange={(e) => setMinute(e.target.value)}
-                  >
-                    {Array.from({ length: 60 }, (_, i) => (
-                      <option key={i}>{String(i).padStart(2, "0")}</option>
-                    ))}
-                  </select>
-                </label>
+                    onChange={setMinute}
+                    className={input}
+                  />
+                </div>
                 <label>
                   Event AM/PM
                   <select

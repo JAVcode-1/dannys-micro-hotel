@@ -80,7 +80,7 @@ export async function x01Postgres(t, pool) {
           )
         ).rows;
         if (confirm) {
-          const reference = `X01-PAID-${n}`;
+          const reference = `51000${String(n).padStart(5, "0")}`;
           await submitPaymentProof(
             guest,
             hold.id,

@@ -92,7 +92,13 @@ export default function StaffRooms({ token }: { token: string }) {
             "Housekeeping could not be recorded. Refresh and retry.",
         );
       }
-      notifySuccess({ start: "Cleaning started.", finish: "Cleaning finished. Ready inspection is still required.", ready: "Room marked Ready." }[action]);
+      notifySuccess(
+        {
+          start: "Cleaning started.",
+          finish: "Cleaning finished. Ready inspection is still required.",
+          ready: "Room marked Ready.",
+        }[action],
+      );
       await load();
       delete retries.current[retry];
       setChecks((current) => ({ ...current, [cycle]: false }));
@@ -123,7 +129,7 @@ export default function StaffRooms({ token }: { token: string }) {
           <p className="text-xs font-bold uppercase tracking-[.2em] text-primary">
             Operations
           </p>
-          <h2 className="mt-2 text-2xl font-bold">Physical rooms</h2>
+          <h2 className="mt-2 text-2xl font-bold">Rooms</h2>
         </div>
         <span className="rounded-full bg-selected px-3 py-2 text-sm font-semibold text-primary">
           {rooms.length} rooms on record
@@ -140,14 +146,20 @@ export default function StaffRooms({ token }: { token: string }) {
               .finally(() => setBusy(false));
           }}
         >
-          Refresh room board
+          Refresh
         </button>
       </div>
-      <p className="mt-3 text-sm text-muted">
-        Physical readiness and turnover protection are separate. Capacity claims
-        below are provisional, not guest room assignments.
-      </p>
-      <RoomRegistration key={token} token={token} refresh={load} disabled={loading || busy} />
+      <details className="mt-4 rounded-xl border border-subtle bg-white p-4">
+        <summary className="min-h-11 cursor-pointer font-semibold text-primary">
+          Register a room
+        </summary>
+        <RoomRegistration
+          key={token}
+          token={token}
+          refresh={load}
+          disabled={loading || busy}
+        />
+      </details>
       {loading && (
         <p role="status" className="mt-6 text-muted">
           Loading room board…
@@ -164,202 +176,309 @@ export default function StaffRooms({ token }: { token: string }) {
           are pending.
         </p>
       )}
-      <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {rooms.map((room) => {
-          const events = room.housekeeping ?? [];
-          const stage = events.at(-1)?.action;
-          const action: HousekeepingAction =
-            stage === "start"
-              ? "finish"
-              : stage === "finish"
-                ? "ready"
-                : "start";
-          const label = {
-            start: "Start cleaning",
-            finish: "Finish cleaning",
-            ready: "Mark Ready",
-          }[action];
-          const cycle = `${room.id}:${room.checkout_id}`;
-          return (
-            <article
-              key={room.id}
-              className="rounded-xl border border-subtle bg-white p-4"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-bold">{room.code}</h3>
-                  <p className="mt-1 text-sm text-muted">
-                    {room.category_name}
-                  </p>
-                </div>
-                <span
-                  className={`rounded-full px-2 py-1 text-xs font-semibold ${status[room.operational_state] ?? status.unverified}`}
-                >
-                  {room.operational_state === "unverified"
-                    ? "Unverified"
-                    : room.operational_state[0].toUpperCase() +
-                      room.operational_state.slice(1)}
-                </span>
-              </div>
-              <div className="mt-4 space-y-2 text-sm">
-                {room.available_now && (
-                  <p className="font-semibold text-green-800">Available now</p>
-                )}
-                {room.operational_state === "cleaning" && (
-                  <p className="font-semibold text-amber-800">
-                    {stage === "finish"
-                      ? "Cleaning finished · Not Ready"
-                      : stage === "start"
-                        ? "Cleaning in progress · Not Ready"
-                        : "Needs cleaning · Not Ready"}
-                  </p>
-                )}
-                {room.maintenance_now && (
-                  <p className="font-semibold">Maintenance block active</p>
-                )}
-                {room.turnover_until && (
-                  <p>
-                    Turnover protected until {time(room.turnover_until)}{" "}
-                    (Asia/Manila)
-                  </p>
-                )}
-                {room.held_now > 0 && (
-                  <p>
-                    Held / awaiting review: {room.held_now} provisional claim
-                  </p>
-                )}
-                {room.reserved_now > 0 && (
-                  <p>Reserved: {room.reserved_now} provisional claim</p>
-                )}
-                {events.map((event) => (
-                  <p
-                    key={event.action}
-                    className="break-words text-xs text-muted"
-                  >
-                    {
-                      {
-                        start: "Cleaning started",
-                        finish: "Cleaning finished",
-                        ready: "Marked Ready",
-                      }[event.action]
-                    }{" "}
-                    · {time(event.occurredAt)} · Staff {event.actorId}
-                  </p>
-                ))}
-              </div>
-              {room.operational_state === "cleaning" &&
-                room.checkout_id &&
-                stage !== "ready" && (
-                  <div className="mt-4 space-y-3 border-t border-subtle pt-4">
-                    {!room.housekeeping_enabled && (
-                      <p className="text-sm text-muted">
-                        Live housekeeping is closed pending acceptance.
-                      </p>
-                    )}
-                    {action === "ready" && (
-                      <label className="flex min-h-11 items-start gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          className="mt-1"
-                          disabled={
-                            busy ||
-                            !room.housekeeping_enabled ||
-                            room.maintenance_now
-                          }
-                          checked={checks[cycle] ?? false}
-                          onChange={(event) =>
-                            setChecks((current) => ({
-                              ...current,
-                              [cycle]: event.target.checked,
-                            }))
-                          }
-                        />
-                        I completed the applicable room checks and confirm this
-                        room is Ready.
-                      </label>
-                    )}
-                    <button
-                      type="button"
-                      className="min-h-11 rounded-lg bg-primary px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                      disabled={
-                        busy ||
-                        !room.active ||
-                        !room.housekeeping_enabled ||
-                        room.maintenance_now ||
-                        (action === "ready" && !checks[cycle])
-                      }
-                      onClick={() => void act(room, action)}
-                    >
-                      {label}
-                    </button>
+      <div className="mt-6 grid items-start gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {[...rooms]
+          .sort((a, b) =>
+            a.code.localeCompare(b.code, "en", {
+              numeric: true,
+              sensitivity: "base",
+            }),
+          )
+          .map((room) => {
+            const events = room.housekeeping ?? [];
+            const stage = events.at(-1)?.action;
+            const action: HousekeepingAction =
+              stage === "start"
+                ? "finish"
+                : stage === "finish"
+                  ? "ready"
+                  : "start";
+            const label = {
+              start: "Start cleaning",
+              finish: "Finish cleaning",
+              ready: "Mark Ready",
+            }[action];
+            const cycle = `${room.id}:${room.checkout_id}`;
+            return (
+              <article
+                key={room.id}
+                className="rounded-xl border border-subtle bg-white p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-bold">{room.code}</h3>
+                    <p className="mt-1 text-sm text-muted">
+                      {room.category_name}
+                    </p>
                   </div>
-                )}
-              <RoomMaintenancePanel
-                key={token + ":" + (room.maintenance?.activeBlockId ?? "none")}
-                room={room}
-                token={token}
-                refresh={load}
-                time={time}
-                busy={busy}
-                rooms={rooms}
-              />
-              {room.legacy_inspection_eligible !== undefined && (
-                <RoomAdministration
-                  key={token + ":" + room.id}
+                  <span
+                    className={`rounded-full px-2 py-1 text-xs font-semibold ${status[room.operational_state] ?? status.unverified}`}
+                  >
+                    {room.operational_state === "unverified"
+                      ? "Unverified"
+                      : room.operational_state[0].toUpperCase() +
+                        room.operational_state.slice(1)}
+                  </span>
+                </div>
+                <div className="mt-4 space-y-2 text-sm">
+                  <p
+                    className={
+                      room.available_now
+                        ? "font-semibold text-green-800"
+                        : "text-muted"
+                    }
+                  >
+                    {room.available_now ? "Available now" : "Unavailable now"}
+                  </p>
+                  {room.operational_state === "cleaning" && (
+                    <p className="font-semibold text-amber-800">
+                      {stage === "finish"
+                        ? "Cleaning finished · Not Ready"
+                        : stage === "start"
+                          ? "Cleaning in progress · Not Ready"
+                          : "Needs cleaning · Not Ready"}
+                    </p>
+                  )}
+                  {room.maintenance_now && (
+                    <p className="font-semibold">Maintenance block active</p>
+                  )}
+                  {room.turnover_until && (
+                    <p>Turnover ends {time(room.turnover_until)} </p>
+                  )}
+                  {room.held_now > 0 && (
+                    <p>On hold / under review: {room.held_now}</p>
+                  )}
+                  {room.reserved_now > 0 && (
+                    <p>Reserved capacity: {room.reserved_now}</p>
+                  )}
+                </div>
+                {room.operational_state === "cleaning" &&
+                  room.checkout_id &&
+                  stage !== "ready" && (
+                    <div className="mt-4 space-y-3 border-t border-subtle pt-4">
+                      {!room.housekeeping_enabled && (
+                        <p className="text-sm text-muted">
+                          Live housekeeping is closed pending acceptance.
+                        </p>
+                      )}
+                      {action === "ready" && (
+                        <label className="flex min-h-11 items-start gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            className="mt-1"
+                            disabled={
+                              busy ||
+                              !room.housekeeping_enabled ||
+                              room.maintenance_now
+                            }
+                            checked={checks[cycle] ?? false}
+                            onChange={(event) =>
+                              setChecks((current) => ({
+                                ...current,
+                                [cycle]: event.target.checked,
+                              }))
+                            }
+                          />
+                          I completed the applicable room checks and confirm
+                          this room is Ready.
+                        </label>
+                      )}
+                      <button
+                        type="button"
+                        className="min-h-11 rounded-lg bg-primary px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={
+                          busy ||
+                          !room.active ||
+                          !room.housekeeping_enabled ||
+                          room.maintenance_now ||
+                          (action === "ready" && !checks[cycle])
+                        }
+                        onClick={() => void act(room, action)}
+                      >
+                        {label}
+                      </button>
+                    </div>
+                  )}
+                <details className="mt-4 border-t border-subtle pt-3 text-sm">
+                  <summary className="min-h-11 cursor-pointer font-semibold text-primary">
+                    Room details and cleaning history
+                  </summary>
+                  <p className="mb-3 text-muted">
+                    Readiness and availability are checked separately.
+                    Provisional capacity claims are not room assignments.
+                  </p>
+                  {events.map((event) => (
+                    <p
+                      key={event.action}
+                      className="break-words text-xs text-muted"
+                    >
+                      {
+                        {
+                          start: "Cleaning started",
+                          finish: "Cleaning finished",
+                          ready: "Marked Ready",
+                        }[event.action]
+                      }{" "}
+                      · {time(event.occurredAt)} · Staff {event.actorId}
+                    </p>
+                  ))}
+                  {!events.length && (
+                    <p className="text-muted">No cleaning history recorded.</p>
+                  )}
+                </details>
+                <RoomMaintenancePanel
+                  key={
+                    token + ":" + (room.maintenance?.activeBlockId ?? "none")
+                  }
                   room={room}
                   token={token}
                   refresh={load}
+                  time={time}
+                  busy={busy}
+                  rooms={rooms}
                 />
-              )}
-              {!room.active && (
-                <p className="mt-4 text-xs font-semibold text-muted">
-                  Inactive · unavailable for booking
-                </p>
-              )}
-            </article>
-          );
-        })}
+                {room.legacy_inspection_eligible !== undefined && (
+                  <RoomAdministration
+                    key={token + ":" + room.id}
+                    room={room}
+                    token={token}
+                    refresh={load}
+                  />
+                )}
+                {!room.active && (
+                  <p className="mt-4 text-xs font-semibold text-muted">
+                    Inactive · unavailable for booking
+                  </p>
+                )}
+              </article>
+            );
+          })}
       </div>
     </section>
   );
 }
 
-function RoomRegistration({ token, refresh, disabled }: { token: string; refresh: () => Promise<void>; disabled: boolean }) {
+function RoomRegistration({
+  token,
+  refresh,
+  disabled,
+}: {
+  token: string;
+  refresh: () => Promise<void>;
+  disabled: boolean;
+}) {
   const [code, setCode] = React.useState("");
   const [category, setCategory] = React.useState("double_standard");
   const [note, setNote] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [message, setMessage] = React.useState("");
   const retry = React.useRef<{ payload: string; key: string } | null>(null);
-  return <form className="mt-5 rounded-xl border border-subtle bg-white p-4" onSubmit={event => {
-    event.preventDefault();
-    if (busy || disabled) return;
-    const payload = JSON.stringify({ code: code.trim(), category, note: note.trim() });
-    if (retry.current?.payload !== payload) retry.current = { payload, key: crypto.randomUUID() };
-    const requestKey = retry.current.key;
-    setBusy(true); setMessage("");
-    void (async () => {
-      try {
-        const response = await fetch(`${apiBase}/staff/rooms`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ ...JSON.parse(payload), requestKey }) });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error || "Registration failed.");
-        notifySuccess("Room registered as inactive and Unverified. Inspect it before activation.");
-        retry.current = null; setCode(""); setNote("");
-        await refresh(); setMessage("Room registered as inactive and Unverified. Inspect it, then activate it for booking.");
-      } catch (error) { setMessage(error instanceof Error ? error.message : "Registration unavailable. Refresh before retrying."); }
-      finally { setBusy(false); }
-    })();
-  }}>
-    <h3 className="font-bold">Register a physical room</h3>
-    <p className="mt-2 text-sm text-muted">Register the actual 10 Double Standard and 5 Family Executive identifiers. The Function Hall is managed separately. New rooms are not automatically Ready or available.</p>
-    <fieldset disabled={busy || disabled} className="mt-3 grid gap-3 sm:grid-cols-2">
-      <label className="grid gap-1 text-sm">Actual room number or identifier<input required maxLength={80} value={code} onChange={e => setCode(e.target.value)} className="rounded border border-subtle p-2" /></label>
-      <label className="grid gap-1 text-sm">Room category<select value={category} onChange={e => setCategory(e.target.value)} className="rounded border border-subtle p-2"><option value="double_standard">Double Standard</option><option value="family_executive">Family Executive</option></select></label>
-      <label className="grid gap-1 text-sm sm:col-span-2">Registration note<input required maxLength={1000} value={note} onChange={e => setNote(e.target.value)} className="rounded border border-subtle p-2" /></label>
-      <button className="min-h-11 rounded-lg bg-primary px-4 font-semibold text-white disabled:opacity-50" disabled={!code.trim() || !note.trim()}>{busy ? "Registering…" : "Register room"}</button>
-    </fieldset>
-    {message && <p role="status" className="mt-3 text-sm">{message}</p>}
-  </form>;
+  return (
+    <form
+      className="mt-5 rounded-xl border border-subtle bg-white p-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (busy || disabled) return;
+        const payload = JSON.stringify({
+          code: code.trim(),
+          category,
+          note: note.trim(),
+        });
+        if (retry.current?.payload !== payload)
+          retry.current = { payload, key: crypto.randomUUID() };
+        const requestKey = retry.current.key;
+        setBusy(true);
+        setMessage("");
+        void (async () => {
+          try {
+            const response = await fetch(`${apiBase}/staff/rooms`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ ...JSON.parse(payload), requestKey }),
+            });
+            const result = await response.json();
+            if (!response.ok)
+              throw new Error(result.error || "Registration failed.");
+            notifySuccess(
+              "Room registered as inactive and Unverified. Inspect it before activation.",
+            );
+            retry.current = null;
+            setCode("");
+            setNote("");
+            await refresh();
+            setMessage(
+              "Room registered as inactive and Unverified. Inspect it, then activate it for booking.",
+            );
+          } catch (error) {
+            setMessage(
+              error instanceof Error
+                ? error.message
+                : "Registration unavailable. Refresh before retrying.",
+            );
+          } finally {
+            setBusy(false);
+          }
+        })();
+      }}
+    >
+      <h3 className="font-bold">Register a physical room</h3>
+      <p className="mt-2 text-sm text-muted">
+        Register the actual 10 Double Standard and 5 Family Executive
+        identifiers. The Function Hall is managed separately. New rooms are not
+        automatically Ready or available.
+      </p>
+      <fieldset
+        disabled={busy || disabled}
+        className="mt-3 grid gap-3 sm:grid-cols-2"
+      >
+        <label className="grid gap-1 text-sm">
+          Actual room number or identifier
+          <input
+            required
+            maxLength={80}
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            className="rounded border border-subtle p-2"
+          />
+        </label>
+        <label className="grid gap-1 text-sm">
+          Room category
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="rounded border border-subtle p-2"
+          >
+            <option value="double_standard">Double Standard</option>
+            <option value="family_executive">Family Executive</option>
+          </select>
+        </label>
+        <label className="grid gap-1 text-sm sm:col-span-2">
+          Registration note
+          <input
+            required
+            maxLength={1000}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            className="rounded border border-subtle p-2"
+          />
+        </label>
+        <button
+          className="min-h-11 rounded-lg bg-primary px-4 font-semibold text-white disabled:opacity-50"
+          disabled={!code.trim() || !note.trim()}
+        >
+          {busy ? "Registering…" : "Register room"}
+        </button>
+      </fieldset>
+      {message && (
+        <p role="status" className="mt-3 text-sm">
+          {message}
+        </p>
+      )}
+    </form>
+  );
 }
 
 function RoomAdministration({
@@ -390,17 +509,28 @@ function RoomAdministration({
     setError("");
     setSuccess("");
     if (!note.trim() || (!inspection && !code.trim())) {
-      setError(inspection
-        ? "Enter an inspection reason before marking the room Ready."
-        : "Enter the confirmed room identifier and an administration reason.");
+      setError(
+        inspection
+          ? "Enter an inspection reason before marking the room Ready."
+          : "Enter the confirmed room identifier and an administration reason.",
+      );
       return;
     }
     if (inspection && !checked) {
-      setError("Confirm that you physically inspected the room and it is Ready.");
+      setError(
+        "Confirm that you physically inspected the room and it is Ready.",
+      );
       return;
     }
-    if (!inspection && active && !room.active && room.operational_state !== "ready") {
-      setError("Inspect and mark the room Ready first, then save with Active for booking selected.");
+    if (
+      !inspection &&
+      active &&
+      !room.active &&
+      room.operational_state !== "ready"
+    ) {
+      setError(
+        "Inspect and mark the room Ready first, then save with Active for booking selected.",
+      );
       return;
     }
     const body = inspection
@@ -424,19 +554,35 @@ function RoomAdministration({
       );
       if (!response.ok) {
         const result = await response.json().catch(() => null);
-        throw new Error(result?.error || "Room update failed. Please try again.");
+        throw new Error(
+          result?.error || "Room update failed. Please try again.",
+        );
       }
       retry.current = null;
       setNote("");
       setChecked(false);
-      notifySuccess(inspection ? "Inspection saved. Room marked Ready." : "Room administration saved.");
-      setSuccess(inspection
-        ? "Inspection saved. Room marked Ready." + (!room.active ? " Activate it for booking using Save room administration." : "")
-        : "Room administration saved." + (active ? " Active for online and walk-in bookings, subject to availability." : " Room is inactive for booking."));
+      notifySuccess(
+        inspection
+          ? "Inspection saved. Room marked Ready."
+          : "Room administration saved.",
+      );
+      setSuccess(
+        inspection
+          ? "Inspection saved. Room marked Ready." +
+              (!room.active
+                ? " Activate it for booking using Save room administration."
+                : "")
+          : "Room administration saved." +
+              (active
+                ? " Active for online and walk-in bookings, subject to availability."
+                : " Room is inactive for booking."),
+      );
       try {
         await refresh();
       } catch {
-        setError("The change was saved, but the room board could not refresh. Use Refresh room board to see the latest status.");
+        setError(
+          "The change was saved, but the room board could not refresh. Use Refresh room board to see the latest status.",
+        );
       }
     } catch (error) {
       setError(
@@ -450,7 +596,7 @@ function RoomAdministration({
   return (
     <details className="mt-4 border-t border-subtle pt-3">
       <summary className="cursor-pointer font-semibold">
-        Room administration and inspection
+        Administration and inspection
       </summary>
       <p className="mt-2 text-sm">
         Use owner-confirmed identifiers only. Current inspection can reconcile
@@ -458,9 +604,12 @@ function RoomAdministration({
         it does not invent historical cleaning events.
       </p>
       {!room.housekeeping_enabled && (
-        <p role="status" className="mt-2 text-sm">Room administration and inspection are currently unavailable.</p>
+        <p role="status" className="mt-2 text-sm">
+          Room administration and inspection are currently unavailable.
+        </p>
       )}
-      {room.active && room.physically_ready === false &&
+      {room.active &&
+        room.physically_ready === false &&
         room.operational_state === "ready" && (
           <p className="text-sm">
             Ready label requires current inspection or latest housekeeping
@@ -479,10 +628,19 @@ function RoomAdministration({
       </label>
       <label className="mt-2 grid gap-1">
         Room category
-        <select value={category} disabled={disabled || room.active} onChange={e => setCategory(e.target.value)} className="rounded border border-subtle p-2">
-          <option value="double_standard">Double Standard</option><option value="family_executive">Family Executive</option>
+        <select
+          value={category}
+          disabled={disabled || room.active}
+          onChange={(e) => setCategory(e.target.value)}
+          className="rounded border border-subtle p-2"
+        >
+          <option value="double_standard">Double Standard</option>
+          <option value="family_executive">Family Executive</option>
         </select>
-        <span className="text-xs text-muted">Category corrections require an inactive room without booking or maintenance history.</span>
+        <span className="text-xs text-muted">
+          Category corrections require an inactive room without booking or
+          maintenance history.
+        </span>
       </label>
       <label className="flex gap-2 py-2">
         <input
@@ -533,7 +691,11 @@ function RoomAdministration({
         </>
       )}
       {busy && <p role="status">Saving room changes…</p>}
-      {success && <p role="status" className="mt-2 text-green-800">{success}</p>}
+      {success && (
+        <p role="status" className="mt-2 text-green-800">
+          {success}
+        </p>
+      )}
       {error && <p role="alert">{error}</p>}
     </details>
   );

@@ -27,7 +27,7 @@ test("W03 synthetic preview keeps overdue occupied, requires unpaid reason and d
   assert.ok(
     screen.getByRole("heading", { name: "Stay countdown and checkout" }),
   );
-  assert.ok(screen.getByText(/Overdue/));
+  assert.ok(screen.getByText(/Package expired/));
   assert.ok(screen.getByText(/not actual hotel room identifiers/));
   const original = JSON.stringify(
     [...document.querySelectorAll("article")]
@@ -77,7 +77,7 @@ test("W03 synthetic preview keeps overdue occupied, requires unpaid reason and d
   mounted.unmount();
   render(createElement(App));
   assert.ok(screen.getByText(/Unpaid-departure exception recorded/));
-  assert.ok(screen.getByText(/Overdue/));
+  assert.ok(screen.getByText(/Package expired/));
 });
 
 test("W03 preview persists checkout timestamps before any departure on reload", () => {

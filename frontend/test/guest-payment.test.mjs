@@ -53,7 +53,7 @@ test("O02 preview requires screenshot and reference, then shows pending staff ve
   fireEvent.submit(form);
   assert.ok(screen.getByRole("alert"));
   fireEvent.change(screen.getByLabelText("Transaction reference"), {
-    target: { value: " TEST-REF " },
+    target: { value: "0123456789" },
   });
   fireEvent.change(
     screen.getByLabelText("Payment screenshot (PNG/JPEG, up to 5 MB)"),
@@ -73,7 +73,7 @@ test("O02 preview requires screenshot and reference, then shows pending staff ve
       }),
     ),
   );
-  assert.equal(submitted.reference, "TEST-REF");
+  assert.equal(submitted.reference, "0123456789");
   assert.equal(submitted.file.name, "sample.png");
   assert.ok(screen.getByText(/does not confirm a booking/));
   assert.equal(

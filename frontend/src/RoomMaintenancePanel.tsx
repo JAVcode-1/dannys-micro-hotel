@@ -1,6 +1,7 @@
 ﻿import React from "react";
 import type { MaintenanceAction, StaffRoom } from "@staytrack/shared";
 import { notifySuccess } from "./notifications";
+import { readableLabel } from "./presentation";
 import { apiBase } from "./staff-auth";
 
 export default function RoomMaintenancePanel({
@@ -113,7 +114,7 @@ export default function RoomMaintenancePanel({
       className="mt-4 border-t border-subtle pt-3"
       open={blockId ? true : undefined}
     >
-      <summary className="cursor-pointer font-semibold">
+      <summary className="min-h-11 cursor-pointer font-semibold">
         Maintenance {blockId ? "in progress" : "details"}
       </summary>
       {maintenance.affected.length > 0 && (
@@ -126,9 +127,14 @@ export default function RoomMaintenancePanel({
                   ? "Payment recorded. Staff resolution required."
                   : "Staff review required."}{" "}
                 {time(item.startAt)} to {time(item.endAt)} (
-                {item.state.replaceAll("_", " ")}).
+                {readableLabel(item.state)}).
                 <br />
-                Room item {item.itemId}
+                <details>
+                  <summary className="cursor-pointer text-primary">
+                    Booking reference
+                  </summary>
+                  <p className="break-all">{item.itemId}</p>
+                </details>
                 <label className="mt-2 grid gap-1">
                   Replacement Ready room
                   <select
@@ -147,6 +153,12 @@ export default function RoomMaintenancePanel({
                           target.category_code === room.category_code &&
                           target.active &&
                           target.operational_state === "ready",
+                      )
+                      .sort((a, b) =>
+                        a.code.localeCompare(b.code, "en", {
+                          numeric: true,
+                          sensitivity: "base",
+                        }),
                       )
                       .map((target) => (
                         <option key={target.id} value={target.id}>
@@ -172,23 +184,28 @@ export default function RoomMaintenancePanel({
         </div>
       )}
       {maintenance.events.length > 0 && (
-        <ul aria-label="Maintenance history" className="mt-3 space-y-2 text-sm">
-          {maintenance.events.map((event) => (
-            <li key={event.id} className="break-words">
-              <strong>
-                {
-                  { open: "Opened", progress: "Progress", clear: "Cleared" }[
-                    event.action
-                  ]
-                }
-              </strong>{" "}
-              {event.note}
-              <p className="text-xs text-muted">
-                {time(event.occurredAt)} · Staff {event.actorId}
-              </p>
-            </li>
-          ))}
-        </ul>
+        <details className="mt-3 text-sm">
+          <summary className="min-h-11 cursor-pointer font-semibold">
+            Maintenance history
+          </summary>
+          <ul aria-label="Maintenance history" className="space-y-2 text-sm">
+            {maintenance.events.map((event) => (
+              <li key={event.id} className="break-words">
+                <strong>
+                  {
+                    { open: "Opened", progress: "Progress", clear: "Cleared" }[
+                      event.action
+                    ]
+                  }
+                </strong>{" "}
+                {event.note}
+                <p className="text-xs text-muted">
+                  {time(event.occurredAt)} · Staff {event.actorId}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
       {!maintenance.enabled && (
         <p className="mt-2 text-sm text-muted">

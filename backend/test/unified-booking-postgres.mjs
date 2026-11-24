@@ -121,7 +121,7 @@ export async function unifiedBookingPostgres(pool) {
   await submitPaymentProof(
     guest,
     mixed.id,
-    "SYNTHETIC-UB-001",
+    "4200000001",
     png,
     "image/png",
     pool,
@@ -152,7 +152,7 @@ export async function unifiedBookingPostgres(pool) {
       ledgerChecked: true,
       receivingAccountChecked: true,
       timeChecked: true,
-      reference: "SYNTHETIC-UB-001",
+      reference: "4200000001",
       recipient: "SYNTHETIC PAYEE",
       amountCentavos: session.amountDueCentavos,
       receivedAt,
@@ -321,7 +321,7 @@ export async function unifiedBookingPostgres(pool) {
   await submitPaymentProof(
     guest,
     changeHold.id,
-    "SYNTHETIC-UB-CHANGE",
+    "4200000002",
     png,
     "image/png",
     pool,
@@ -341,7 +341,7 @@ export async function unifiedBookingPostgres(pool) {
       requestKey: "unified-hallonly-review",
       verification: {
         ...decision.verification,
-        reference: "SYNTHETIC-UB-CHANGE",
+        reference: "4200000002",
         amountCentavos: 300000,
         receivedAt: changeReceivedAt,
       },
@@ -468,7 +468,7 @@ export async function unifiedBookingPostgres(pool) {
   await submitPaymentProof(
     guest,
     cheaperHold.id,
-    "SYNTHETIC-UB-CHEAPER",
+    "4200000003",
     png,
     "image/png",
     pool,
@@ -488,7 +488,7 @@ export async function unifiedBookingPostgres(pool) {
       requestKey: "unified-cheaper-review",
       verification: {
         ...decision.verification,
-        reference: "SYNTHETIC-UB-CHEAPER",
+        reference: "4200000003",
         amountCentavos: 500000,
         receivedAt: cheaperReceivedAt,
       },

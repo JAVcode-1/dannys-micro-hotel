@@ -4,6 +4,10 @@ status: confirmed-facility-planned-software
 ---
 # Future Function Hall Reservation & Management
 
+## Function Hall booking hours and package pricing
+
+Owner approved same-day and overnight Function Hall bookings without a daily opening, closing, or minimum advance-notice cutoff. The start time in Asia/Manila selects the three-hour package. Starts from 8:00 AM until before 5:00 PM cost ₱3,000, and all other starts cost ₱5,000. Each additional full hour costs ₱1,000. Past starts are ineligible. Short-notice starts within the setup buffer require a Ready Hall, and all bookings still protect setup and cleanup against overlap. The existing advance booking horizon and payment verification still apply. This supersedes earlier provisional hours and notice statements.
+
 ## Current Unified Online Booking authority - 2026-11-21
 
 The owner's UB-01 through UB-06 implementation request supersedes the earlier staff-inquiry-only customer restriction and all pending mixed-payment/hold/cancellation questions. Customers may reserve the Hall alone or with independently scheduled rooms in one planner. One exclusive physical Hall has alternative Theater Type/Room Type setups; it is not two halls.

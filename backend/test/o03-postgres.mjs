@@ -138,7 +138,7 @@ export async function o03Postgres(t, pool) {
             [record.reservationId],
           )
         ).rows;
-      const confirmed = await make("O03-REF-001");
+      const confirmed = await make("0300000001");
       const before = await items(confirmed);
       await assert.rejects(
         pool.query(
@@ -223,7 +223,7 @@ export async function o03Postgres(t, pool) {
         /immutable/,
       );
 
-      const duplicate = await make("o03 ref 001");
+      const duplicate = await make("0300000001");
       assert.equal(
         (await staffPaymentReviews(pool)).find((row) => row.id === duplicate.id)
           .duplicateReference,
@@ -237,8 +237,8 @@ export async function o03Postgres(t, pool) {
         ),
       );
       const races = await Promise.all([
-        make("O03-RACE-REF"),
-        make("o03 race ref"),
+        make("0300000002"),
+        make("0300000002"),
       ]);
       const results = await Promise.allSettled(races.map((row) => decide(row)));
       assert.equal(
@@ -254,13 +254,13 @@ export async function o03Postgres(t, pool) {
       assert.equal(
         (
           await pool.query(
-            "select count(*)::int as n from staytrack.verified_online_payments where normalized_reference='O03RACEREF'",
+            "select count(*)::int as n from staytrack.verified_online_payments where normalized_reference='0300000002'",
           )
         ).rows[0].n,
         1,
       );
 
-      const unresolved = await make("O03-UNRESOLVED");
+      const unresolved = await make("0300000003");
       const conflict = await Promise.allSettled(
         ["unresolved", "mismatched"].map((decision, index) =>
           decide(unresolved, {
@@ -294,12 +294,12 @@ export async function o03Postgres(t, pool) {
         }),
         { status: "confirmed", version: 2, replayed: false },
       );
-      for (const decision of [
+      for (const [index, decision] of [
         "rejected",
         "mismatched",
         "late_reconciliation",
-      ]) {
-        const record = await make(`O03-${decision}`);
+      ].entries()) {
+        const record = await make(`030000000${7 + index}`);
         await decide(record, { ...record.input, decision });
         assert.ok(
           (await state(record)).every(
@@ -318,7 +318,7 @@ export async function o03Postgres(t, pool) {
         );
       }
 
-      const failure = await make("O03-ROLLBACK");
+      const failure = await make("0300000004");
       const auditBefore = (
         await pool.query("select count(*)::int as n from staytrack.staff_audit")
       ).rows[0].n;
@@ -404,8 +404,8 @@ export async function o03Postgres(t, pool) {
         [terms],
       );
       // Create fixtures before deliberately making the shared inventory infeasible.
-      const unavailable = await make("O03-RELEASED");
-      const blocked = await make("O03-MAINTENANCE");
+      const unavailable = await make("0300000005");
+      const blocked = await make("0300000006");
       await pool.query(
         `insert into staytrack.room_blocks(room_id,start_at,end_at,reason)
       select i.room_id,i.start_at,i.end_at,'O03 TEST MAINTENANCE' from staytrack.inventory_claims i join staytrack.room_bookings b on b.claim_id=i.id where b.reservation_id=$1`,

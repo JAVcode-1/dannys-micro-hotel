@@ -80,17 +80,17 @@ test("X02 guest form isolates item state and preserves inputs on conflict", asyn
   fireEvent.change(screen.getByLabelText("Arrival date - A"), {
     target: { value: "2027-01-02" },
   });
-  fireEvent.change(screen.getByLabelText("Request reason - A"), {
+  fireEvent.change(screen.getByLabelText("Note for staff - A"), {
     target: { value: "New arrival" },
   });
   fireEvent.click(
-    screen.getByRole("button", { name: "Request reschedule - A" }),
+    screen.getByRole("button", { name: "Send request - A" }),
   );
   await waitFor(() => assert.ok(screen.getByRole("alert")));
   assert.equal(screen.getByLabelText("Arrival date - A").value, "2027-01-02");
   assert.equal(screen.getByLabelText("Arrival date - B").value, peer);
   assert.equal(
-    screen.getByRole("button", { name: "Request reschedule - A" }).disabled,
+    screen.getByRole("button", { name: "Send request - A" }).disabled,
     true,
   );
   fireEvent.click(
@@ -98,7 +98,7 @@ test("X02 guest form isolates item state and preserves inputs on conflict", asyn
   );
   await waitFor(() =>
     assert.equal(
-      screen.getByRole("button", { name: "Request reschedule - A" }).disabled,
+      screen.getByRole("button", { name: "Send request - A" }).disabled,
       false,
     ),
   );
@@ -182,48 +182,33 @@ test("X02 staff refresh preserves both drafts and disables newly blocked approva
   }
 });
 
-test("X02 malformed packages can be corrected without losing the draft", async () => {
-  let submits = 0;
+test("X02 guest can correct the arrival time and send without a note", async () => {
+  let submitted;
   render(
     createElement(GuestRescheduleForm, {
       itemId: "A",
       revision: 0,
-      startAt: "2027-01-01T02:00:00Z",
-      endAt: "2027-01-01T08:00:00Z",
+      startAt: "2099-01-01T02:00:00Z",
       blocks: [360],
-      confirmationAt: null,
-      submit: async () => {
-        submits++;
-        return {};
+      submit: async (input) => {
+        submitted = input;
       },
     }),
   );
-  fireEvent.change(screen.getByLabelText("Package minutes - A"), {
-    target: { value: "60" },
+  fireEvent.change(screen.getByLabelText("Arrival time - A"), {
+    target: { value: "14:90" },
   });
-  fireEvent.change(screen.getByLabelText("Request reason - A"), {
-    target: { value: "Retained reason" },
+  fireEvent.click(screen.getByRole("button", { name: "Send request - A" }));
+  assert.ok(screen.getByText("Enter a time such as 2:30."));
+  assert.equal(submitted, undefined);
+  fireEvent.change(screen.getByLabelText("Arrival time - A"), {
+    target: { value: "11:15" },
   });
-  fireEvent.click(
-    screen.getByRole("button", { name: "Request reschedule - A" }),
-  );
-  await waitFor(() =>
-    assert.match(screen.getByRole("alert").textContent, /allowed package/),
-  );
-  assert.equal(submits, 0);
-  assert.equal(
-    screen.getByRole("button", { name: "Request reschedule - A" }).disabled,
-    false,
-  );
-  fireEvent.change(screen.getByLabelText("Package minutes - A"), {
-    target: { value: "360" },
-  });
-  fireEvent.click(
-    screen.getByRole("button", { name: "Request reschedule - A" }),
-  );
-  await waitFor(() => assert.equal(submits, 1));
-  assert.equal(
-    screen.getByLabelText("Request reason - A").value,
-    "Retained reason",
-  );
+  assert.ok(screen.getByText("New checkout:"));
+  fireEvent.click(screen.getByRole("button", { name: "Send request - A" }));
+  await screen.findByText("Awaiting staff approval");
+  assert.deepEqual(submitted.blocks, [360]);
+  assert.equal(submitted.startAt, "2099-01-01T11:15:00+08:00");
+  assert.equal(submitted.endAt, "2099-01-01T09:15:00.000Z");
+  assert.ok(submitted.reason);
 });

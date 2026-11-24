@@ -84,10 +84,39 @@ test("real walk-in controls disclose policy and submit contact with metadata wit
   fireEvent.change(screen.getByLabelText("Primary contact phone"), {
     target: { value: "09170000000" },
   });
+  const showPolicies = screen.getByRole("button", { name: "Show booking policies" });
+  assert.equal(showPolicies.getAttribute("aria-expanded"), "false");
+  assert.equal(globalThis.document.getElementById(showPolicies.getAttribute("aria-controls")).hidden, true);
+  fireEvent.click(showPolicies);
+  const hidePolicies = screen.getByRole("button", {
+    name: "Hide booking policies",
+  });
+  assert.ok(screen.getByText(/Collect at least 50% before normal room access/));
+  const policyContent = globalThis.document.getElementById(
+    hidePolicies.getAttribute("aria-controls"),
+  );
+  assert.equal(policyContent.querySelector("details").open, false);
+  assert.match(policyContent.textContent, /Synthetic no-smoking policy/);
+  fireEvent.click(hidePolicies);
+  assert.equal(policyContent.hidden, true);
   fireEvent.click(
     screen.getByLabelText(
       "Guest has acknowledged the disclosed booking policy",
     ),
+  );
+  assert.equal(
+    screen.getByLabelText("Guest has acknowledged the disclosed booking policy")
+      .checked,
+    true,
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Show booking policies" }),
+  );
+  assert.equal(policyContent.hidden, false);
+  assert.equal(
+    screen.getByLabelText("Guest has acknowledged the disclosed booking policy")
+      .checked,
+    true,
   );
   fireEvent.click(
     screen.getByRole("button", { name: "Calculate server quote" }),

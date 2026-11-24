@@ -145,6 +145,14 @@ test("verified guest submits reviewed server price, contact, acknowledgement and
   await waitFor(() =>
     assert.ok(screen.getByText("₱200.00", { selector: "p.text-3xl" })),
   );
+  const policiesToggle = screen.getByRole("button", { name: /Show booking policies/i });
+  assert.equal(policiesToggle.getAttribute("aria-expanded"), "false");
+  const policiesContent = globalThis.document.getElementById(policiesToggle.getAttribute("aria-controls"));
+  assert.equal(policiesContent.hidden, true);
+  fireEvent.click(policiesToggle);
+  assert.equal(policiesContent.hidden, false);
+  fireEvent.click(screen.getByRole("button", { name: /Hide booking policies/i }));
+  assert.equal(policiesContent.hidden, true);
   fireEvent.change(screen.getByLabelText("Primary guest name"), {
     target: { value: "Synthetic Guest" },
   });

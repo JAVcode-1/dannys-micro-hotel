@@ -10,7 +10,7 @@ test("unified prices conserve exact centavos and reject unsafe totals", () => {
   assert.equal(unifiedTotal(20001, 300000), 320001);
   assert.throws(() => unifiedTotal(Number.MAX_SAFE_INTEGER, 1));
 });
-test("online Hall cannot override minimum notice or inject unbounded requests", () => {
+test("online Hall rejects staff-only fields and unbounded requests", () => {
   const hall = {
     setup: "theater",
     start: "2026-12-01T10:00",

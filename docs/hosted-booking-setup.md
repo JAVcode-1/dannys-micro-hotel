@@ -1,5 +1,9 @@
 # Hosted development: rooms, OTP and booking emails
 
+## Hosted turnover and cash migrations applied (2026-11-24)
+
+The owner approved migrations 20261124002900 and 20261124003000 for the linked Supabase development project. Both were previewed in a rolled-back transaction and committed together through the project-pinned PostgreSQL connection after the CLI login-role request returned HTTP 403. One outstanding turnover block ended at its recorded Ready time. Hosted API readiness returned HTTP 200, and npm run dev started the API and Vite. The verification server was stopped afterward. The application test suite and end-to-end cash receipt check were not run.
+
 Updated 2026-11-22. Scope: owner-approved development project `pgbierfxeviouyjsmjnh`, never production activation.
 
 ## Applied and checked

@@ -16,6 +16,7 @@ import {
   stayAction,
   staySource,
   readStayFinancials,
+  readStayPayee,
   recordStayReceipt,
   allocateStayReceipt,
   releaseStayAllocation,
@@ -158,10 +159,13 @@ export async function stayChangeRows(
   actor: string,
   page = 0,
   pool = databasePool(),
+  pageSize = 100,
 ): Promise<StayChangeRow[]> {
   stayId(actor);
   if (!Number.isSafeInteger(page) || page < 0 || page > 1000000)
     throw new BookingError("Invalid page.");
+  if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100)
+    throw new BookingError("Invalid page size.");
   return claimTransaction(async (db) => {
     if (
       !(
@@ -182,8 +186,8 @@ export async function stayChangeRows(
       return [];
     const rows = (
       await db.query(
-        `select b.id,b.reservation_id as "reservationId",b.category_code as category,r.channel,rm.code as "roomCode",t.original_checkout_at as "originalCheckoutAt",t.effective_checkout_at as "effectiveCheckoutAt",b.stay_extension_revision::float8 as revision,(o.room_booking_id is not null) as "checkedOut" from staytrack.room_bookings b join staytrack.reservations r on r.id=b.reservation_id join staytrack.stay_item_terms t on t.room_booking_id=b.id join staytrack.room_check_ins s on s.room_booking_id=b.id join staytrack.rooms rm on rm.id=s.room_id left join staytrack.room_checkouts o on o.room_booking_id=b.id order by (o.room_booking_id is not null),t.effective_checkout_at,b.id limit 100 offset $1`,
-        [page * 100],
+        `select b.id,b.reservation_id as "reservationId",b.category_code as category,r.channel,rm.code as "roomCode",t.original_checkout_at as "originalCheckoutAt",t.effective_checkout_at as "effectiveCheckoutAt",b.stay_extension_revision::float8 as revision,(o.room_booking_id is not null) as "checkedOut" from staytrack.room_bookings b join staytrack.reservations r on r.id=b.reservation_id join staytrack.stay_item_terms t on t.room_booking_id=b.id join staytrack.room_check_ins s on s.room_booking_id=b.id join staytrack.rooms rm on rm.id=s.room_id left join staytrack.room_checkouts o on o.room_booking_id=b.id order by (o.room_booking_id is not null),t.effective_checkout_at,b.id limit $2 offset $1`,
+        [page * pageSize, pageSize],
       )
     ).rows;
     for (const r of rows) {
@@ -198,30 +202,23 @@ export async function stayChangeRows(
           [r.id],
         )
       ).rows;
-      r.receipts = (
-        await db.query(
-          `select s.id,s.method,s.amount_centavos::float8 as "amountCentavos",(s.amount_centavos-coalesce(a.amount,0))::float8 as "availableCentavos" from staytrack.stay_receipts s left join lateral(select sum(amount_centavos) as amount from staytrack.stay_active_allocations where receipt_id=s.id) a on true where s.reservation_id=$1 order by s.recorded_at`,
-          [r.reservationId],
-        )
-      ).rows;
-      r.allocations = (
-        await db.query(
-          `select a.id,a.receipt_id as "receiptId",a.extension_request_id as "requestId",a.charge_id as "chargeId",a.amount_centavos::float8 as "amountCentavos",exists(select 1 from staytrack.stay_receipt_allocations r where r.release_of=a.id) as released,(a.extension_request_id is not null and (d.approved=false or (d.id is null and exists(select 1 from staytrack.stay_extension_requests q join staytrack.room_bookings b on b.id=q.room_booking_id where q.id=a.extension_request_id and (q.expected_revision<>b.stay_extension_revision or q.new_end<=clock_timestamp() or q.package_snapshot is distinct from staytrack.stay_quote_current(b.category_code,q.blocks))))) and not exists(select 1 from staytrack.stay_receipt_allocations r where r.release_of=a.id)) as releasable from staytrack.stay_receipt_allocations a left join staytrack.stay_extension_decisions d on d.request_id=a.extension_request_id where a.room_booking_id=$1 and a.kind='allocate' order by a.recorded_at`,
-          [r.id],
-        )
-      ).rows;
-      r.charges = (
-        await db.query(
-          `select e.id,e.kind,e.amount_centavos::float8 as "amountCentavos",coalesce(a.amount,0)::float8 as "paidCentavos",coalesce(c.amount,0)::float8 as "creditedCentavos",e.review_id as "reviewId",e.reason from staytrack.stay_charge_entries e left join lateral(select sum(amount_centavos) as amount from staytrack.stay_active_allocations where charge_id=e.id or (e.extension_request_id is not null and extension_request_id=e.extension_request_id)) a on true left join lateral(select sum(amount_centavos) as amount from staytrack.stay_charge_entries where credit_of=e.id) c on true where e.room_booking_id=$1 order by e.recorded_at`,
-          [r.id],
-        )
-      ).rows;
-      r.reviews = (
-        await db.query(
-          `select q.id,q.kind,q.reason,(extract(epoch from(q.end_at-q.start_at))*1000)::float8 as "durationMs",exists(select 1 from staytrack.stay_charge_entries where review_id=q.id) as decided,case when o.room_booking_id is not null then 'New fees after departure are policy pending' when q.policy_version_id is null or q.disclosure_id is null then 'Owner-approved rate and prior disclosure required' else null end as blocker from staytrack.stay_charge_reviews q left join staytrack.room_checkouts o on o.room_booking_id=q.room_booking_id where q.room_booking_id=$1 order by q.recorded_at`,
-          [r.id],
-        )
-      ).rows;
+      const details = await db.query(
+        `select
+          to_json(array(select row_to_json(detail) from (
+          select s.id,s.method,s.amount_centavos::float8 as "amountCentavos",(s.amount_centavos-coalesce(a.amount,0))::float8 as "availableCentavos" from staytrack.stay_receipts s left join lateral(select sum(amount_centavos) as amount from staytrack.stay_active_allocations where receipt_id=s.id) a on true where s.reservation_id=$2 order by s.recorded_at
+          ) detail)) as receipts,
+          to_json(array(select row_to_json(detail) from (
+          select a.id,a.receipt_id as "receiptId",a.extension_request_id as "requestId",a.charge_id as "chargeId",a.amount_centavos::float8 as "amountCentavos",exists(select 1 from staytrack.stay_receipt_allocations r where r.release_of=a.id) as released,(a.extension_request_id is not null and (d.approved=false or (d.id is null and exists(select 1 from staytrack.stay_extension_requests q join staytrack.room_bookings b on b.id=q.room_booking_id where q.id=a.extension_request_id and (q.expected_revision<>b.stay_extension_revision or q.new_end<=clock_timestamp() or q.package_snapshot is distinct from staytrack.stay_quote_current(b.category_code,q.blocks))))) and not exists(select 1 from staytrack.stay_receipt_allocations r where r.release_of=a.id)) as releasable from staytrack.stay_receipt_allocations a left join staytrack.stay_extension_decisions d on d.request_id=a.extension_request_id where a.room_booking_id=$1 and a.kind='allocate' order by a.recorded_at
+          ) detail)) as allocations,
+          to_json(array(select row_to_json(detail) from (
+          select e.id,e.kind,e.amount_centavos::float8 as "amountCentavos",coalesce(a.amount,0)::float8 as "paidCentavos",coalesce(c.amount,0)::float8 as "creditedCentavos",e.review_id as "reviewId",e.reason from staytrack.stay_charge_entries e left join lateral(select sum(amount_centavos) as amount from staytrack.stay_active_allocations where charge_id=e.id or (e.extension_request_id is not null and extension_request_id=e.extension_request_id)) a on true left join lateral(select sum(amount_centavos) as amount from staytrack.stay_charge_entries where credit_of=e.id) c on true where e.room_booking_id=$1 order by e.recorded_at
+          ) detail)) as charges,
+          to_json(array(select row_to_json(detail) from (
+          select q.id,q.kind,q.reason,(extract(epoch from(q.end_at-q.start_at))*1000)::float8 as "durationMs",exists(select 1 from staytrack.stay_charge_entries where review_id=q.id) as decided,case when o.room_booking_id is not null then 'New fees after departure are policy pending' when q.policy_version_id is null or q.disclosure_id is null then 'Owner-approved rate and prior disclosure required' else null end as blocker from staytrack.stay_charge_reviews q left join staytrack.room_checkouts o on o.room_booking_id=q.room_booking_id where q.room_booking_id=$1 order by q.recorded_at
+          ) detail)) as reviews`,
+        [r.id, r.reservationId],
+      );
+      Object.assign(r, details.rows[0]);
     }
     return JSON.parse(JSON.stringify(rows)) as StayChangeRow[];
   }, pool);
@@ -269,7 +266,9 @@ export function registerStayChanges(
           res.locals.actorId,
           Number(req.query.page ?? 0),
           pool,
+          Number(req.query.pageSize ?? 100),
         ),
+        payeeLabel: await readStayPayee(pool ?? databasePool()),
         enabled,
       });
     } catch (e) {

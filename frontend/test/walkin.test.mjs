@@ -13,7 +13,7 @@ Object.defineProperty(globalThis, "navigator", {
 });
 globalThis.HTMLElement = dom.window.HTMLElement;
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-const { render, screen, cleanup, fireEvent, waitFor } =
+const { render, screen, cleanup, fireEvent, waitFor, within } =
   await import("@testing-library/react");
 const { WalkInPreview: App } = await import("../src/WalkInDesk.tsx");
 afterEach(cleanup);
@@ -21,7 +21,10 @@ test("W01 synthetic planner is distinct from W02 and cannot check a guest in", (
   render(createElement(App));
   assert.ok(screen.getByRole("heading", { name: "Walk-in desk" }));
   assert.ok(screen.getByText(/Synthetic preview/));
-  assert.ok(screen.getByRole("button", { name: "Check-in is W02" }).disabled);
+  assert.ok(
+    screen.getByRole("button", { name: "Check-in is recorded separately" })
+      .disabled,
+  );
 });
 test("W01 preview journals mixed payments and requires a fresh quote after successful creation", async () => {
   render(createElement(App));
@@ -71,7 +74,10 @@ test("W01 preview journals mixed payments and requires a fresh quote after succe
     screen.getByRole("button", { name: "Record synthetic payment" }),
   );
   await waitFor(() => assert.ok(screen.getByText("gcash")));
-  assert.ok(screen.getByRole("button", { name: "Check-in is W02" }).disabled);
+  assert.ok(
+    screen.getByRole("button", { name: "Check-in is recorded separately" })
+      .disabled,
+  );
   assert.equal(
     screen
       .getByRole("button", { name: "Record synthetic payment" })
@@ -84,16 +90,17 @@ test("W01 planner preserves independent AM/PM schedules and charges one Family b
   fireEvent.change(screen.getByLabelText("Primary guest name"), {
     target: { value: "SYNTHETIC GROUP" },
   });
-  fireEvent.change(screen.getByLabelText("Arrival 1 date"), {
+  const room1 = within(screen.getByRole("group", { name: "Room 1" }));
+  fireEvent.change(room1.getByLabelText("Arrival date"), {
     target: { value: "2027-01-01" },
   });
-  fireEvent.change(screen.getByLabelText("Arrival 1 hour"), {
+  fireEvent.change(room1.getByLabelText("Arrival hour"), {
     target: { value: "2" },
   });
-  fireEvent.change(screen.getByLabelText("Arrival 1 minute"), {
+  fireEvent.change(room1.getByLabelText("Arrival minute"), {
     target: { value: "00" },
   });
-  fireEvent.change(screen.getByLabelText("Arrival 1 AM/PM"), {
+  fireEvent.change(room1.getByLabelText("Arrival AM/PM"), {
     target: { value: "PM" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Add room" }));
@@ -105,16 +112,17 @@ test("W01 planner preserves independent AM/PM schedules and charges one Family b
       (option) => option.value === "180",
     ),
   );
-  fireEvent.change(screen.getByLabelText("Arrival 2 date"), {
+  const room2 = within(screen.getByRole("group", { name: "Room 2" }));
+  fireEvent.change(room2.getByLabelText("Arrival date"), {
     target: { value: "2027-01-02" },
   });
-  fireEvent.change(screen.getByLabelText("Arrival 2 hour"), {
+  fireEvent.change(room2.getByLabelText("Arrival hour"), {
     target: { value: "10" },
   });
-  fireEvent.change(screen.getByLabelText("Arrival 2 minute"), {
+  fireEvent.change(room2.getByLabelText("Arrival minute"), {
     target: { value: "00" },
   });
-  fireEvent.change(screen.getByLabelText("Arrival 2 AM/PM"), {
+  fireEvent.change(room2.getByLabelText("Arrival AM/PM"), {
     target: { value: "AM" },
   });
   fireEvent.click(

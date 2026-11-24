@@ -4,6 +4,10 @@ status: approved-baseline-with-pending-settings
 ---
 # 02 — Business & Functional Requirements
 
+## Function Hall booking hours and package pricing
+
+Owner approved same-day and overnight Function Hall bookings without a daily opening, closing, or minimum advance-notice cutoff. The start time in Asia/Manila selects the three-hour package. Starts from 8:00 AM until before 5:00 PM cost ₱3,000, and all other starts cost ₱5,000. Each additional full hour costs ₱1,000. Past starts are ineligible. Short-notice starts within the setup buffer require a Ready Hall, and all bookings still protect setup and cleanup against overlap. The existing advance booking horizon and payment verification still apply. This supersedes earlier provisional hours and notice statements.
+
 ## Unified Online Booking - UB-01 through UB-06, 2026-11-21
 
 The owner's implementation request resolves the earlier mixed-booking policy questions. This section supersedes older statements below that describe these decisions as pending or restrict customer Hall bookings to staff inquiries. Implementation and acceptance evidence are recorded separately in [[unified-online-booking-requirements-sync]].
@@ -84,7 +88,7 @@ There is **no 3h Family Executive package**. Multi-day stays consist of permitte
 
 - Countdown from persisted server timestamps; survives page close/reload; warning thresholds configurable (e.g., 30/15/5 minutes). Reaching zero flags overdue but **never auto-checks out**.
 - Staff may grant chargeable overtime or free overtime. Every waiver stores reason, authorizing staff, timestamp and waived minutes.
-- Cleaning/turnover buffer configurable; physical room must also be manually marked **Ready** before next guest enters. Buffer expiry alone never marks Ready.
+- The cleaning buffer is configurable. Staff must confirm **Ready** before the next guest enters. That confirmation ends any remaining checkout turnover block after cleaning. Buffer expiry alone never marks Ready.
 - Maintenance: block room, record reason/repair progress, exclude from feasible room allocation, flag any already scheduled booking requiring room reassignment. Staff manually restores Ready after clearance.
 
 ## Policy and organization

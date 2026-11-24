@@ -1,7 +1,9 @@
 import React from "react";
+import { useOutletContext } from "react-router";
 import { apiBase } from "./staff-auth";
 import PaymentQrSettings from "./PaymentQrSettings";
 import { notifySuccess } from "./notifications";
+import StaffIcon from "./StaffIcon";
 
 type Settings = {
   cleaningBufferMinutes: number | null;
@@ -13,6 +15,8 @@ type Settings = {
 };
 
 export default function OperationalSettings({ token }: { token: string }) {
+  const { signOut } = useOutletContext<{ signOut?: () => Promise<void> } | null>() ?? {};
+  const [signingOut, setSigningOut] = React.useState(false);
   const [value, setValue] = React.useState<Settings | null>(null);
   const [message, setMessage] = React.useState("");
   const [busy, setBusy] = React.useState(false);
@@ -60,8 +64,8 @@ export default function OperationalSettings({ token }: { token: string }) {
     <section className="mt-8 border-t border-subtle pt-6">
       <h2 className="text-2xl font-bold">Operational settings</h2>
       <p className="mt-2 text-sm text-muted">
-        Pending owner values stay blank. Payment and booking remain unavailable
-        until their later gates.
+        Leave unapproved values blank. Availability and payment safeguards still
+        apply.
       </p>
       {value && (
         <form
@@ -88,11 +92,11 @@ export default function OperationalSettings({ token }: { token: string }) {
             />
           </label>
           <label className="text-sm font-medium">
-            Checkout warning thresholds (comma-separated minutes)
+            Checkout reminders (minutes, separated by commas)
             <input
               className="mt-1 min-h-11 w-full rounded-lg border border-subtle px-3"
               disabled={!("checkoutWarningMinutes" in value)}
-              placeholder="Pending owner configuration / approved migration"
+              placeholder="Not configured"
               defaultValue={value.checkoutWarningMinutes?.join(", ") ?? ""}
               onChange={(event) =>
                 setValue({
@@ -124,7 +128,7 @@ export default function OperationalSettings({ token }: { token: string }) {
             />
           </label>
           <label className="text-sm font-medium sm:col-span-2">
-            Cancellation display text
+            Cancellation policy
             <textarea
               className="mt-1 min-h-24 w-full rounded-lg border border-subtle p-3"
               value={value.cancellationDisplayText ?? ""}
@@ -150,6 +154,31 @@ export default function OperationalSettings({ token }: { token: string }) {
         </p>
       )}
       <PaymentQrSettings token={token} />
+      <section className="mt-8 rounded-xl border border-subtle bg-white p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h3 className="font-semibold">Your session</h3>
+            <p className="mt-1 text-sm text-muted">Sign out of your Staff/Admin account.</p>
+          </div>
+          <button
+            type="button"
+            disabled={signingOut || busy || !signOut}
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-subtle px-4 text-primary disabled:opacity-50"
+            onClick={async () => {
+              if (signingOut || !signOut) return;
+              setSigningOut(true);
+              try {
+                await signOut();
+              } finally {
+                setSigningOut(false);
+              }
+            }}
+          >
+            <StaffIcon name="logout" />
+            {signingOut ? "Signing out…" : "Sign out"}
+          </button>
+        </div>
+      </section>
     </section>
   );
 }

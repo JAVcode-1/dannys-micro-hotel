@@ -15,7 +15,6 @@ import {
   PROOF_BUCKET,
   QR_BUCKET,
   validatePaymentImage,
-  validateReference,
   type PaymentMediaStore,
   hasControlCharacters,
 } from "./payment-media.js";
@@ -118,8 +117,13 @@ async function ownedReservation(
   const { rows } = await pool.query<{
     total_centavos: string;
     confirmation_at?: string | null;
+    review_installed: boolean;
   }>(
-    "select total_centavos, to_jsonb(reservations)->>'online_confirmation_at' as confirmation_at from staytrack.reservations where id = $1 and owner_auth_user_id = $2 and verified_email = $3",
+    `select total_centavos,
+      to_jsonb(reservations)->>'online_confirmation_at' as confirmation_at,
+      to_jsonb(reservations) ? 'online_confirmation_at' as review_installed
+    from staytrack.reservations
+    where id = $1 and owner_auth_user_id = $2 and verified_email = $3`,
     [reservationId, guest.id, guest.email.toLowerCase()],
   );
   if (!rows[0]) throw new BookingError("Reservation not found.", 404);
@@ -148,16 +152,28 @@ export async function guestPaymentSession(
     ...rows.map((row) => row.proof_deadline_at.getTime()),
   );
   const now = rows[0].now.getTime();
-  const verified = reservation.confirmation_at
+  const receivedAmountCentavos = reservation.confirmation_at
     ? (
-        await pool.query<{ verified: boolean }>(
-          `select exists(select 1 from staytrack.verified_online_payments v
-        join staytrack.payment_submissions p on p.id=v.submission_id
-        where p.reservation_id=$1 and p.status='confirmed') as verified`,
+        await pool.query<{ amount: number }>(
+          `select v.amount_centavos::float8 as amount from staytrack.verified_online_payments v
+          join staytrack.payment_submissions p on p.id=v.submission_id
+          where p.reservation_id=$1 and p.status='confirmed'`,
           [reservationId],
         )
-      ).rows[0]?.verified === true
-    : false;
+      ).rows[0]?.amount ?? null
+    : reservation.review_installed
+      ? (
+          await pool.query<{ amount: number | null }>(
+            `select (review.evidence->>'amountCentavos')::float8 as amount
+            from staytrack.payment_submissions p
+            join staytrack.payment_reviews review on review.submission_id=p.id and review.version=p.review_version
+            where p.reservation_id=$1 and p.status='mismatched'`,
+            [reservationId],
+          )
+        ).rows[0]?.amount ?? null
+      : null;
+  const verified =
+    Boolean(reservation.confirmation_at) && receivedAmountCentavos !== null;
   // Payment history survives room-item checkout, cancellation and capacity release.
   const status = verified
     ? "confirmed"
@@ -188,6 +204,7 @@ export async function guestPaymentSession(
       })),
     ],
     amountDueCentavos: Number(reservation.total_centavos),
+    receivedAmountCentavos,
     serverNow: new Date(now).toISOString(),
     proofDeadlineAt: new Date(deadline).toISOString(),
     status,
@@ -210,7 +227,11 @@ export async function submitPaymentProof(
   store = paymentMediaStore(),
 ): Promise<{ status: "pending_review"; replayed: boolean }> {
   const extension = validatePaymentImage(bytes, mime);
-  const ref = validateReference(reference);
+  if (typeof reference !== "string" || !/^[0-9]{10,13}$/.test(reference))
+    throw new BookingError(
+      "Enter a GCash transaction reference with 10 to 13 digits.",
+    );
+  const ref = reference;
   await ownedReservation(guest, reservationId, pool);
   const hash = createHash("sha256")
     .update(ref)

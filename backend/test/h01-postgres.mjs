@@ -460,4 +460,55 @@ export async function h01Postgres(t, pool) {
       }
     },
   );
+  await t.test(
+    "Ready releases turnover for existing and new confirmations",
+    async () => {
+      const alreadyReady = await make();
+      const awaitingReady = await make();
+      for (const room of [alreadyReady, awaitingReady]) {
+        await recordHousekeeping(actor, room.room, input(room, "start"), pool);
+        await recordHousekeeping(actor, room.room, input(room, "finish"), pool);
+        assert.ok((await board(room)).turnover_until);
+        assert.equal((await board(room)).available_now, false);
+      }
+      await recordHousekeeping(
+        actor,
+        alreadyReady.room,
+        input(alreadyReady, "ready"),
+        pool,
+      );
+      const originalDeadlines = await Promise.all(
+        [alreadyReady, awaitingReady].map(async (room) => (await board(room)).turnover_until),
+      );
+      await pool.query(
+        readFileSync(
+          new URL(
+            "../../supabase/migrations/20261124002900_release_turnover_on_ready.sql",
+            import.meta.url,
+          ),
+          "utf8",
+        ),
+      );
+      assert.ok((await board(awaitingReady)).turnover_until);
+      await recordHousekeeping(
+        actor,
+        awaitingReady.room,
+        input(awaitingReady, "ready"),
+        pool,
+      );
+      for (const [index, room] of [alreadyReady, awaitingReady].entries()) {
+        const ready = await board(room);
+        assert.equal(ready.turnover_until, null);
+        assert.equal(ready.available_now, true);
+        const block = (
+          await pool.query(
+            "select b.planned_turnover_end_at from staytrack.room_blocks b join staytrack.room_checkouts o on o.cleaning_block_id=b.id where o.room_booking_id=$1",
+            [room.item.id],
+          )
+        ).rows[0];
+        assert.deepEqual(block.planned_turnover_end_at, originalDeadlines[index]);
+        await checkIn(actor, room.sibling.id, room.room, key(), pool);
+      }
+    },
+  );
 }

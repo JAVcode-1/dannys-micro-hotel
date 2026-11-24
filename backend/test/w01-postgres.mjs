@@ -211,10 +211,10 @@ export async function w01Postgres(t, pool) {
         /Verify actual GCash/,
       );
       await assert.rejects(
-        collect(record, payment("gcash", 55000, "O03-REF-001")),
+        collect(record, payment("gcash", 55000, "0300000001")),
         /already collected/,
       );
-      const gcash = payment("gcash", 55000, "W01-MIXED-REF");
+      const gcash = payment("gcash", 55000, "2700-000-001");
       const paid = await collect(record, gcash);
       assert.equal(paid.booking.collectedCentavos, 110000);
       assert.equal(paid.booking.balanceCentavos, 0);
@@ -276,7 +276,7 @@ export async function w01Postgres(t, pool) {
       );
       await assert.rejects(
         pool.query(
-          "delete from staytrack.gcash_reference_registry where normalized_reference='W01MIXEDREF'",
+          "delete from staytrack.gcash_reference_registry where normalized_reference='2700000001'",
         ),
         /immutable/,
       );
@@ -380,7 +380,7 @@ export async function w01Postgres(t, pool) {
           },
         };
       }
-      const duplicatedOnline = await online("w01 mixed ref");
+      const duplicatedOnline = await online("2700000001");
       assert.equal(
         (await staffPaymentReviews(pool)).find(
           (row) => row.id === duplicatedOnline.id,
@@ -397,9 +397,9 @@ export async function w01Postgres(t, pool) {
         /already verified/,
       );
       const raceWalkIn = await make();
-      const raceOnline = await online("W01-CROSS-RACE");
+      const raceOnline = await online("2700000002");
       const cross = await Promise.allSettled([
-        collect(raceWalkIn, payment("gcash", 55000, "w01 cross race")),
+        collect(raceWalkIn, payment("gcash", 55000, "2700-000-002")),
         decidePaymentReview(actor, raceOnline.id, raceOnline.input, pool),
       ]);
       assert.equal(cross.filter((row) => row.status === "fulfilled").length, 1);
@@ -412,12 +412,12 @@ export async function w01Postgres(t, pool) {
       assert.equal(
         (
           await pool.query(
-            "select count(*)::int as n from staytrack.gcash_reference_registry where normalized_reference='W01CROSSRACE'",
+            "select count(*)::int as n from staytrack.gcash_reference_registry where normalized_reference='2700000002'",
           )
         ).rows[0].n,
         1,
       );
-      const verifiedOnline = await online("W01-ONLINE-FIRST");
+      const verifiedOnline = await online("2700000003");
       await decidePaymentReview(
         actor,
         verifiedOnline.id,
@@ -426,7 +426,7 @@ export async function w01Postgres(t, pool) {
       );
       const afterOnline = await make();
       await assert.rejects(
-        collect(afterOnline, payment("gcash", 55000, "w01 online first")),
+        collect(afterOnline, payment("gcash", 55000, "2700-000-003")),
         /already collected/,
       );
 

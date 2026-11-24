@@ -256,7 +256,7 @@ export async function sprintPostgres(t, pool) {
           headers: {
             Authorization: "Bearer guest",
             "Content-Type": "image/png",
-            "X-Transaction-Reference": "SPRINT-HTTP-GCASH-001",
+            "X-Transaction-Reference": "6300000001",
           },
           body: png,
         });
@@ -276,7 +276,7 @@ export async function sprintPostgres(t, pool) {
             requestKey: "sprint-http-confirm-001",
             verification: {
               amountCentavos: quote.quote.totalCentavos,
-              reference: "SPRINT-HTTP-GCASH-001",
+              reference: "6300000001",
               recipient: "SYNTHETIC TEST PAYEE",
               receivedAt: new Date(Date.now() - 60000).toISOString(),
               ledgerChecked: true,

@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
 
@@ -76,7 +76,16 @@ function Table({
                       </th>
                     ) : (
                       <td key={j} className="px-4 py-3 tabular-nums">
-                        {value}
+                        {columns[j] === "Package" ? (
+                          <details>
+                            <summary className="min-h-11 cursor-pointer text-primary">
+                              Package {value.slice(0, 8).toUpperCase()}
+                            </summary>
+                            <span className="break-all">{value}</span>
+                          </details>
+                        ) : (
+                          value
+                        )}
                       </td>
                     ),
                   )}
@@ -285,12 +294,7 @@ export default function StaffAnalytics({ token }: { token: string }) {
           </dl>
           <Table
             title="Collection trends"
-            columns={[
-              "Manila period start",
-              "Gross",
-              "Refunds",
-              "Net Collections",
-            ]}
+            columns={["Period (Manila)", "Gross", "Refunds", "Net Collections"]}
             rows={report.trends.map((row) => [row.period, ...money(row)])}
           />
           <Table
@@ -319,7 +323,7 @@ export default function StaffAnalytics({ token }: { token: string }) {
               "Package",
               "Version",
               "Duration",
-              "Recorded price",
+              "Package price",
               "Original purchases",
               "Extensions",
               "Net Collections",

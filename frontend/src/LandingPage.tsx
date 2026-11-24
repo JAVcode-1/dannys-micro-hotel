@@ -781,8 +781,9 @@ export default function LandingPage({
                 Type and 50 in Room Type.
               </p>
               <p>
-                First 3 hours from ₱3,000.00 before 5:00 PM or ₱5,000.00 from
-                5:00 PM. Additional full hours: ₱1,000.00.
+                Three-hour package: ₱3,000.00 for starts from 8:00 AM to before
+                5:00 PM, or ₱5,000.00 for other start times. Additional full
+                hours: ₱1,000.00.
               </p>
               <div className="landing-hall-actions">
                 {hallEnabled && (

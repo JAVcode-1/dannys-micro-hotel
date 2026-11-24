@@ -9,6 +9,7 @@ export type PaymentReviewInput = {
   expectedVersion: number;
   requestKey: string;
   note: string;
+  receivedAmountCentavos?: number;
   verification?: {
     ledgerChecked: boolean;
     receivingAccountChecked: boolean;
@@ -26,6 +27,7 @@ export type StaffPaymentReview = {
   reservationId: string;
   primaryName: string;
   transactionReference: string;
+  payeeLabel?: string | null;
   amountDueCentavos: number;
   submittedAt: string;
   status: "pending_review" | PaymentDecision;

@@ -16,7 +16,10 @@ export async function checkInItems(pool = databasePool()) {
     )
   ).rows[0].installed;
   const result = await pool.query(`
-        select b.id, r.channel, b.category_code as category, b.start_at, b.end_at,
+        select b.id, r.primary_name, r.channel, b.category_code as category, b.start_at, b.end_at,
+          case when exists (select 1 from staytrack.room_bookings sibling
+            where sibling.reservation_id=b.reservation_id and sibling.id<>b.id)
+            then b.item_index+1 end as reservation_room_number,
           ${corrections ? "(select json_build_object('decision',n.decision,'note',n.note,'occurredAt',n.occurred_at) from staytrack.accommodation_no_show_reviews n where n.room_booking_id=b.id order by n.occurred_at desc,n.id desc limit 1)" : "null"} as no_show_review,
           coalesce(r.channel='online' and s.room_booking_id is null
             and clock_timestamp() >= b.start_at + interval '1 hour',false) as late,

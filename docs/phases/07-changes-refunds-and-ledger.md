@@ -4,6 +4,14 @@ status: x01-x03-development-checkpoints-acceptance-pending
 ---
 # Phase 07 — Cancellations, Rescheduling, Extensions & Refunds
 
+## Streamlined room extension payments
+
+Routine extension payments can be recorded and allocated to the selected extension in one transaction. Manual allocation remains available for splits and later use. Cash uses the server-recorded receipt time unless staff supply an earlier time. The desk shows the configured GCash recipient and the API validates it while preserving reference deduplication. Review confirmation and staff reasons are shown with their respective approval or exception actions. No schema migration is required. Automated checks were skipped at the owner’s request.
+
+## Room extensions and additional receipts (2026-11-24)
+
+Routine room-extension quotes, funded approvals, additional receipts and allocations use a standard audit reason when the staff note is blank. Rejections, commitment releases and incident or charge actions still require a staff reason. Checked-in guests from both online and walk-in bookings can pay additional charges in cash. The staff can fill receipt time from the current Manila time. Additional GCash receipts still require the transaction’s actual reference for global duplicate prevention. The owner-approved cash migration was applied to the linked Supabase development project. API and Vite startup were verified. Manual receipt acceptance remains pending.
+
 ## Unified item policies - 2026-11-21
 
 UB-05/UB-06 explicitly extend independent item changes to online Hall items. Cancellation eligibility ends strictly before confirmation plus one hour and before the selected item's actual check-in/event start. Siblings remain unchanged; release only the cancelled claim. Manual refunds must trace to the selected item's share of the one original verified GCash payment and subtract previous payouts/approvals. Do not duplicate the original receipt/reference or automate GCash transfers. Staff-approved rescheduling retains the original confirmation deadline. Room extension funding remains at least 50%; Hall extensions require full additional cost. Preserve price snapshots, capacity locks, audit and retry protections. See [[../unified-online-booking-requirements-sync]] for implemented versus deferred evidence; existing acceptance gaps remain open.

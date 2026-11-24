@@ -29,7 +29,7 @@ export default function PaymentQrSettings({ token }: { token: string }) {
       .catch(() => {
         if (!controller.signal.aborted)
           setMessage(
-            "QR storage is unavailable until the approved O02 migration and private Storage setup are ready.",
+            "The payment QR is unavailable. Contact your administrator.",
           );
       });
     return () => controller.abort();
@@ -92,7 +92,7 @@ export default function PaymentQrSettings({ token }: { token: string }) {
         <fieldset disabled={busy} className="space-y-4">
           <legend className="sr-only">Configure GCash QR</legend>
           <label className="block text-sm font-semibold">
-            Verified GCash payee label
+            Verified GCash account name
             <input
               required
               maxLength={120}
@@ -112,7 +112,7 @@ export default function PaymentQrSettings({ token }: { token: string }) {
             />
           </label>
           <button className="min-h-11 rounded-xl bg-primary px-5 font-semibold text-white">
-            {busy ? "Uploading…" : "Save private QR configuration"}
+            {busy ? "Uploading…" : "Save payment QR"}
           </button>
         </fieldset>
       </form>

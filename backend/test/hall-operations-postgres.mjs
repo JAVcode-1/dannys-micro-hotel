@@ -96,7 +96,21 @@ export async function hallOperationsPostgres(t, pool) {
         ).rows[0].n,
         1,
       );
-      await command("receipt", receipt(a, 150000));
+      const cash = await command("receipt", {
+        id: a,
+        amount: 150000,
+        method: "cash",
+        verified: true,
+      });
+      const { rows: [cashReceipt] } = await pool.query(
+        "select received_at<=clock_timestamp() as received, evidence, normalized_reference from staytrack.hall_receipts where id=$1",
+        [cash.receiptId],
+      );
+      assert.deepEqual(cashReceipt, {
+        received: true,
+        evidence: "Staff confirmed cash received.",
+        normalized_reference: null,
+      });
       await command("receipt", receipt(b, 150000));
       const confirmed = await Promise.all([
         command("confirm", { id: a }),

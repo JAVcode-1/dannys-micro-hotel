@@ -229,6 +229,39 @@ export async function x03Behavior(t, pool) {
       ).rows[0];
       assert.equal(+quote.new_end - +quote.old_end, 180 * 60000);
       assert.ok(+quote.old_end < Date.now());
+      const combinedStay = await make();
+      const combinedQuote = await req(combinedStay);
+      const combinedPayment = {
+        requestKey: key(),
+        reason,
+        method: "cash",
+        cashReceived: true,
+        amountCentavos: 1,
+        extensionRequestId: combinedQuote.id,
+      };
+      await assert.rejects(
+        recordStayReceipt(actor, combinedStay.item.id, {
+          ...combinedPayment,
+          extensionRequestId: q.id,
+        }, pool),
+        (e) => e.status === 409,
+      );
+      const combinedReceipt = await recordStayReceipt(
+        actor, combinedStay.item.id, combinedPayment, pool,
+      );
+      assert.deepEqual(
+        await recordStayReceipt(actor, combinedStay.item.id, combinedPayment, pool),
+        combinedReceipt,
+      );
+      assert.deepEqual(
+        (
+          await pool.query(
+            "select extension_request_id,amount_centavos::int from staytrack.stay_receipt_allocations where receipt_id=$1",
+            [combinedReceipt.id],
+          )
+        ).rows,
+        [{ extension_request_id: combinedQuote.id, amount_centavos: 1 }],
+      );
       await assert.rejects(
         decideExtension(actor, q.id, decision(q), pool),
         (e) => e.status === 409,
@@ -858,7 +891,7 @@ export async function x03Behavior(t, pool) {
         receivedAt: new Date(Date.now() - 1000).toISOString(),
         verification: {
           reference: "X03-SYNTHETIC-GCASH-UNIQUE",
-          recipient: "SYNTHETIC PAYEE ONLY",
+          recipient: "TEST PAYEE ONLY",
           ledgerChecked: true,
           receivingAccountChecked: true,
           timeChecked: true,
@@ -873,7 +906,7 @@ export async function x03Behavior(t, pool) {
             ...gcashInput,
             verification: {
               timeChecked: true,
-              recipient: "SYNTHETIC PAYEE ONLY",
+              recipient: "TEST PAYEE ONLY",
               receivingAccountChecked: true,
               reference: "X03-SYNTHETIC-GCASH-UNIQUE",
               ledgerChecked: true,

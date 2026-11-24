@@ -4,6 +4,10 @@ status: h03-a-development-checkpoint-acceptance-pending
 ---
 # Phase 08 — Housekeeping, Maintenance, Incidents & Reporting
 
+## Confirmed Ready ends checkout turnover (2026-11-24)
+
+Explicit staff Mark Ready ends the checkout cleaning block after confirmed cleaning and preserves its originally scheduled end for audit. The existing availability and check-in checks use the effective end. Maintenance, active claims and readiness evidence continue to apply. The new migration also releases outstanding blocks with a recorded Ready event. The owner-approved migration was applied to the linked Supabase development project and released one outstanding turnover block. API and Vite startup were verified. Manual acceptance remains pending.
+
 
 ## H03-A development checkpoint - 2026-11-20
 

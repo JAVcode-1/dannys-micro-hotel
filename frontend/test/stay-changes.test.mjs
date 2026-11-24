@@ -52,13 +52,14 @@ const row = (id) => ({
 test("X03 synthetic preview separates pending funds, settlement, policy blockers and closed activation", () => {
   render(createElement(StayChangesPreview));
   assert.ok(screen.getByText(/Synthetic preview/));
+  screen.getByText("Extend this stay").closest("details").open = true;
+  screen.getByText("Overtime and incident review").closest("details").open = true;
   assert.ok(screen.getByText("Pending extension funds"));
-  assert.ok(screen.getByText("Required settlement"));
-  assert.ok(screen.getByText(/At least 50%/));
-  fireEvent.change(screen.getByLabelText("Staff reason"), {
+  assert.ok(screen.getByText("Remaining balance"));
+  assert.ok(screen.getByText("Minimum to approve"));
+  fireEvent.change(screen.getByLabelText("Reason for incident or charge action"), {
     target: { value: "Reviewed synthetic policy" },
   });
-  fireEvent.click(screen.getByLabelText(/I reviewed this room/));
   assert.equal(
     screen.getByRole("button", { name: "Post approved policy charge" })
       .disabled,
@@ -87,13 +88,15 @@ test("X03 item drafts survive refresh and failed approval without changing sibli
     assert.equal(document.querySelectorAll("article").length, 2),
   );
   let cards = document.querySelectorAll("article");
-  fireEvent.change(within(cards[0]).getByLabelText("Staff reason"), {
+  for (const card of cards) {
+    within(card).getByText("Extend this stay").closest("details").open = true;
+  }
+  fireEvent.change(within(cards[0]).getByLabelText("Reason for incident or charge action"), {
     target: { value: "Item A draft" },
   });
-  fireEvent.change(within(cards[1]).getByLabelText("Staff reason"), {
+  fireEvent.change(within(cards[1]).getByLabelText("Reason for incident or charge action"), {
     target: { value: "Independent B draft" },
   });
-  fireEvent.click(within(cards[0]).getByLabelText(/I reviewed this room/));
   fireEvent.click(
     within(cards[0]).getByRole("button", { name: "Request extension quote" }),
   );
@@ -106,16 +109,16 @@ test("X03 item drafts survive refresh and failed approval without changing sibli
   });
   cards = document.querySelectorAll("article");
   assert.equal(
-    within(cards[0]).getByLabelText("Staff reason").value,
+    within(cards[0]).getByLabelText("Reason for incident or charge action").value,
     "Item A draft",
   );
   assert.equal(
-    within(cards[1]).getByLabelText("Staff reason").value,
+    within(cards[1]).getByLabelText("Reason for incident or charge action").value,
     "Independent B draft",
   );
   assert.equal(
     within(cards[1]).getByRole("button", { name: "Request extension quote" })
       .disabled,
-    true,
+    false,
   );
 });

@@ -2,6 +2,7 @@ export type PaymentSession = {
   allocations?: { label: string; amountCentavos: number }[];
   reservationId: string;
   amountDueCentavos: number;
+  receivedAmountCentavos?: number | null;
   serverNow: string;
   proofDeadlineAt: string;
   status:

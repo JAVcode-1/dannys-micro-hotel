@@ -57,6 +57,16 @@ export function parsePaymentDecision(value: unknown): PaymentReviewInput {
     throw new BookingError(
       "Choose a decision and enter a review note with a fresh request key and current version.",
     );
+  const receivedAmountCentavos = input.receivedAmountCentavos;
+  if (
+    receivedAmountCentavos !== undefined &&
+    (input.decision !== "mismatched" ||
+      !Number.isSafeInteger(receivedAmountCentavos) ||
+      receivedAmountCentavos < 0)
+  )
+    throw new BookingError(
+      "Enter a valid received amount for a payment mismatch.",
+    );
   let verification: PaymentReviewInput["verification"];
   if (input.decision === "confirmed") {
     const v = input.verification;
@@ -93,6 +103,7 @@ export function parsePaymentDecision(value: unknown): PaymentReviewInput {
     expectedVersion: input.expectedVersion,
     requestKey: input.requestKey,
     note: input.note.trim(),
+    ...(receivedAmountCentavos !== undefined ? { receivedAmountCentavos } : {}),
     ...(verification ? { verification } : {}),
   };
 }
@@ -121,6 +132,7 @@ export async function staffPaymentReviews(
   >(
     `select p.id, p.reservation_id as "reservationId", r.primary_name as "primaryName",
     p.transaction_reference as "transactionReference", r.total_centavos::float8 as "amountDueCentavos",
+    (select trim(q.payee_label) from staytrack.payment_qr q where q.id=true) as "payeeLabel",
     p.submitted_at as "submittedAt", clock_timestamp() as "serverNow", p.status, p.review_version as version,
     (select json_build_object('note',pr.note,'actorId',pr.actor_auth_user_id,'createdAt',pr.created_at)
       from staytrack.payment_reviews pr where pr.submission_id=p.id order by pr.version desc limit 1) as "lastReview",
@@ -464,7 +476,12 @@ export async function decidePaymentReview(
             input.decision,
             input.note,
             actorId,
-            JSON.stringify(input.verification ?? {}),
+            JSON.stringify(
+              input.verification ??
+                (input.receivedAmountCentavos === undefined
+                  ? {}
+                  : { amountCentavos: input.receivedAmountCentavos }),
+            ),
           ],
         )
       ).rows[0];

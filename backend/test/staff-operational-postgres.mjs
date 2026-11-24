@@ -146,6 +146,37 @@ export async function staffOperationalPostgres(t, pool) {
         /Only unarrived/,
       );
       assert.ok((await staffRooms(pool)).find((x) => x.id === room));
+      await pool.query(
+        readFileSync(
+          new URL(
+            "../../supabase/migrations/20261124003000_cash_for_checked_in_stays.sql",
+            import.meta.url,
+          ),
+          "utf8",
+        ),
+      );
+      const cash = await recordStayReceipt(
+        actor,
+        item.id,
+        {
+          requestKey: "staff-online-stay-cash-fixture",
+          reason: "Synthetic cash received after online guest checked in.",
+          method: "cash",
+          cashReceived: true,
+          amountCentavos: 100,
+          receivedAt: new Date().toISOString(),
+        },
+        pool,
+      );
+      assert.deepEqual(
+        (
+          await pool.query(
+            "select method,cash_received,normalized_reference from staytrack.stay_receipts where id=$1",
+            [cash.id],
+          )
+        ).rows[0],
+        { method: "cash", cash_received: true, normalized_reference: null },
+      );
       const tables = (
         await pool.query(
           "select relname,relrowsecurity as rls,has_table_privilege('anon',oid,'select,insert,update,delete') as anon,has_table_privilege('authenticated',oid,'select,insert,update,delete') as authenticated from pg_class where oid in ('staytrack.room_inspections'::regclass,'staytrack.early_check_in_approvals'::regclass,'staytrack.accommodation_no_show_reviews'::regclass)",

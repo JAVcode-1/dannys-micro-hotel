@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BrowserRouter,
   Route,
@@ -10,7 +10,6 @@ import {
   useParams,
   useLocation,
 } from "react-router";
-import "./guest-booking.css";
 import { staffRoutes } from "./StaffRoutes";
 import GuestAccess from "./GuestAccess";
 import Catalog from "./Catalog";
@@ -49,10 +48,69 @@ function GuestLayout() {
       : ["/verify", "/login", "/register"].includes(pathname) ? 2
         : /^\/reservations\/[^/]+\/payment$/.test(pathname) ? 3 : 0;
   const [message, setMessage] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileMenu, setMobileMenu] = useState(false);
+  const menuTrigger = useRef<HTMLButtonElement>(null);
+  const firstMenuLink = useRef<HTMLAnchorElement>(null);
+  const header = useRef<HTMLElement>(null);
+  const stepLabels = ["Choose your stay", "Verify email", "Payment & review"];
+  useEffect(() => {
+    const mobile = window.matchMedia?.("(max-width: 52rem)");
+    if (!mobile) return;
+    const closeOnDesktop = () => {
+      setMobileMenu(mobile.matches);
+      setMenuOpen(false);
+    };
+    closeOnDesktop();
+    mobile.addEventListener("change", closeOnDesktop);
+    return () => mobile.removeEventListener("change", closeOnDesktop);
+  }, []);
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+  useEffect(() => {
+    if (!menuOpen) return;
+    firstMenuLink.current?.focus();
+    const closeOutside = (event: PointerEvent) => {
+      if (!header.current?.contains(event.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    return () => document.removeEventListener("pointerdown", closeOutside);
+  }, [menuOpen]);
+  const navigationLinks = (
+    <>
+      <NavLink ref={firstMenuLink} to="/rooms" onClick={() => setMenuOpen(false)}>Rooms &amp; rates</NavLink>
+      <NavLink to="/function-hall" onClick={() => setMenuOpen(false)}>Function Hall</NavLink>
+      <NavLink to="/reservations" onClick={() => setMenuOpen(false)}>My bookings</NavLink>
+      {session?.access.status === "authenticated" && (
+        <button
+          type="button"
+          onClick={() => {
+            setMenuOpen(false);
+            void session.signOut().catch(() => setMessage("Sign-out failed. Try again."));
+          }}
+        >
+          Sign out
+        </button>
+      )}
+    </>
+  );
   return (
     <div className="guest-journey min-h-svh bg-canvas text-main">
       <a href="#guest-main" className="guest-skip">Skip to main content</a>
-      <header className="guest-header print:hidden">
+      <header
+        ref={header}
+        className="guest-header print:hidden"
+        onKeyDown={(event) => {
+          if (event.key !== "Escape" || !menuOpen) return;
+          setMenuOpen(false);
+          menuTrigger.current?.focus();
+        }}
+        onBlur={(event) => {
+          if (menuOpen && !event.currentTarget.contains(event.relatedTarget))
+            setMenuOpen(false);
+        }}
+      >
         <nav
           aria-label="Guest navigation"
           className="guest-navigation"
@@ -63,22 +121,25 @@ function GuestLayout() {
               Danny’s <small>MICRO HOTEL</small>
             </span>
           </Link>
-          <div className="guest-navigation-links">
-            <NavLink to="/rooms">Rooms &amp; rates</NavLink>
-            <NavLink to="/function-hall">Function Hall</NavLink>
-            <NavLink to="/reservations">My bookings</NavLink>
-            {session?.access.status === "authenticated" ? (
-              <button
-                onClick={() =>
-                  void session
-                    .signOut()
-                    .catch(() => setMessage("Sign-out failed. Try again."))
-                }
-              >
-                Sign out
-              </button>
-            ) : null}
+          <div
+            id="guest-mobile-menu"
+            className="guest-navigation-links"
+            data-open={menuOpen || undefined}
+            inert={mobileMenu && !menuOpen}
+          >
+            {navigationLinks}
           </div>
+          <button
+            type="button"
+            ref={menuTrigger}
+            className="guest-menu-toggle"
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-controls="guest-mobile-menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            <span className="guest-menu-icon" aria-hidden="true" />
+          </button>
           <NavLink to="/book" className="guest-book-now">
             Book now
           </NavLink>
@@ -89,8 +150,16 @@ function GuestLayout() {
       )}
       {step > 0 && (
         <div className="guest-progress-wrap">
+          <div className="guest-mobile-progress">
+            <p aria-live="polite">Step {step} of 3 · <strong>{stepLabels[step - 1]}</strong></p>
+            <div className="guest-progress-segments" aria-hidden="true">
+              {stepLabels.map((label, index) => (
+                <span key={label} data-complete={index < step ? "" : undefined} />
+              ))}
+            </div>
+          </div>
           <ol className="guest-progress" aria-label="Booking steps">
-            {["Choose your stay", "Verify email", "Payment & review"].map((label, index) => (
+            {stepLabels.map((label, index) => (
               <li key={label} aria-current={step === index + 1 ? "step" : undefined}>
                 <span className="guest-step-number" aria-hidden="true">
                   0{index + 1}

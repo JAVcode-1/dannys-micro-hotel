@@ -1,4 +1,5 @@
-﻿import React from "react";
+import { readableLabel } from "./presentation";
+import React from "react";
 import type { StaffAuditPage } from "@staytrack/shared";
 import { apiBase } from "./staff-auth";
 
@@ -53,77 +54,86 @@ export default function StaffAuditDesk({ token }: { token: string }) {
     "mt-1 min-h-11 w-full rounded-lg border border-subtle bg-white px-3";
   return (
     <section className="mt-6 space-y-4">
-      <h2 className="text-xl font-semibold">Staff audit</h2>
-      <form
-        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          const filters = new URLSearchParams();
-          for (const [key, value] of new FormData(event.currentTarget)) {
-            const text = String(value).trim();
-            if (text) filters.set(key, text);
-          }
-          setSearch({ filters: filters.toString(), cursor: "" });
-        }}
-      >
-        <label>
-          Actor ID
-          <input
-            className={field}
-            name="actor"
-            maxLength={36}
-            placeholder="Staff UUID"
-          />
-        </label>
-        <label>
-          Action
-          <input
-            className={field}
-            name="action"
-            maxLength={80}
-            placeholder="e.g. room.maintenance.open"
-          />
-        </label>
-        <label>
-          Subject type
-          <select className={field} name="subjectType">
-            <option value="">All subjects</option>
-            <option value="room">Physical room</option>
-            <option value="room_item">Room item</option>
-            <option value="payment_submission">Payment submission</option>
-            <option value="hall_reservation">Function Hall reservation</option>
-            <option value="review">Guest review</option>
-            <option value="feedback">Private feedback</option>
-          </select>
-        </label>
-        <label>
-          Subject ID
-          <input className={field} name="subjectId" maxLength={36} />
-        </label>
-        <label>
-          From date (Manila)
-          <input className={field} name="from" type="date" />
-        </label>
-        <label>
-          Through date (Manila)
-          <input className={field} name="to" type="date" />
-        </label>
-        <div className="sm:col-span-2 lg:col-span-3">
-          <button
-            className="min-h-11 rounded-lg bg-primary px-4 py-2 font-semibold text-white"
-            type="submit"
-          >
-            Search audit
-          </button>
-        </div>
-      </form>
+      <h2 className="text-xl font-semibold">Activity log</h2>
+      <details>
+        <summary className="min-h-11 cursor-pointer font-semibold text-primary">
+          Filter activity
+        </summary>
+        <form
+          className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const filters = new URLSearchParams();
+            for (const [key, value] of new FormData(event.currentTarget)) {
+              const text = String(value).trim();
+              if (text) filters.set(key, text);
+            }
+            setSearch({ filters: filters.toString(), cursor: "" });
+          }}
+        >
+          <label>
+            Actor ID
+            <input
+              className={field}
+              name="actor"
+              maxLength={36}
+              placeholder="Full staff ID"
+            />
+          </label>
+          <label>
+            Action
+            <input
+              className={field}
+              name="action"
+              maxLength={80}
+              placeholder="e.g. room.maintenance.open"
+            />
+          </label>
+          <label>
+            Subject type
+            <select className={field} name="subjectType">
+              <option value="">All subjects</option>
+              <option value="room">Physical room</option>
+              <option value="room_item">Room item</option>
+              <option value="payment_submission">Payment submission</option>
+              <option value="hall_reservation">
+                Function Hall reservation
+              </option>
+              <option value="review">Guest review</option>
+              <option value="feedback">Private feedback</option>
+            </select>
+          </label>
+          <label>
+            Subject ID
+            <input className={field} name="subjectId" maxLength={36} />
+          </label>
+          <label>
+            From date (Manila)
+            <input className={field} name="from" type="date" />
+          </label>
+          <label>
+            Through date (Manila)
+            <input className={field} name="to" type="date" />
+          </label>
+          <div className="sm:col-span-2 lg:col-span-3">
+            <button
+              className="min-h-11 rounded-lg bg-primary px-4 py-2 font-semibold text-white"
+              type="submit"
+            >
+              Search audit
+            </button>
+          </div>
+        </form>
+      </details>
       {loading && <p role="status">Loading audit activity…</p>}
       {error && (
         <p role="alert" className="text-red-700">
           {error}
         </p>
       )}
-      {page && page.entries.length === 0 && <p>No matching audit entries.</p>}
+      {page && page.entries.length === 0 && (
+        <p className="staff-empty">No matching audit entries.</p>
+      )}
       {page && page.entries.length > 0 && (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -149,12 +159,29 @@ export default function StaffAuditDesk({ token }: { token: string }) {
                       {auditTime.format(new Date(entry.occurredAt))}
                     </time>
                   </td>
-                  <td className="p-2">{entry.action}</td>
-                  <td className="break-all p-2">{entry.actorId}</td>
+                  <td className="p-2">
+                    {readableLabel(entry.action.replaceAll(".", " "))}
+                  </td>
+                  <td className="p-2">
+                    <details>
+                      <summary className="min-h-11 cursor-pointer">
+                        Staff {entry.actorId.slice(0, 8).toUpperCase()}
+                      </summary>
+                      <span className="break-all">{entry.actorId}</span>
+                    </details>
+                  </td>
                   <td className="break-all p-2">
-                    {entry.subjectType
-                      ? `${entry.subjectType.replaceAll("_", " ")} · ${entry.subjectId}`
-                      : "No subject recorded"}
+                    {entry.subjectType ? (
+                      <details>
+                        <summary className="min-h-11 cursor-pointer">
+                          {readableLabel(entry.subjectType)}{" "}
+                          {entry.subjectId?.slice(0, 8).toUpperCase()}
+                        </summary>
+                        <span className="break-all">{entry.subjectId}</span>
+                      </details>
+                    ) : (
+                      "No subject recorded"
+                    )}
                   </td>
                 </tr>
               ))}

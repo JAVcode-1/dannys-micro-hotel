@@ -1,3 +1,11 @@
+import {
+  hours,
+  minutes,
+  TimePickerChevron,
+  timePickerButton,
+  timePickerInputPadding,
+} from "./TimePartInput";
+import { readableLabel } from "./presentation";
 import { useEffect, useRef, useState } from "react";
 import type { RescheduleInput, RescheduleRecord } from "@staytrack/shared";
 import { apiBase } from "./staff-auth";
@@ -7,98 +15,118 @@ const field =
   "mt-1 min-h-11 w-full rounded-lg border border-subtle bg-white p-2 text-base";
 const button =
   "min-h-11 rounded-lg bg-primary px-4 py-2 font-semibold text-white disabled:opacity-50";
-const stamp = (date: string, hour: string, minute: string, period: string) =>
-  `${date}T${String((Number(hour) % 12) + (period === "PM" ? 12 : 0)).padStart(2, "0")}:${minute}:00+08:00`;
+const manilaOffsetMs = 8 * 60 * 60 * 1000;
+const arrivalTimePattern = /^(0?[1-9]|1[0-2]):([0-5][0-9])$/;
+const invalidField = " ring-1 ring-red-600";
 
 export function GuestRescheduleForm({
   itemId,
   revision,
   startAt,
-  endAt,
   blocks,
-  confirmationAt,
   submit,
   refresh,
 }: {
   itemId: string;
   revision: number;
   startAt: string;
-  endAt: string;
   blocks: number[];
-  confirmationAt: string | null;
   submit: (input: RescheduleInput) => Promise<RescheduleRecord>;
   refresh?: () => Promise<{
     revision: number;
     startAt: string;
-    endAt: string;
-    confirmationAt: string | null;
     pending: boolean;
   }>;
 }) {
-  const [snapshot, setSnapshot] = useState({
-    revision,
-    startAt,
-    endAt,
-    confirmationAt,
-  });
-  const recorded = useRef(false);
-  const local = new Date(Date.parse(startAt) + 8 * 3600000).toISOString();
+  const [snapshot, setSnapshot] = useState({ revision, startAt });
+  const local = new Date(Date.parse(startAt) + manilaOffsetMs).toISOString();
+  const localHour = Number(local.slice(11, 13));
   const [date, setDate] = useState(local.slice(0, 10));
-  const [hour, setHour] = useState(
-    String(Number(local.slice(11, 13)) % 12 || 12),
+  const [time, setTime] = useState(
+    `${localHour % 12 || 12}:${local.slice(14, 16)}`,
   );
-  const [minute, setMinute] = useState(local.slice(14, 16));
-  const [period, setPeriod] = useState(
-    Number(local.slice(11, 13)) >= 12 ? "PM" : "AM",
-  );
-  const [packages, setPackages] = useState(blocks.join(","));
-  const [reason, setReason] = useState("");
+  const [period, setPeriod] = useState(localHour >= 12 ? "PM" : "AM");
+  const [note, setNote] = useState("");
+  const [attempted, setAttempted] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [stale, setStale] = useState(false);
+  const [pending, setPending] = useState(false);
   const retry = useRef(crypto.randomUUID());
+
+  const now = Date.now();
+  const today = new Date(now + manilaOffsetMs).toISOString().slice(0, 10);
+  const match = arrivalTimePattern.exec(time.trim());
+  const requestedStart = match && date
+    ? `${date}T${String((Number(match[1]) % 12) + (period === "PM" ? 12 : 0)).padStart(2, "0")}:${match[2]}:00+08:00`
+    : "";
+  const arrivalMs = Date.parse(requestedStart);
+  const durationMinutes = blocks.reduce((sum, block) => sum + block, 0);
+  const dateError = date && date < today
+    ? "Choose today or a later date."
+    : attempted && !date
+      ? "Choose an arrival date."
+      : "";
+  const timeError =
+    attempted && !match
+      ? "Enter a time such as 2:30."
+      : !dateError && Number.isFinite(arrivalMs) && arrivalMs <= now
+        ? "Choose an arrival time in the future."
+        : "";
+  const changed = arrivalMs !== Date.parse(snapshot.startAt);
+  const checkout =
+    changed && Number.isFinite(arrivalMs) && arrivalMs > now
+      ? new Date(arrivalMs + durationMinutes * 60000).toISOString()
+      : null;
+
+  if (pending) {
+    return (
+      <div role="status" className="my-3 rounded-xl border border-subtle bg-selected p-4">
+        <p className="font-semibold">Awaiting staff approval</p>
+        <p className="mt-1">
+          Your current booking stays active while staff check availability.
+        </p>
+      </div>
+    );
+  }
+
+  const dateErrorId = `arrival-date-error-${itemId}`;
+  const timeErrorId = `arrival-time-error-${itemId}`;
+
   return (
     <form
       className="my-3 space-y-3 rounded-xl border border-subtle p-4"
-      onSubmit={async (e) => {
-        e.preventDefault();
+      noValidate
+      onSubmit={async (event) => {
+        event.preventDefault();
         if (busy || stale) return;
-        setBusy(true);
+        setAttempted(true);
         setMessage("");
+        if (!date || !match || dateError || timeError) return;
+        if (!Number.isFinite(arrivalMs) || arrivalMs <= Date.now()) {
+          setMessage("Choose a future arrival date and time.");
+          return;
+        }
+        if (!checkout) {
+          setMessage("Choose a different arrival date or time.");
+          return;
+        }
+        setBusy(true);
         try {
-          const selected = packages.split(",").map((x) => Number(x.trim()));
-          if (
-            !selected.length ||
-            selected.length > 30 ||
-            selected.some((x) => ![180, 360, 720, 1440].includes(x))
-          )
-            throw Object.assign(
-              new Error("Use allowed package minutes: 180, 360, 720 or 1440."),
-              { status: 400 },
-            );
-          const start = stamp(date, hour, minute, period);
-          const end = new Date(
-            Date.parse(start) + selected.reduce((a, b) => a + b, 0) * 60000,
-          ).toISOString();
           await submit({
             requestKey: retry.current,
             expectedRevision: snapshot.revision,
-            startAt: start,
-            endAt: end,
-            blocks: selected,
-            reason,
+            startAt: requestedStart,
+            endAt: checkout,
+            blocks,
+            reason: note.trim() || "Guest requested a new arrival date or time.",
           });
-          recorded.current = true;
-          notifySuccess("Schedule change requested. Your original schedule stays active until approved.");
-          setMessage(
-            "Request recorded. Your original schedule remains active until staff approves.",
-          );
-          setStale(true);
+          setPending(true);
         } catch (error) {
           setMessage(
             error instanceof Error
               ? error.message
-              : "Request unavailable. Refresh and review.",
+              : "Could not send the request. Refresh your booking and try again.",
           );
           setStale((error as { status?: number }).status !== 400);
         } finally {
@@ -106,144 +134,145 @@ export function GuestRescheduleForm({
         }
       }}
     >
-      <p className="font-semibold">Request a schedule change</p>
-      <p>
-        {hotelTime(startAt)} → {hotelTime(endAt)}
-      </p>
-      <p className="text-sm text-muted">
-        Original cancellation deadline:{" "}
-        {snapshot.confirmationAt
-          ? hotelTime(
-              new Date(
-                Date.parse(snapshot.confirmationAt) + 3600000,
-              ).toISOString(),
-            )
-          : "Not applicable"}
-        . Rescheduling does not restart it.
-      </p>
-      <div className="grid gap-3 sm:grid-cols-4">
-        <label>
-          Arrival date
-          <input
-            aria-label={`Arrival date - ${itemId}`}
-            type="date"
-            required
-            className={field}
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
-        </label>
-        <label>
-          Hour
-          <select
-            aria-label={`Arrival hour - ${itemId}`}
-            className={field}
-            value={hour}
-            onChange={(e) => setHour(e.target.value)}
-          >
-            {Array.from({ length: 12 }, (_, i) => (
-              <option key={i + 1}>{i + 1}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Minute
-          <select
-            aria-label={`Arrival minute - ${itemId}`}
-            className={field}
-            value={minute}
-            onChange={(e) => setMinute(e.target.value)}
-          >
-            {Array.from({ length: 60 }, (_, i) => (
-              <option key={i}>{String(i).padStart(2, "0")}</option>
-            ))}
-          </select>
-        </label>
+      <p className="font-semibold">Request a new arrival</p>
+      <div className="grid gap-3 sm:grid-cols-[2fr_2fr_1fr]">
+        <div>
+          <label>
+            Arrival date
+            <input
+              aria-label={`Arrival date - ${itemId}`}
+              aria-invalid={Boolean(dateError)}
+              aria-describedby={dateError ? dateErrorId : undefined}
+              type="date"
+              min={today}
+              required
+              className={field + (dateError ? invalidField : "")}
+              value={date}
+              onChange={(event) => setDate(event.target.value)}
+            />
+          </label>
+          {dateError && <p id={dateErrorId} className="text-red-700">{dateError}</p>}
+        </div>
+        <div>
+          <div className="relative grid min-w-0">
+            <label htmlFor={`arrival-time-${itemId}`}>Arrival time</label>
+            <input
+              id={`arrival-time-${itemId}`}
+              style={timePickerInputPadding}
+              aria-label={`Arrival time - ${itemId}`}
+              aria-invalid={Boolean(timeError)}
+              aria-describedby={timeError ? timeErrorId : undefined}
+              placeholder="2:30"
+              required
+              className={field + (timeError ? invalidField : "")}
+              value={time}
+              onChange={(event) => setTime(event.target.value)}
+            />
+            <details>
+              <summary
+                aria-label="Choose hour and minute"
+                className={
+                  timePickerButton + " list-none [&::-webkit-details-marker]:hidden"
+                }
+              >
+                <TimePickerChevron />
+              </summary>
+              <div className="absolute right-0 top-full z-20 mt-2 grid w-56 grid-cols-2 gap-3 rounded-xl border border-subtle bg-white p-3 text-sm shadow-lg">
+                <label>
+                  Hour
+                  <select
+                    aria-label={`Choose arrival hour - ${itemId}`}
+                    className={field}
+                    value={match ? String(Number(match[1])) : ""}
+                    onChange={(event) => setTime(`${event.target.value}:${match?.[2] ?? "00"}`)}
+                  >
+                    <option value="" disabled>Hour</option>
+                    {hours.map((hour) => <option key={hour}>{hour}</option>)}
+                  </select>
+                </label>
+                <label>
+                  Minute
+                  <select
+                    aria-label={`Choose arrival minute - ${itemId}`}
+                    className={field}
+                    value={match?.[2] ?? ""}
+                    onChange={(event) => setTime(`${match?.[1] ?? (localHour % 12 || 12)}:${event.target.value}`)}
+                  >
+                    <option value="" disabled>Minute</option>
+                    {minutes.map((minute) => <option key={minute}>{minute}</option>)}
+                  </select>
+                </label>
+              </div>
+            </details>
+          </div>
+          {timeError && <p id={timeErrorId} className="text-red-700">{timeError}</p>}
+        </div>
         <label>
           AM/PM
           <select
             aria-label={`Arrival period - ${itemId}`}
             className={field}
             value={period}
-            onChange={(e) => setPeriod(e.target.value)}
+            onChange={(event) => setPeriod(event.target.value)}
           >
             <option>AM</option>
             <option>PM</option>
           </select>
         </label>
       </div>
+      {checkout && (
+        <p className="rounded-lg bg-selected p-3 text-sm" aria-live="polite">
+          <strong>New checkout:</strong> {hotelTime(checkout)}
+        </p>
+      )}
       <p className="text-sm text-muted">
-        Asia/Manila. Keeping purchased packages preserves their booked price.
-        Proposed capacity is not reserved.
+        Times are in Manila time. Your {durationMinutes / 60}-hour stay and
+        booked price stay the same. Contact the hotel for a different stay length.
       </p>
       <label className="block">
-        Package minutes (comma-separated)
+        Note for staff (optional)
         <input
-          aria-label={`Package minutes - ${itemId}`}
+          aria-label={`Note for staff - ${itemId}`}
           className={field}
-          required
-          value={packages}
-          onChange={(e) => setPackages(e.target.value)}
-        />
-      </label>
-      <p className="text-sm text-muted">
-        Changing duration creates a policy-pending quote only; no schedule,
-        charge or refund is approved.
-      </p>
-      <label className="block">
-        Request reason
-        <textarea
-          aria-label={`Request reason - ${itemId}`}
-          className={field}
-          required
           maxLength={1000}
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
         />
       </label>
       <button
         className={button}
         disabled={busy || stale}
-        aria-label={`Request reschedule - ${itemId}`}
+        aria-label={`Send request - ${itemId}`}
       >
-        {busy ? "Submitting…" : "Request reschedule"}
+        {busy ? "Sending…" : "Send request"}
       </button>
       {message && <p role="alert">{message}</p>}
-      {stale && (
-        <p>
-          <button
-            type="button"
-            className="min-h-11 font-semibold text-primary"
-            aria-label={`Refresh reservation - ${itemId}`}
-            disabled={busy || !refresh}
-            onClick={async () => {
-              if (!refresh) return;
-              setBusy(true);
-              try {
-                const current = await refresh();
-                setSnapshot(current);
-                setStale(current.pending);
-                if (recorded.current && !current.pending) {
-                  retry.current = crypto.randomUUID();
-                  recorded.current = false;
-                }
-                setMessage(
-                  current.pending
-                    ? "A request is already pending. Your drafts are retained."
-                    : "Reservation refreshed. Your drafts are retained; review before submitting.",
-                );
-              } catch (e) {
-                setMessage(
-                  e instanceof Error ? e.message : "Refresh unavailable",
-                );
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            Refresh reservation and review again
-          </button>
-        </p>
+      {stale && refresh && (
+        <button
+          type="button"
+          className="min-h-11 font-semibold text-primary"
+          aria-label={`Refresh reservation - ${itemId}`}
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              const current = await refresh();
+              setSnapshot(current);
+              setPending(current.pending);
+              if (!current.pending) retry.current = crypto.randomUUID();
+              setStale(false);
+              setMessage("Booking refreshed. Review your new arrival before sending.");
+            } catch (error) {
+              setMessage(
+                error instanceof Error ? error.message : "Refresh unavailable",
+              );
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          Refresh and review
+        </button>
       )}
     </form>
   );
@@ -270,9 +299,7 @@ export function GuestRescheduleRequest(props: {
   itemId: string;
   revision: number;
   startAt: string;
-  endAt: string;
   blocks: number[];
-  confirmationAt: string | null;
 }) {
   return (
     <GuestRescheduleForm
@@ -289,8 +316,6 @@ export function GuestRescheduleRequest(props: {
         return {
           revision: item.scheduleRevision ?? 0,
           startAt: item.startAt,
-          endAt: item.endAt,
-          confirmationAt: item.confirmationAt,
           pending: item.pendingReschedule ?? false,
         };
       }}
@@ -365,7 +390,15 @@ function DecisionCard({
   };
   return (
     <article className="mt-4 rounded-xl border border-subtle bg-white p-5">
-      <h3 className="font-semibold break-all">{row.id}</h3>
+      <h3 className="font-semibold">
+        Schedule request {row.id.slice(0, 8).toUpperCase()}
+      </h3>
+      <details className="mt-2 text-sm">
+        <summary className="min-h-11 cursor-pointer text-muted">
+          Request reference
+        </summary>
+        <p className="break-all">{row.id}</p>
+      </details>
       <dl className="mt-3 space-y-2 text-sm">
         <div>
           <dt className="text-muted">Current schedule</dt>
@@ -381,17 +414,22 @@ function DecisionCard({
         </div>
       </dl>
       <p className="mt-3 break-words">Guest reason: {row.reason}</p>
-      <p>
-        Purchased packages: {row.originalBlocks.join(" + ")} minutes. Requested
-        packages: {row.blocks.join(" + ")} minutes.
-      </p>
-      <p className="mt-3">Purchased price: {peso(row.originalCentavos)}</p>
-      <p className="text-sm text-muted">
-        Original cancellation deadline:{" "}
-        {row.cancellationDeadlineAt
-          ? hotelTime(row.cancellationDeadlineAt)
-          : "Not applicable"}
-      </p>
+      <details className="mt-3 text-sm">
+        <summary className="min-h-11 cursor-pointer text-primary">
+          Packages and policy records
+        </summary>
+        <p>
+          Purchased packages: {row.originalBlocks.join(" + ")} minutes.
+          Requested packages: {row.blocks.join(" + ")} minutes.
+        </p>
+        <p className="mt-3">Purchased price: {peso(row.originalCentavos)}</p>
+        <p className="text-sm text-muted">
+          Original cancellation deadline:{" "}
+          {row.cancellationDeadlineAt
+            ? hotelTime(row.cancellationDeadlineAt)
+            : "Not applicable"}
+        </p>
+      </details>
       {row.proposalStatus && (
         <p className="mt-3 rounded-lg bg-lavender p-3">
           Proposal only: {peso(row.proposalDeltaCentavos ?? 0)} — policy
@@ -403,7 +441,7 @@ function DecisionCard({
           ? "Approved schedule move"
           : row.approved === false
             ? "Request rejected"
-            : (row.blocker ?? row.eligibility.replaceAll("_", " "))}
+            : (row.blocker ?? readableLabel(row.eligibility))}
       </p>
       {row.approved === null && (
         <>
@@ -539,7 +577,7 @@ export default function RescheduleDesk({
   }, [token, guest, page, refresh]);
   return (
     <section aria-label="Rescheduling" className="mt-6 text-main">
-      <h2 className="text-2xl font-bold">Rescheduling</h2>
+      <h2 className="text-2xl font-bold">Schedule changes</h2>
       <p className="mt-2 text-sm text-muted">
         {token
           ? "Staff approval is required. Your original schedule stays active during review."
@@ -567,7 +605,7 @@ export default function RescheduleDesk({
             </p>
             <p>
               {row.approved === null
-                ? (row.blocker ?? row.eligibility.replaceAll("_", " "))
+                ? (row.blocker ?? readableLabel(row.eligibility))
                 : row.approved
                   ? "Approved schedule move"
                   : "Request rejected"}

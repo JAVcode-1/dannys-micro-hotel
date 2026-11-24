@@ -116,8 +116,9 @@ export default function Catalog({
               Type for up to 50.
             </p>
             <p className="mt-4">
-              First 3 hours: <strong>₱3,000.00</strong> for starts from 8:00 AM
-              to before 5:00 PM; <strong>₱5,000.00</strong> from 5:00 PM.
+              Three-hour package: <strong>₱3,000.00</strong> for starts from
+              8:00 AM to before 5:00 PM, or <strong>₱5,000.00</strong> for
+              other start times.
               Additional full hours: <strong>₱1,000.00 each</strong>.
             </p>
             <div className="mt-5 flex flex-wrap gap-4">

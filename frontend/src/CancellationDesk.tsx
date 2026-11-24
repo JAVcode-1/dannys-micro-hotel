@@ -1,3 +1,4 @@
+import { readableLabel } from "./presentation";
 import ManilaDateTimeInput from "./ManilaDateTimeInput";
 import { useEffect, useRef, useState } from "react";
 import type { CancellationRow } from "@staytrack/shared";
@@ -197,11 +198,13 @@ export default function CancellationDesk({
           throw new Error(data.error);
         }
         attempts.current.delete(attemptId);
-        notifySuccess(action === "transfer"
-          ? "Manual refund transfer recorded. No money was sent by this application."
-          : action === "approve"
-            ? "Cancellation approved. Any refund still requires a manual transfer."
-            : "Cancellation or refund action recorded.");
+        notifySuccess(
+          action === "transfer"
+            ? "Manual refund transfer recorded. No money was sent by this application."
+            : action === "approve"
+              ? "Cancellation approved. Any refund still requires a manual transfer."
+              : "Cancellation or refund action recorded.",
+        );
         await load();
       } else {
         const next = rows.map((item) => {
@@ -266,7 +269,7 @@ export default function CancellationDesk({
   return (
     <section className="mx-auto max-w-5xl space-y-4 rounded-2xl border border-subtle bg-white p-6 text-main">
       <h1 className="text-2xl font-bold text-primary">
-        Individual cancellations and manual refunds
+        Cancellations and refunds
       </h1>
       {!token && (
         <p>
@@ -274,15 +277,20 @@ export default function CancellationDesk({
           or payer accounts.
         </p>
       )}
-      <p>
-        No money is transferred by this application. A screenshot alone never
-        verifies a payer or refund.
-      </p>
-      <p>
-        Online free cancellation: request before 60 minutes from original staff
-        confirmation, before that item checks in. Walk-in and extra-bed refund
-        policies remain pending.
-      </p>
+      <details>
+        <summary className="min-h-11 cursor-pointer font-semibold text-primary">
+          Cancellation and refund policy
+        </summary>
+        <p>
+          No money is transferred by this application. A screenshot alone never
+          verifies a payer or refund.
+        </p>
+        <p>
+          Online free cancellation: request before 60 minutes from original
+          staff confirmation, before that item checks in. Walk-in and extra-bed
+          refund policies remain pending.
+        </p>
+      </details>
       {token && !enabled && (
         <p>
           Live cancellation and refund writes are closed pending acceptance.
@@ -302,7 +310,8 @@ export default function CancellationDesk({
               className="rounded-xl border border-primary bg-selected p-4 space-y-3"
             >
               <h2 className="font-semibold">
-                Review {confirmation.action} for {row.id}
+                Review {readableLabel(confirmation.action)} for{" "}
+                {row.id.slice(0, 8).toUpperCase()}
               </h2>
               <p>
                 Item amount: {peso(row.refundCentavos ?? row.originalCentavos)}.{" "}
@@ -364,9 +373,18 @@ export default function CancellationDesk({
             key={row.id}
             className="space-y-3 rounded-xl border border-subtle p-4"
           >
-            <h2 className="font-semibold">{row.id}</h2>
+            <h2 className="font-semibold">
+              Cancellation {row.id.slice(0, 8).toUpperCase()}
+            </h2>
+            <details className="text-sm">
+              <summary className="min-h-11 cursor-pointer text-muted">
+                Full references
+              </summary>
+              <p className="break-all">Cancellation: {row.id}</p>
+              <p className="break-all">Reservation: {row.reservationId}</p>
+            </details>
             <p>
-              {row.reservationId} -{" "}
+              Booking {row.reservationId.slice(0, 8).toUpperCase()} &middot;{" "}
               {row.channel === "online" ? "Online" : "Walk-in"}
             </p>
             <p>
@@ -379,21 +397,21 @@ export default function CancellationDesk({
                 ? hotelTime(row.confirmationAt)
                 : "Not applicable / unconfirmed"}
             </p>
-            <p>{row.eligibility}</p>
+            <p>{readableLabel(row.eligibility)}</p>
             {row.requestedAt && (
               <p>
                 Requested {hotelTime(row.requestedAt)} -{" "}
                 {row.approved === null
                   ? "Awaiting staff review; capacity retained"
                   : row.approved
-                    ? "Cancelled; refund " + row.refundStatus
+                    ? "Cancelled; refund " + readableLabel(row.refundStatus)
                     : "Request rejected"}
               </p>
             )}
             {row.approved && (
               <p>
                 Item refund {peso(row.refundCentavos ?? 0)} - Reservation refund
-                outstanding {peso(row.refundDueCentavos)} - Net charges{" "}
+                outstanding {peso(row.refundDueCentavos)} - Total amount{" "}
                 {peso(row.netChargeCentavos)} - Account balance{" "}
                 {peso(row.balanceCentavos)} (negative means credit owed)
               </p>
@@ -678,7 +696,9 @@ export function GuestCancellationRequest({
         disabled={busy || !reason.trim()}
         onClick={() => void submit()}
       >
-        {staff ? "Request cancellation of this room item" : "Request cancellation"}
+        {staff
+          ? "Request cancellation of this room item"
+          : "Request cancellation"}
       </button>
       {message && <p role="status">{message}</p>}
     </div>
