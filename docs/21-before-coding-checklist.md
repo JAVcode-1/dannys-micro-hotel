@@ -126,4 +126,4 @@ Change `[ ]` to `[x]` only after observed evidence, add `date`, `owner`, `eviden
 - [ ] Determine whether Gitleaks, Semgrep and OSV-Scanner are installed and permitted; record any missing/unsupported checks (never claim scans passed if they did not run).
 - [ ] Establish a Git baseline and review execution/commit permissions; the original greploop includes auto-commit behavior that **must not** run without user approval.
 
-See `CODEX-START-HERE.md` and `.agents/README.md` in the repository root. This check is not evidence of an implemented application.
+See [QUALITY-GATE-SETUP.md](../QUALITY-GATE-SETUP.md) and the [repository skills guide](../.agents/README.md). This check is not evidence of an implemented application.

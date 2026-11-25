@@ -1,11 +1,12 @@
 # Codex greploop + scanloop quality gate — Windows setup
 
-**The original uploaded Claude `SKILL.md` files are preserved byte-for-byte.** Codex-specific additions use `.codex/agents/`, root `AGENTS.md`, and scripts. This package DOES NOT install software on your PC merely by extracting it.
+The original Claude `SKILL.md` files are preserved under `.agents/skills/`. In Codex, use `/skills` to check discovery. The verifier compares file hashes with `.agents/skills-manifest.json`. Follow [AGENTS.md](AGENTS.md) for the development checkpoint and full quality-gate requirements.
 
 ## Run once in VS Code PowerShell
 
 ```powershell
 # Inspect this script before executing it; it installs external tools to your local Windows machine.
+powershell -NoProfile -File .\scripts\verify-original-skills.ps1
 Get-Content .\scripts\setup-security-tools.ps1
 powershell -NoProfile -File .\scripts\setup-security-tools.ps1 -InstallCodexCli
 ```
@@ -19,7 +20,7 @@ codex --version
 codex
 ```
 
-## After each coding task, before git commit
+## Full gate for major milestones and predeployment
 
 ```powershell
 # Run the relevant build / lint / tests first. Then:
@@ -28,14 +29,13 @@ powershell -NoProfile -File .\scripts\run-quality-gate.ps1
 
 This executes **Gitleaks**, **Semgrep** (pinned local rule file and metrics off), **OSV** (for detected JS lockfiles), and **three independent `codex exec --sandbox read-only` reviews** with JSON reports in `.quality/reviews/`. If a tool is missing, a scanner finds a problem, or reviewers find a blocking/major issue, it exits nonzero. Fix confirmed problems and rerun, at most five review iterations per original greploop.
 
-This gate reviews **uncommitted** source changes; call it before committing. The three reviews use your Codex login and consume additional tokens. The reviews are independent CLI sessions, not the original Claude reviewer type. When working interactively, Codex may instead spawn the three project reviewers natively; check their actual activity rather than accepting verbal claims.
+Run the gate on uncommitted source changes. The three independent CLI sessions use your Codex login. Native reviewer agents can provide additional assurance alongside the required scripted evidence.
 
 ## Limitations and privacy
 
 - Semgrep pinned local YAML is a small offline starter pack, **not the full Semgrep community registry coverage** in the Claude original. Add reviewed local rules as the security program matures; don't assert that all application vulnerabilities were checked.
 - OSV-Scanner normally sends dependency package names and versions to OSV.dev; configure its offline database mode separately if network-free checks are required.
 - Gitleaks output is redacted; never upload raw report data or real `.env` files.
-- PowerShell installation and scanner scripts **have not been executed on your Windows machine**. Verify results there before marking a gate Done.
 - Independent CLI Codex reviewers send source context to the configured Codex service. Use your organization's approved confidentiality settings.
 - The `run-greploop-review.ps1` uses `git status` to review the current uncommitted changes, including untracked code; Git needs to be initialized first.
 - The quality gate does not itself replace real tests or a human production deployment review.

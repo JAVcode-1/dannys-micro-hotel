@@ -46,7 +46,7 @@ These are the **original, unmodified user-provided Claude skills**, stored verba
 6. Reserve the complete scanloop/greploop quality gate and comprehensive testing for major milestones and predeployment verification. Preserve the original skill files and executable security scripts; run them when the gate is required or the task warrants them. Never weaken a security check to obtain a passing result.
 7. Update the relevant Obsidian milestone, decision, and context notes. Continue to the next documented feature only when instructed.
 
-See `CODEX-START-HERE.md` and `QUALITY-GATE-SETUP.md` for the existing setup and full-gate procedures.
+See [QUALITY-GATE-SETUP.md](QUALITY-GATE-SETUP.md) for tool setup, skill verification, and full-gate procedures.
 
 
 ## Full quality gate for major milestones and predeployment (D-038)

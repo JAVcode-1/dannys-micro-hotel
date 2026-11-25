@@ -458,7 +458,7 @@ See [[18-backlog]].
 
 ## D-037 — Preserve original Claude skills for Codex (2026-11-12)
 
-**Requested:** Preserve exact source files for `code-structure`, `scanloop`, and `greploop` as originally uploaded; place in `.agents/skills/`, with root `AGENTS.md` requiring their review/quality workflow. Refer to `CODEX-START-HERE.md` for compatibility and truthful execution limits. Actual scanner installation, reviewer agent features and every skill's execution remain workstation-dependent. Do not automatically commit/push.
+**Requested:** Preserve exact source files for `code-structure`, `scanloop`, and `greploop` as originally uploaded; place in `.agents/skills/`, with root `AGENTS.md` requiring their review/quality workflow. See [QUALITY-GATE-SETUP.md](../QUALITY-GATE-SETUP.md) for compatibility and execution limits. Actual scanner installation, reviewer agent features and every skill's execution remain workstation-dependent. Do not automatically commit/push.
 
 ## D-038 — Verified guest ratings, public reviews and private feedback (2026-11-16)
 
