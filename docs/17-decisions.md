@@ -6,6 +6,10 @@ status: approved-baseline
 
 The Function Hall and refunds checkpoint preserves the existing staff-assisted reschedule request contract. The shared form receives the current schedule revision and booked duration blocks. Staff approval remains a separate action. No new business policy or dependency was introduced by the checkpoint verification fixes.
 
+## Unconfirmed housekeeping requests (2026-11-25)
+
+If a housekeeping response is lost, prompt staff to refresh the Rooms board and confirm the current state before retrying. Keep the same request key for the action within the current board session. Existing API errors remain visible when the API returns a message.
+
 ## Partial refunds and guest reports
 
 Record actual verified manual transfer amounts for each refund installment. Cumulative transfers are capped at the approved obligation and duplicate GCash references are rejected. Retain the original approval, payer checks, and existing transfer evidence. The migration carries historical Hall transfers forward at their previously attested approved amounts because the actual transfer amount was not stored separately.

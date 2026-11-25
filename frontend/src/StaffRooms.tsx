@@ -84,12 +84,12 @@ export default function StaffRooms({ token }: { token: string }) {
           },
           body: JSON.stringify(input),
         },
-      );
-      if (!response.ok) {
-        const body = await response.json();
+      ).catch(() => null);
+      if (!response?.ok) {
+        const body = await response?.json().catch(() => null);
         throw new Error(
-          body.error ??
-            "Housekeeping could not be recorded. Refresh and retry.",
+          body?.error ||
+            "The housekeeping update could not be confirmed. Refresh the Rooms board before trying again.",
         );
       }
       notifySuccess(

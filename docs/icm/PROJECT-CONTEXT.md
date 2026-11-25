@@ -6,6 +6,10 @@ status: unified-online-booking-development-review
 
 The Function Hall and refunds checkpoint has passing build, typecheck, lint, formatting, 229 application tests and 40 integration tests on disposable PostgreSQL. The targeted unified-booking PostgreSQL check also passed. Staff-assisted rescheduling now uses the current form props, and test fixtures exercise the current availability, payment and staff sign-in flows. Manual browser acceptance remains pending.
 
+## Housekeeping response recovery (2026-11-25)
+
+The reported housekeeping connection reset coincided with a development API restart. `StaffRooms.tsx` now asks staff to refresh the board before retrying an unconfirmed action, using the existing retry key. The booking email warning is separate and indicates that the development mail provider is unconfigured. No mail settings were changed.
+
 ## Partial refunds and guest reports
 
 My bookings shows actual recorded refund totals and outstanding balances for room and Hall items. The staff Cancellations and refunds page lists open reports, including Function Hall reports. Staff can record separate transfer installments through existing refund workflows, and guests can view the staff resolution for their item. The separately approved refund migration is applied to the D-040 development project. Hosted development readiness and Vite both returned HTTP 200 through `npm run dev`. Manual refund workflow acceptance is pending.

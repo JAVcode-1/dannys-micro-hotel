@@ -4,6 +4,12 @@ status: in-progress
 ---
 # 14 — Milestones & Work Tracker
 
+## Housekeeping response recovery (2026-11-25)
+
+The Rooms board now gives a refresh instruction when a disconnect or empty proxy error leaves a housekeeping action unconfirmed. After refreshing, staff can retry an action that is still offered with the original request key. The test reproduced the reported JSON error before the fix. The local Vite proxy returned HTTP 200 for `/api/health`. Browser acceptance on Room 2 remains pending. No Phase 08 checklist item was marked complete.
+
+Build, typecheck, lint, changed-file formatting, and all 230 application tests passed (128 backend, 102 frontend). The regression test covers an empty proxy response, a rejected fetch, and reuse of the request key after refreshing.
+
 ## Function Hall and refunds development checkpoint
 
 Build, typecheck, lint and the GitHub CI formatting check passed. The application suite passed 128 backend and 101 frontend tests after correcting the staff reschedule form props and aligning test fixtures with the current workflows. All 40 integration tests passed on disposable loopback PostgreSQL. The targeted unified-booking runner also applied all 32 migrations on loopback and verified payment confirmation, availability locking, refund backfill, partial transfer caps, retry and reference checks, and refund report authorization. Manual browser acceptance and the formal milestone gate remain pending.

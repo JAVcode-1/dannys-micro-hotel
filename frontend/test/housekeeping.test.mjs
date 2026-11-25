@@ -103,6 +103,33 @@ test("H01 room board records start, finish, explicit checks and Ready separately
   assert.ok(screen.getByText(/Turnover ends/));
   assert.equal(screen.queryByText("Available now"), null);
 });
+test("H01 an empty proxy error tells staff to refresh and preserves the retry key", async () => {
+  const posts = [];
+  globalThis.fetch = async (_url, options) => {
+    if (options?.method === "POST") {
+      posts.push(JSON.parse(options.body));
+      if (posts.length === 1)
+        return new globalThis.Response(null, { status: 500 });
+      throw new TypeError("Failed to fetch");
+    }
+    return { ok: true, json: async () => [room] };
+  };
+  render(createElement(StaffRooms, { token: "synthetic-token" }));
+  const start = await screen.findByRole("button", { name: "Start cleaning" });
+  fireEvent.click(start);
+  await screen.findByText(
+    /housekeeping update could not be confirmed.*refresh/i,
+  );
+  assert.equal(posts.length, 1);
+  fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+  await waitFor(() => assert.equal(start.disabled, false));
+  fireEvent.click(start);
+  await screen.findByText(
+    /housekeeping update could not be confirmed.*refresh/i,
+  );
+  assert.equal(posts.length, 2);
+  assert.equal(posts[0].requestKey, posts[1].requestKey);
+});
 test("H01 closed gates and maintenance prevent controls; failed requests retain retry key", async () => {
   const posts = [];
   globalThis.fetch = async (_url, options) =>
