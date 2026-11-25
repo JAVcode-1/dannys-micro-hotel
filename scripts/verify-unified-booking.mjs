@@ -57,10 +57,34 @@ try {
   const migrations = readdirSync("supabase/migrations")
     .filter((name) => name.endsWith(".sql"))
     .sort();
-  for (const name of migrations)
-    await pool.query(
-      readFileSync(resolve("supabase/migrations", name), "utf8"),
-    );
+  for (const name of migrations) {
+    const sql = readFileSync(resolve("supabase/migrations", name), "utf8");
+    if (name === "20261125003200_partial_refunds_and_reports.sql") {
+      const client = await pool.connect();
+      try {
+        await client.query("begin");
+        await client.query(`with booking as (
+          insert into staytrack.hall_reservations(channel,organizer,quote_input)
+          values ('walk_in','Synthetic legacy refund','{}') returning id
+        ), approval as (
+          insert into staytrack.hall_refund_approvals(reservation_id,amount_centavos,reason)
+          select id,12500,'Synthetic prior approval' from booking returning id
+        ) insert into staytrack.hall_refund_transfers(approval_id,method,transferred_at,evidence)
+          select id,'cash',clock_timestamp(),'Synthetic prior transfer' from approval`);
+        await client.query(sql);
+        const { rows } = await client.query(
+          "select id,amount_centavos from staytrack.hall_refund_transfers",
+        );
+        assert.equal(rows.length, 1);
+        assert.ok(rows[0].id);
+        assert.equal(Number(rows[0].amount_centavos), 12500);
+      } finally {
+        await client.query("rollback");
+        client.release();
+      }
+    }
+    await pool.query(sql);
+  }
   console.log(
     `Applied ${migrations.length} candidate migrations to disposable loopback PostgreSQL only.`,
   );
@@ -108,6 +132,29 @@ try {
       });
       assert.equal(response.status, 200, `${path}: ${await response.text()}`);
     }
+    const refundQueue = await globalThis.fetch(`${base}/staff/refund-issues`, {
+      headers: { Authorization: `Bearer ${staffToken}` },
+    });
+    assert.equal(refundQueue.status, 200);
+    const { items: refundReports } = await refundQueue.json();
+    assert.equal(refundReports.length, 1);
+    assert.equal(refundReports[0].kind, "room");
+    assert.equal(
+      (
+        await globalThis.fetch(`${base}/staff/refund-issues`, {
+          headers: { Authorization: `Bearer ${guestToken}` },
+        })
+      ).status,
+      403,
+    );
+    const roomReport = await globalThis.fetch(
+      `${base}/guest/refund-issues/room/${refundReports[0].itemId}`,
+      {
+        headers: { Authorization: `Bearer ${guestToken}` },
+      },
+    );
+    assert.equal(roomReport.status, 200);
+    assert.equal((await roomReport.json()).issue.status, "open");
     const hall = (
       await pool.query(
         "select hall_reservation_id from staytrack.online_payment_allocations where hall_reservation_id is not null order by reservation_id limit 1",

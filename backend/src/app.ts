@@ -10,6 +10,7 @@ import { registerAudit } from "./audit.js";
 import { registerMaintenance } from "./maintenance.js";
 import { registerStayChanges } from "./extensions.js";
 import { registerCancellations } from "./cancellations.js";
+import { registerRefundIssues } from "./refund-issues.js";
 import { registerReschedules } from "./rescheduling.js";
 import express from "express";
 import type { HealthResponse } from "@staytrack/shared";
@@ -33,7 +34,11 @@ import {
 import type { RuntimeComposition } from "./isolated-composition.js";
 import { sharedRequestLimit } from "./request-limits.js";
 import { databasePool } from "./database.js";
-import { assertDevelopmentProject, assertIsolatedTarget, proxyTrust } from "./runtime-config.js";
+import {
+  assertDevelopmentProject,
+  assertIsolatedTarget,
+  proxyTrust,
+} from "./runtime-config.js";
 import {
   registerPaymentRoutes,
   type PaymentRouteOptions,
@@ -71,9 +76,13 @@ export function createApp(
       if (
         process.env.NODE_ENV !== "development" ||
         runtime.pool !== databasePool() ||
-        !ssl || typeof ssl !== "object" || ssl.rejectUnauthorized !== true
+        !ssl ||
+        typeof ssl !== "object" ||
+        ssl.rejectUnauthorized !== true
       )
-        throw new Error("Hosted development requires the configured database pool and verified TLS in development mode.");
+        throw new Error(
+          "Hosted development requires the configured database pool and verified TLS in development mode.",
+        );
     } else {
       assertIsolatedTarget(runtime.pool.options);
     }
@@ -231,14 +240,19 @@ export function createApp(
   });
   app.post("/staff/sign-in", async (request, response) => {
     if (runtime?.writesEnabled && !runtime.hostedDevelopment) {
-      response.status(503).json({ error: "Use the local development sign-in." });
+      response
+        .status(503)
+        .json({ error: "Use the local development sign-in." });
       return;
     }
     try {
       response.json(await signInStaffUsername(request.body));
     } catch (error) {
       response.status(error instanceof BookingError ? error.status : 503).json({
-        error: error instanceof BookingError ? error.message : "Staff sign-in is unavailable.",
+        error:
+          error instanceof BookingError
+            ? error.message
+            : "Staff sign-in is unavailable.",
       });
     }
   });
@@ -257,7 +271,11 @@ export function createApp(
       }
       await audit(staff.id);
       response.setHeader("Cache-Control", "no-store");
-      response.json({ id: staff.id, email: staff.email, username: staff.username });
+      response.json({
+        id: staff.id,
+        email: staff.email,
+        username: staff.username,
+      });
     } catch {
       response.status(503).json({ error: "Staff access unavailable" });
     }
@@ -318,7 +336,8 @@ export function createApp(
       policy: bookingPolicy,
       hallEnabled: runtime?.writesEnabled === true,
       unifiedEnabled: runtime?.writesEnabled === true,
-      isolatedDevelopment: runtime?.writesEnabled === true && !runtime.hostedDevelopment,
+      isolatedDevelopment:
+        runtime?.writesEnabled === true && !runtime.hostedDevelopment,
       paymentsEnabled:
         runtime?.writesEnabled === true &&
         paymentOptions.guestEnabled === true &&
@@ -360,7 +379,13 @@ export function createApp(
           !quote.hall || (await hallAvailability(client, quote.hall));
         return {
           available: check.status === "created" && hallAvailable,
-          reason: check.status !== "created" ? check.reason : !hallAvailable ? "The Function Hall is unavailable for the selected schedule, including preparation and cleanup time." : undefined,
+          ...(quote.hall && { hallAvailable }),
+          reason:
+            check.status !== "created"
+              ? check.reason
+              : !hallAvailable
+                ? "The Function Hall is unavailable for the selected schedule, including preparation and cleanup time."
+                : undefined,
           quote,
           advisory: true,
         };
@@ -614,11 +639,23 @@ export function createApp(
   });
   app.get("/staff/notifications", catalogStaff, async (_request, response) => {
     response.setHeader("Cache-Control", "no-store");
-    if (!runtime?.writesEnabled) { response.status(503).json({ error: "Notification delivery is not enabled." }); return; }
+    if (!runtime?.writesEnabled) {
+      response
+        .status(503)
+        .json({ error: "Notification delivery is not enabled." });
+      return;
+    }
     try {
-      const states = await runtime.pool.query("select state,count(*)::int as count from staytrack.notification_outbox group by state");
-      response.json({ deliveryConfigured: !!configuredMailAdapter(), states: states.rows });
-    } catch { response.status(503).json({ error: "Notification status unavailable." }); }
+      const states = await runtime.pool.query(
+        "select state,count(*)::int as count from staytrack.notification_outbox group by state",
+      );
+      response.json({
+        deliveryConfigured: !!configuredMailAdapter(),
+        states: states.rows,
+      });
+    } catch {
+      response.status(503).json({ error: "Notification status unavailable." });
+    }
   });
   app.get("/staff/settings", catalogStaff, async (_request, response) => {
     try {
@@ -703,6 +740,13 @@ export function createApp(
     runtime?.writesEnabled ? runtime.pool : undefined,
   );
   registerCancellations(
+    app,
+    catalogStaff,
+    guestVerifier,
+    runtime?.writesEnabled,
+    runtime?.pool,
+  );
+  registerRefundIssues(
     app,
     catalogStaff,
     guestVerifier,

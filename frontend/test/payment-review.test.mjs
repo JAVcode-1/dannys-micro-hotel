@@ -99,6 +99,7 @@ test("O03 manual checks and Manila received time are required; uncertain retries
     reservationId: "test-reservation",
     primaryName: "TEST GUEST",
     transactionReference: "TEST-REF",
+    payeeLabel: "TEST PAYEE",
     amountDueCentavos: 20000,
     submittedAt: "2026-11-19T05:00:00Z",
     status: "pending_review",
@@ -128,11 +129,10 @@ test("O03 manual checks and Manila received time are required; uncertain retries
     name: "Confirm verified payment",
   });
   assert.ok(button.disabled);
-  for (const checkbox of screen.getAllByRole("checkbox"))
-    fireEvent.click(checkbox);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Correct transaction time" }),
+  );
   for (const [label, value] of [
-    ["Ledger reference", "TEST-REF"],
-    ["Receiving payee label", "TEST PAYEE"],
     ["Received amount (PHP)", "200.00"],
     ["Received date (Manila)", "2026-11-19"],
     ["Received hour", "1"],
@@ -141,10 +141,10 @@ test("O03 manual checks and Manila received time are required; uncertain retries
     ["Review note and guest recovery action", "Ledger manually checked."],
   ])
     fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  for (const checkbox of screen.getAllByRole("checkbox"))
+    fireEvent.click(checkbox);
   fireEvent.click(button);
-  await waitFor(() =>
-    assert.match(screen.getByRole("status").textContent, /Uncertain network/),
-  );
+  await screen.findByText(/Uncertain network/);
   assert.equal(payloads.length, 1);
   assert.equal(payloads[0].verification.receivedAt, "2026-11-19T05:05:00.000Z");
   assert.equal(payloads[0].verification.amountCentavos, 20000);

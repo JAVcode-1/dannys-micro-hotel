@@ -153,16 +153,16 @@ export async function guestPaymentSession(
   );
   const now = rows[0].now.getTime();
   const receivedAmountCentavos = reservation.confirmation_at
-    ? (
+    ? ((
         await pool.query<{ amount: number }>(
           `select v.amount_centavos::float8 as amount from staytrack.verified_online_payments v
           join staytrack.payment_submissions p on p.id=v.submission_id
           where p.reservation_id=$1 and p.status='confirmed'`,
           [reservationId],
         )
-      ).rows[0]?.amount ?? null
+      ).rows[0]?.amount ?? null)
     : reservation.review_installed
-      ? (
+      ? ((
           await pool.query<{ amount: number | null }>(
             `select (review.evidence->>'amountCentavos')::float8 as amount
             from staytrack.payment_submissions p
@@ -170,7 +170,7 @@ export async function guestPaymentSession(
             where p.reservation_id=$1 and p.status='mismatched'`,
             [reservationId],
           )
-        ).rows[0]?.amount ?? null
+        ).rows[0]?.amount ?? null)
       : null;
   const verified =
     Boolean(reservation.confirmation_at) && receivedAmountCentavos !== null;

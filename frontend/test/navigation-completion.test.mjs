@@ -20,7 +20,7 @@ afterEach(cleanup);
 test("unknown pages and disabled public modules give explicit states", () => {
   for (const [path, label] of [
     ["/missing", "Page not found"],
-    ["/payment-preview", "Page not found"],
+    ["/payment-preview", "Book your stay or event"],
     ["/reviews", "Reviews are unavailable"],
     ["/function-hall", "Function Hall is unavailable"],
   ]) {

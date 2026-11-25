@@ -71,18 +71,49 @@ export async function processOutbox(
       )
     ).rows[0];
     if (!row) break;
-    if (adapter.idempotencyWindowMs && row.attempts > 1 && Date.now() - new Date(row.created_at).getTime() >= adapter.idempotencyWindowMs) {
-      await pool.query("update staytrack.notification_outbox set state='failed',lease_token=null,lease_until=null where id=$1 and lease_token=$2", [row.id, lease]);
+    if (
+      adapter.idempotencyWindowMs &&
+      row.attempts > 1 &&
+      Date.now() - new Date(row.created_at).getTime() >=
+        adapter.idempotencyWindowMs
+    ) {
+      await pool.query(
+        "update staytrack.notification_outbox set state='failed',lease_token=null,lease_until=null where id=$1 and lease_token=$2",
+        [row.id, lease],
+      );
       failed++;
       continue;
     }
-    if (["reservation_created", "payment_submitted"].includes(row.kind) && row.reservation_id) {
-      const payment = (await pool.query("select status,submitted_at from staytrack.payment_submissions where reservation_id=$1", [row.reservation_id])).rows[0];
-      const nextEscalation = row.payload.reviewMinutes === 15 ? 30 : row.payload.reviewMinutes === 30 ? 60 : null;
-      if ((row.kind === "reservation_created" && payment) ||
-        (row.kind === "payment_submitted" && (!payment || payment.status !== "pending_review")) ||
-        (row.payload.staffAlert && payment && nextEscalation && Date.now() - new Date(payment.submitted_at).getTime() >= nextEscalation * 60000)) {
-        await pool.query("update staytrack.notification_outbox set state='cancelled',lease_token=null,lease_until=null where id=$1 and lease_token=$2", [row.id, lease]);
+    if (
+      ["reservation_created", "payment_submitted"].includes(row.kind) &&
+      row.reservation_id
+    ) {
+      const payment = (
+        await pool.query(
+          "select status,submitted_at from staytrack.payment_submissions where reservation_id=$1",
+          [row.reservation_id],
+        )
+      ).rows[0];
+      const nextEscalation =
+        row.payload.reviewMinutes === 15
+          ? 30
+          : row.payload.reviewMinutes === 30
+            ? 60
+            : null;
+      if (
+        (row.kind === "reservation_created" && payment) ||
+        (row.kind === "payment_submitted" &&
+          (!payment || payment.status !== "pending_review")) ||
+        (row.payload.staffAlert &&
+          payment &&
+          nextEscalation &&
+          Date.now() - new Date(payment.submitted_at).getTime() >=
+            nextEscalation * 60000)
+      ) {
+        await pool.query(
+          "update staytrack.notification_outbox set state='cancelled',lease_token=null,lease_until=null where id=$1 and lease_token=$2",
+          [row.id, lease],
+        );
         continue;
       }
     }
@@ -128,10 +159,16 @@ export async function processOutbox(
       const payload = { ...row.payload };
       if (row.reservation_id && row.kind !== "reservation_confirmed") {
         const unified = await unifiedInstalled(pool);
-        const deadline = (await pool.query(`select min(proof_deadline_at) deadline from (
+        const deadline = (
+          await pool.query(
+            `select min(proof_deadline_at) deadline from (
           select i.proof_deadline_at from staytrack.inventory_claims i join staytrack.room_bookings b on b.claim_id=i.id where b.reservation_id=$1
-          ${unified ? "union all select proof_deadline_at from staytrack.online_hall_items where reservation_id=$1" : ""}) deadlines`, [row.reservation_id])).rows[0]?.deadline;
-        if (deadline) payload.proofDeadlineAt = new Date(deadline).toISOString();
+          ${unified ? "union all select proof_deadline_at from staytrack.online_hall_items where reservation_id=$1" : ""}) deadlines`,
+            [row.reservation_id],
+          )
+        ).rows[0]?.deadline;
+        if (deadline)
+          payload.proofDeadlineAt = new Date(deadline).toISOString();
       }
       await adapter.deliver({
         id: row.id,
@@ -176,15 +213,27 @@ export async function runScheduledJobs(
     and (exists(select 1 from staytrack.room_bookings b join staytrack.inventory_claims i on i.id=b.claim_id where b.reservation_id=r.id and i.state='held' and i.proof_deadline_at>clock_timestamp()) ${unified ? "or exists(select 1 from staytrack.online_hall_items o where o.reservation_id=r.id and o.state='held' and o.proof_deadline_at>clock_timestamp())" : ""})
     on conflict(dedupe_key) do nothing`);
   if (delivery?.queueInvitation) await processReviewInvitations(pool, delivery);
-  const recipients = (process.env.MAIL_REVIEW_RECIPIENTS || "").split(",").map(x => x.trim()).filter(Boolean);
-  if (recipients.some(x => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x))) throw new Error("MAIL_REVIEW_RECIPIENTS contains an invalid address.");
-  if (recipients.length) await pool.query(`insert into staytrack.notification_outbox(dedupe_key,recipient,kind,reservation_id,payload)
+  const recipients = (process.env.MAIL_REVIEW_RECIPIENTS || "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
+  if (recipients.some((x) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x)))
+    throw new Error("MAIL_REVIEW_RECIPIENTS contains an invalid address.");
+  if (recipients.length)
+    await pool.query(
+      `insert into staytrack.notification_outbox(dedupe_key,recipient,kind,reservation_id,payload)
     select 'staff_review:'||p.id||':'||age.minutes||':'||md5(recipient),recipient,'payment_submitted'::text,p.reservation_id,
       jsonb_build_object('reservationId',p.reservation_id,'staffAlert',true,'reviewMinutes',age.minutes)
     from staytrack.payment_submissions p cross join unnest($1::text[]) as recipients(recipient)
     cross join lateral (select max(n) minutes from (values(15),(30),(60)) v(n) where p.submitted_at<=clock_timestamp()-n*interval '1 minute') age
-    where p.status='pending_review' and age.minutes is not null on conflict(dedupe_key) do nothing`, [recipients]);
-  return { expired, ...(adapter ? await processOutbox(pool, adapter) : { sent: 0, failed: 0 }), deliveryConfigured: !!adapter };
+    where p.status='pending_review' and age.minutes is not null on conflict(dedupe_key) do nothing`,
+      [recipients],
+    );
+  return {
+    expired,
+    ...(adapter ? await processOutbox(pool, adapter) : { sent: 0, failed: 0 }),
+    deliveryConfigured: !!adapter,
+  };
 }
 
 export function outboxReviewDelivery(

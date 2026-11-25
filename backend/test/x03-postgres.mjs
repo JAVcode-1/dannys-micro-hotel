@@ -240,17 +240,30 @@ export async function x03Behavior(t, pool) {
         extensionRequestId: combinedQuote.id,
       };
       await assert.rejects(
-        recordStayReceipt(actor, combinedStay.item.id, {
-          ...combinedPayment,
-          extensionRequestId: q.id,
-        }, pool),
+        recordStayReceipt(
+          actor,
+          combinedStay.item.id,
+          {
+            ...combinedPayment,
+            extensionRequestId: q.id,
+          },
+          pool,
+        ),
         (e) => e.status === 409,
       );
       const combinedReceipt = await recordStayReceipt(
-        actor, combinedStay.item.id, combinedPayment, pool,
+        actor,
+        combinedStay.item.id,
+        combinedPayment,
+        pool,
       );
       assert.deepEqual(
-        await recordStayReceipt(actor, combinedStay.item.id, combinedPayment, pool),
+        await recordStayReceipt(
+          actor,
+          combinedStay.item.id,
+          combinedPayment,
+          pool,
+        ),
         combinedReceipt,
       );
       assert.deepEqual(

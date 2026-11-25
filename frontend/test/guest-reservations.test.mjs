@@ -60,7 +60,7 @@ test("reservation history paginates and links to owned detail", async () => {
       20,
     ),
   );
-  fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
   await waitFor(() =>
     assert.ok(requests.some((url) => url.includes("offset=20"))),
   );
@@ -129,8 +129,8 @@ test("Hall-only detail shows item refunds and submits staff-approved extension w
     ),
   );
   assert.match(
-    screen.getByText(/Hall refund due:/).textContent,
-    /100.00.*50.00/,
+    screen.getByText(/Refunded:.*Still due:/).textContent,
+    /50\.00.*100\.00/,
   );
   fireEvent.click(screen.getByText("Change hall booking"));
   fireEvent.change(screen.getByLabelText("Change type"), {
@@ -143,9 +143,7 @@ test("Hall-only detail shows item refunds and submits staff-approved extension w
     target: { value: "Longer event" },
   });
   fireEvent.submit(
-    screen
-      .getByRole("button", { name: "Send request" })
-      .closest("form"),
+    screen.getByRole("button", { name: "Send request" }).closest("form"),
   );
   await waitFor(() =>
     assert.ok(screen.getByText(/Request sent for staff approval/)),

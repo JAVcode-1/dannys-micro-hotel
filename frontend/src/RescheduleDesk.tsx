@@ -57,16 +57,18 @@ export function GuestRescheduleForm({
   const now = Date.now();
   const today = new Date(now + manilaOffsetMs).toISOString().slice(0, 10);
   const match = arrivalTimePattern.exec(time.trim());
-  const requestedStart = match && date
-    ? `${date}T${String((Number(match[1]) % 12) + (period === "PM" ? 12 : 0)).padStart(2, "0")}:${match[2]}:00+08:00`
-    : "";
+  const requestedStart =
+    match && date
+      ? `${date}T${String((Number(match[1]) % 12) + (period === "PM" ? 12 : 0)).padStart(2, "0")}:${match[2]}:00+08:00`
+      : "";
   const arrivalMs = Date.parse(requestedStart);
   const durationMinutes = blocks.reduce((sum, block) => sum + block, 0);
-  const dateError = date && date < today
-    ? "Choose today or a later date."
-    : attempted && !date
-      ? "Choose an arrival date."
-      : "";
+  const dateError =
+    date && date < today
+      ? "Choose today or a later date."
+      : attempted && !date
+        ? "Choose an arrival date."
+        : "";
   const timeError =
     attempted && !match
       ? "Enter a time such as 2:30."
@@ -81,7 +83,10 @@ export function GuestRescheduleForm({
 
   if (pending) {
     return (
-      <div role="status" className="my-3 rounded-xl border border-subtle bg-selected p-4">
+      <div
+        role="status"
+        className="my-3 rounded-xl border border-subtle bg-selected p-4"
+      >
         <p className="font-semibold">Awaiting staff approval</p>
         <p className="mt-1">
           Your current booking stays active while staff check availability.
@@ -119,7 +124,8 @@ export function GuestRescheduleForm({
             startAt: requestedStart,
             endAt: checkout,
             blocks,
-            reason: note.trim() || "Guest requested a new arrival date or time.",
+            reason:
+              note.trim() || "Guest requested a new arrival date or time.",
           });
           setPending(true);
         } catch (error) {
@@ -151,7 +157,11 @@ export function GuestRescheduleForm({
               onChange={(event) => setDate(event.target.value)}
             />
           </label>
-          {dateError && <p id={dateErrorId} className="text-red-700">{dateError}</p>}
+          {dateError && (
+            <p id={dateErrorId} className="text-red-700">
+              {dateError}
+            </p>
+          )}
         </div>
         <div>
           <div className="relative grid min-w-0">
@@ -172,7 +182,8 @@ export function GuestRescheduleForm({
               <summary
                 aria-label="Choose hour and minute"
                 className={
-                  timePickerButton + " list-none [&::-webkit-details-marker]:hidden"
+                  timePickerButton +
+                  " list-none [&::-webkit-details-marker]:hidden"
                 }
               >
                 <TimePickerChevron />
@@ -184,10 +195,16 @@ export function GuestRescheduleForm({
                     aria-label={`Choose arrival hour - ${itemId}`}
                     className={field}
                     value={match ? String(Number(match[1])) : ""}
-                    onChange={(event) => setTime(`${event.target.value}:${match?.[2] ?? "00"}`)}
+                    onChange={(event) =>
+                      setTime(`${event.target.value}:${match?.[2] ?? "00"}`)
+                    }
                   >
-                    <option value="" disabled>Hour</option>
-                    {hours.map((hour) => <option key={hour}>{hour}</option>)}
+                    <option value="" disabled>
+                      Hour
+                    </option>
+                    {hours.map((hour) => (
+                      <option key={hour}>{hour}</option>
+                    ))}
                   </select>
                 </label>
                 <label>
@@ -196,16 +213,28 @@ export function GuestRescheduleForm({
                     aria-label={`Choose arrival minute - ${itemId}`}
                     className={field}
                     value={match?.[2] ?? ""}
-                    onChange={(event) => setTime(`${match?.[1] ?? (localHour % 12 || 12)}:${event.target.value}`)}
+                    onChange={(event) =>
+                      setTime(
+                        `${match?.[1] ?? (localHour % 12 || 12)}:${event.target.value}`,
+                      )
+                    }
                   >
-                    <option value="" disabled>Minute</option>
-                    {minutes.map((minute) => <option key={minute}>{minute}</option>)}
+                    <option value="" disabled>
+                      Minute
+                    </option>
+                    {minutes.map((minute) => (
+                      <option key={minute}>{minute}</option>
+                    ))}
                   </select>
                 </label>
               </div>
             </details>
           </div>
-          {timeError && <p id={timeErrorId} className="text-red-700">{timeError}</p>}
+          {timeError && (
+            <p id={timeErrorId} className="text-red-700">
+              {timeError}
+            </p>
+          )}
         </div>
         <label>
           AM/PM
@@ -227,7 +256,8 @@ export function GuestRescheduleForm({
       )}
       <p className="text-sm text-muted">
         Times are in Manila time. Your {durationMinutes / 60}-hour stay and
-        booked price stay the same. Contact the hotel for a different stay length.
+        booked price stay the same. Contact the hotel for a different stay
+        length.
       </p>
       <label className="block">
         Note for staff (optional)
@@ -261,7 +291,9 @@ export function GuestRescheduleForm({
               setPending(current.pending);
               if (!current.pending) retry.current = crypto.randomUUID();
               setStale(false);
-              setMessage("Booking refreshed. Review your new arrival before sending.");
+              setMessage(
+                "Booking refreshed. Review your new arrival before sending.",
+              );
             } catch (error) {
               setMessage(
                 error instanceof Error ? error.message : "Refresh unavailable",

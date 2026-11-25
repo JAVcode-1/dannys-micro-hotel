@@ -1,8 +1,28 @@
 import { BookingError } from "./booking-quote.js";
 import { normalizePaymentReference } from "./payment-review.js";
 
+// Historical Hall transfers used the approval as their full transfer amount.
+export const hallRefundTransferAmount =
+  "coalesce((to_jsonb(t)->>'amount_centavos')::bigint,a.amount_centavos)";
+
 export function hallDepositMet(total: bigint, net: bigint) {
   return net >= (total + 1n) / 2n;
+}
+
+export function hallStartPaymentIssue(
+  walkIn: boolean,
+  total: bigint,
+  netPaid: bigint,
+  netAfterApprovedRefunds: bigint,
+) {
+  const coversStart = (amount: bigint) =>
+    walkIn ? hallDepositMet(total, amount) : amount >= total;
+  if (!coversStart(netPaid))
+    return walkIn
+      ? "Verified payment must cover at least half the booking price before starting."
+      : "Full verified net payment is required.";
+  if (!coversStart(netAfterApprovedRefunds))
+    return "Resolve the outstanding refund approval before starting.";
 }
 
 export function normalizeHallReceipt(input: {

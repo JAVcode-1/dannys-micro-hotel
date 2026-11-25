@@ -1,5 +1,6 @@
 import type { Pool } from "pg";
 import { BookingError } from "./booking-quote.js";
+import { hallRefundTransferAmount } from "./hall-payments.js";
 
 export async function hallReport(
   pool: Pick<Pool, "query">,
@@ -42,7 +43,7 @@ export async function hallReport(
       where hall_reservation_id is not null and received_at>=lo and received_at<hi`
           : ""
       }
-      union all select t.transferred_at,0,a.amount_centavos
+      union all select t.transferred_at,0,${hallRefundTransferAmount}
       from staytrack.hall_refund_transfers t join staytrack.hall_refund_approvals a on a.id=t.approval_id
       cross join bounds where t.transferred_at>=lo and t.transferred_at<hi
     ), days as (

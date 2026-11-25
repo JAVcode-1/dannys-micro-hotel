@@ -4,6 +4,14 @@ status: approved-baseline-with-pending-settings
 ---
 # 02 — Business & Functional Requirements
 
+## Function Hall status and scheduled availability
+
+Staff can mark the hall ready or take it out of service until a specified Manila date and time. The system derives reservation and event-in-progress status from the Hall calendar. An out-of-service period shares the same overlap protection as bookings and cannot replace an existing reservation or hold. The hall needs preparation after an event or an out-of-service period until staff mark it ready. Guests see whether their selected date and time is available. Current Hall status does not confirm a future slot.
+
+## Function Hall walk-in start and payment
+
+A confirmed Function Hall walk-in may start during its booked interval when the hall is ready and vacant and at least 50% of the price remains covered by verified payment after refunds and refund approvals. Staff can collect the outstanding balance separately. Full verified payment is still required to start events booked through other channels.
+
 ## Function Hall booking hours and package pricing
 
 Owner approved same-day and overnight Function Hall bookings without a daily opening, closing, or minimum advance-notice cutoff. The start time in Asia/Manila selects the three-hour package. Starts from 8:00 AM until before 5:00 PM cost ₱3,000, and all other starts cost ₱5,000. Each additional full hour costs ₱1,000. Past starts are ineligible. Short-notice starts within the setup buffer require a Ready Hall, and all bookings still protect setup and cleanup against overlap. The existing advance booking horizon and payment verification still apply. This supersedes earlier provisional hours and notice statements.

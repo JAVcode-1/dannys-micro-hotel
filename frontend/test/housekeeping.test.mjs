@@ -100,7 +100,7 @@ test("H01 room board records start, finish, explicit checks and Ready separately
   );
   assert.equal(posts[2].checksConfirmed, true);
   assert.ok(posts.every((p) => p.checkoutId === room.checkout_id));
-  assert.ok(screen.getByText(/Turnover protected until/));
+  assert.ok(screen.getByText(/Turnover ends/));
   assert.equal(screen.queryByText("Available now"), null);
 });
 test("H01 closed gates and maintenance prevent controls; failed requests retain retry key", async () => {

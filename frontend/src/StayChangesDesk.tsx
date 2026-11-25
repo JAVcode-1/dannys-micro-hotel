@@ -34,7 +34,7 @@ function Item({
 }) {
   const [rejectReason, setRejectReason] = useState(""),
     [releaseReason, setReleaseReason] = useState(""),
-    [incidentReason, setIncidentReason] = useState(""),
+    [chargeReason, setChargeReason] = useState(""),
     [blocks, setBlocks] = useState(
       row.category === "family_executive" ? "360" : "180",
     ),
@@ -48,7 +48,6 @@ function Item({
     [receipt, setReceipt] = useState(""),
     [allocationAmount, setAllocationAmount] = useState(""),
     [target, setTarget] = useState(""),
-    [kind, setKind] = useState("smoking"),
     [start, setStart] = useState(""),
     [end, setEnd] = useState(""),
     [confirmedQuoteId, setConfirmedQuoteId] = useState(""),
@@ -56,7 +55,10 @@ function Item({
     [message, setMessage] = useState("");
   const retry = useRef(new Map<string, { hash: string; key: string }>());
   const canAct = enabled && !pending;
-  const incidentValid = canAct && !!incidentReason.trim();
+  const chargeReasonValid = canAct && !!chargeReason.trim();
+  const overtimeReviews = row.reviews.filter(
+    (review) => review.kind === "overtime",
+  );
   async function act(
     path: string,
     body: Record<string, unknown>,
@@ -228,11 +230,15 @@ function Item({
                 <dl className="grid gap-3 rounded-lg bg-selected p-4 text-sm sm:grid-cols-3">
                   <div>
                     <dt>New checkout</dt>
-                    <dd className="font-semibold">{hotelTime(pendingQuote.newEnd)}</dd>
+                    <dd className="font-semibold">
+                      {hotelTime(pendingQuote.newEnd)}
+                    </dd>
                   </div>
                   <div>
                     <dt>Extension price</dt>
-                    <dd className="font-semibold">{peso(pendingQuote.amountCentavos)}</dd>
+                    <dd className="font-semibold">
+                      {peso(pendingQuote.amountCentavos)}
+                    </dd>
                   </div>
                   <div>
                     <dt>Minimum to approve</dt>
@@ -264,7 +270,10 @@ function Item({
                     onClick={() =>
                       void act(
                         `/staff/stay-changes/${row.id}/extensions`,
-                        { expectedRevision: row.revision, blocks: [Number(blocks)] },
+                        {
+                          expectedRevision: row.revision,
+                          blocks: [Number(blocks)],
+                        },
                         "Staff requested a stay extension quote.",
                       )
                     }
@@ -293,7 +302,9 @@ function Item({
                     <select
                       className={field}
                       value={paymentExtension.id}
-                      onChange={(event) => setPaymentExtensionId(event.target.value)}
+                      onChange={(event) =>
+                        setPaymentExtensionId(event.target.value)
+                      }
                     >
                       {payableExtensions.map((q) => (
                         <option key={q.id} value={q.id}>
@@ -397,7 +408,9 @@ function Item({
               <input
                 type="checkbox"
                 checked={verified === verificationKey}
-                onChange={(e) => setVerified(e.target.checked ? verificationKey : "")}
+                onChange={(e) =>
+                  setVerified(e.target.checked ? verificationKey : "")
+                }
               />
               {method === "cash"
                 ? "I personally received this cash."
@@ -455,11 +468,11 @@ function Item({
                 >
                   <option value="">Choose obligation</option>
                   {payableExtensions.map((q) => (
-                      <option key={q.id} value={"extension:" + q.id}>
-                        Extension | {peso(q.amountCentavos - q.fundedCentavos)}{" "}
-                        remaining
-                      </option>
-                    ))}
+                    <option key={q.id} value={"extension:" + q.id}>
+                      Extension | {peso(q.amountCentavos - q.fundedCentavos)}{" "}
+                      remaining
+                    </option>
+                  ))}
                   {row.charges
                     .filter((c) =>
                       ["overtime_debit", "smoking_debit"].includes(c.kind),
@@ -467,7 +480,11 @@ function Item({
                     .map((c) => (
                       <option key={c.id} value={"charge:" + c.id}>
                         {c.kind.replaceAll("_", " ")} |{" "}
-                        {peso(c.amountCentavos - c.paidCentavos - c.creditedCentavos)}{" "}
+                        {peso(
+                          c.amountCentavos -
+                            c.paidCentavos -
+                            c.creditedCentavos,
+                        )}{" "}
                         remaining
                       </option>
                     ))}
@@ -567,36 +584,45 @@ function Item({
                     ? `Record ${peso(fundingNeeded)} more to meet the minimum payment.`
                     : `Minimum payment met. New checkout: ${hotelTime(pendingQuote.newEnd)}.`}
               </p>
-              {!row.checkedOut && fundingNeeded === 0 && pendingQuote.blocker && (
-                <p className="mt-2 text-sm">{pendingQuote.blocker}</p>
-              )}
-              {!row.checkedOut && fundingNeeded === 0 && !pendingQuote.blocker && (
-                <div className="mt-3 space-y-2">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={confirmedQuoteId === pendingQuote.id}
-                      onChange={(e) =>
-                        setConfirmedQuoteId(e.target.checked ? pendingQuote.id : "")
+              {!row.checkedOut &&
+                fundingNeeded === 0 &&
+                pendingQuote.blocker && (
+                  <p className="mt-2 text-sm">{pendingQuote.blocker}</p>
+                )}
+              {!row.checkedOut &&
+                fundingNeeded === 0 &&
+                !pendingQuote.blocker && (
+                  <div className="mt-3 space-y-2">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={confirmedQuoteId === pendingQuote.id}
+                        onChange={(e) =>
+                          setConfirmedQuoteId(
+                            e.target.checked ? pendingQuote.id : "",
+                          )
+                        }
+                      />
+                      I confirm the new checkout time and funding.
+                    </label>
+                    <button
+                      className={button}
+                      disabled={!canAct || confirmedQuoteId !== pendingQuote.id}
+                      onClick={() =>
+                        void act(
+                          `/staff/stay-extensions/${pendingQuote.id}/decision`,
+                          {
+                            expectedRevision: pendingQuote.revision,
+                            approved: true,
+                          },
+                          "Staff approved the funded stay extension.",
+                        )
                       }
-                    />
-                    I confirm the new checkout time and funding.
-                  </label>
-                  <button
-                    className={button}
-                    disabled={!canAct || confirmedQuoteId !== pendingQuote.id}
-                    onClick={() =>
-                      void act(
-                        `/staff/stay-extensions/${pendingQuote.id}/decision`,
-                        { expectedRevision: pendingQuote.revision, approved: true },
-                        "Staff approved the funded stay extension.",
-                      )
-                    }
-                  >
-                    Approve funded extension
-                  </button>
-                </div>
-              )}
+                    >
+                      Approve funded extension
+                    </button>
+                  </div>
+                )}
               <details className="mt-3">
                 <summary className="cursor-pointer text-primary">
                   Reject extension
@@ -616,7 +642,10 @@ function Item({
                   onClick={() =>
                     void act(
                       `/staff/stay-extensions/${pendingQuote.id}/decision`,
-                      { expectedRevision: pendingQuote.revision, approved: false },
+                      {
+                        expectedRevision: pendingQuote.revision,
+                        approved: false,
+                      },
                       rejectReason,
                     )
                   }
@@ -645,7 +674,7 @@ function Item({
       </details>
       <details>
         <summary className="my-3 cursor-pointer font-semibold">
-          Overtime and incident review
+          Overtime review
         </summary>
         <p>
           Charges are never automatic. Missing approved rates, rounding,
@@ -653,58 +682,42 @@ function Item({
           blocked.
         </p>
         <label className="my-3 block">
-          Reason for incident or charge action
+          Reason for overtime or charge action
           <textarea
             className={field}
-            value={incidentReason}
-            onChange={(e) => setIncidentReason(e.target.value)}
+            value={chargeReason}
+            onChange={(e) => setChargeReason(e.target.value)}
             maxLength={1000}
           />
         </label>
-        <label>
-          Review type
-          <select
-            className={field}
-            value={kind}
-            onChange={(e) => setKind(e.target.value)}
-          >
-            <option value="smoking">Smoking incident</option>
-            <option value="overtime">Overtime</option>
-          </select>
-        </label>
-        {kind === "overtime" && (
-          <>
-            <ManilaDateTimeInput
-              label="Interval start (Manila)"
-              value={start}
-              onChange={setStart}
-            />
-            <ManilaDateTimeInput
-              label="Interval end (Manila)"
-              value={end}
-              onChange={setEnd}
-            />
-          </>
-        )}
+        <ManilaDateTimeInput
+          label="Overtime start (Manila)"
+          value={start}
+          onChange={setStart}
+        />
+        <ManilaDateTimeInput
+          label="Overtime end (Manila)"
+          value={end}
+          onChange={setEnd}
+        />
         <button
           className={button + " mt-3"}
-          disabled={!incidentValid || (kind === "overtime" && (!start || !end))}
+          disabled={!chargeReasonValid || !start || !end}
           onClick={() =>
             void act(
               `/staff/stay-changes/${row.id}/reviews`,
               {
-                kind,
-                ...(kind === "overtime"
-                  ? { startAt: local(start), endAt: local(end) }
-                  : {}),
+                kind: "overtime",
+                startAt: local(start),
+                endAt: local(end),
               },
-              incidentReason,
+              chargeReason,
             )
           }
         >
-          Record review only
+          Record overtime review
         </button>
-        {row.reviews.map((r) => (
+        {overtimeReviews.map((r) => (
           <section key={r.id} className="my-3 rounded-lg bg-canvas p-3">
             <p>
               {r.kind} | {r.reason} |{" "}
@@ -715,14 +728,14 @@ function Item({
               <div className="flex gap-2">
                 <button
                   className={button}
-                  disabled={!incidentValid || !!r.blocker}
+                  disabled={!chargeReasonValid || !!r.blocker}
                   onClick={() =>
                     void act(
                       `/staff/stay-reviews/${r.id}/decision`,
                       {
                         action: "charge",
                       },
-                      incidentReason,
+                      chargeReason,
                     )
                   }
                 >
@@ -730,14 +743,14 @@ function Item({
                 </button>
                 <button
                   className={button}
-                  disabled={!incidentValid}
+                  disabled={!chargeReasonValid}
                   onClick={() =>
                     void act(
                       `/staff/stay-reviews/${r.id}/decision`,
                       {
                         action: "waive",
                       },
-                      incidentReason,
+                      chargeReason,
                     )
                   }
                 >
@@ -757,7 +770,7 @@ function Item({
               <button
                 className={button}
                 disabled={
-                  !incidentValid ||
+                  !chargeReasonValid ||
                   !moneyValid ||
                   cents > c.amountCentavos - c.paidCentavos - c.creditedCentavos
                 }
@@ -767,7 +780,7 @@ function Item({
                     {
                       amountCentavos: cents,
                     },
-                    incidentReason,
+                    chargeReason,
                   )
                 }
               >
@@ -960,11 +973,11 @@ export function StayChangesPreview() {
           reviews: [
             {
               id: "synthetic-review",
-              kind: "smoking",
-              reason: "Synthetic review; rate pending",
+              kind: "overtime",
+              reason: "Synthetic overtime review",
               blocker: "Owner-approved rate and prior disclosure required",
               decided: false,
-              durationMs: null,
+              durationMs: 30 * 60 * 1000,
             },
           ],
         },

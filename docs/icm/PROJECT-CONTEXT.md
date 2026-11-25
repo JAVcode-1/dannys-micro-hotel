@@ -4,7 +4,41 @@ status: unified-online-booking-development-review
 ---
 # Session Context — StayTrack / Danny's Micro Hotel
 
+The Function Hall and refunds checkpoint has passing build, typecheck, lint, formatting, 229 application tests and 40 integration tests on disposable PostgreSQL. The targeted unified-booking PostgreSQL check also passed. Staff-assisted rescheduling now uses the current form props, and test fixtures exercise the current availability, payment and staff sign-in flows. Manual browser acceptance remains pending.
+
+## Partial refunds and guest reports
+
+My bookings shows actual recorded refund totals and outstanding balances for room and Hall items. The staff Cancellations and refunds page lists open reports, including Function Hall reports. Staff can record separate transfer installments through existing refund workflows, and guests can view the staff resolution for their item. The separately approved refund migration is applied to the D-040 development project. Hosted development readiness and Vite both returned HTTP 200 through `npm run dev`. Manual refund workflow acceptance is pending.
+
+## Staff navigation badges
+
+Desktop and mobile navigation reuse the staff dashboard counts. Zero counts and unavailable data produce no badge. The existing Hall capability controls whether its count is shown. No new API, database migration or package is needed.
+
+## Staff incident review
+
+The Extensions and charges screen now offers overtime review only. The staff API rejects new smoking incident reviews. The change requires no migration or dependency. Tests were left to the owner.
+
 ## Function Hall staff reservation workflow
+
+Staff see the Hall's physical condition independently of the current booking hold. The staff calendar reads the existing claim cleanup end and displays it in Manila time. Checkout, booking protection, and guest-facing status rules are unchanged. No migration or package is needed.
+
+Hall command recovery now runs automatically after a lost response or when staff reopen the desk with a saved command. Existing outcomes are loaded without replay. An unrecorded action can be retried once per recovery attempt using the original idempotency key. No database change or dependency is needed.
+
+Function Hall reporting uses the existing staff-only endpoint from Management → Analytics → Function Hall. The Hall operations page no longer shows the report tab. No migration or dependency is needed.
+
+The Calendar combines readiness, active events, reserved windows and out-of-service blocks under Hall status. The migration `20261124003100_function_hall_out_of_service.sql` uses the existing Hall claim exclusion constraint and was applied to the D-040 Supabase development project on 2026-11-24 with owner approval. Guest status and selected-time availability expose no booking or guest details. Hosted API readiness and the Vite home page returned HTTP 200 through `npm run dev`. Manual Hall workflow acceptance is pending.
+
+The Manage refund panel reuses the existing refund approval and completion commands. A successful approval reloads authoritative refund details and keeps the panel open for repayment. No migration or dependency is needed.
+
+Hall extensions use an authenticated preview and the existing retry-safe extension command. The combined flow reuses receipt validation, verifies the quoted amount due, and preserves the original claim when the extension loses availability. No migration is needed.
+
+Removed the routine Hall extension reason field and made the API reason optional for staff extensions. Valid guest booking drafts are checked automatically after email verification. Payment review preserves the transaction-time check when selecting the initial or already selected booking timestamp. The walk-in arrival group keeps its accessible name. No migration is needed.
+
+Function Hall walk-ins can start with the verified 50% deposit, net of refunds and refund approvals. The staff card keeps balance collection accessible before and during the event. The schedule and readiness checks still apply. No migration is needed.
+
+The hotel website, Hall information page and booking planner show live Hall status from a read-only Express endpoint. Status uses the existing in-progress event, protected claims and readiness flag. The staff date label is Event date and start time. No new maintenance state, migration or dependency is needed.
+
+Direct walk-in booking uses the existing Hall transaction, staff authorization, receipt rules, availability constraint and saved command recovery. Staff can check a quote for a tentative request without saving an inquiry. No migration or dependency is needed.
 
 The Function Hall now prioritizes in-progress events, shows a live countdown, and presents a confirmed staff checkout action with the actual departure time visible afterward. Changes are scoped to the Hall staff calendar and its list ordering. No dependency or migration was added. Tests and manual acceptance are pending.
 

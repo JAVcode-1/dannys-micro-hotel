@@ -4,7 +4,45 @@ status: approved-baseline
 ---
 # 17 — Approved Decisions Register
 
+The Function Hall and refunds checkpoint preserves the existing staff-assisted reschedule request contract. The shared form receives the current schedule revision and booked duration blocks. Staff approval remains a separate action. No new business policy or dependency was introduced by the checkpoint verification fixes.
+
+## Partial refunds and guest reports
+
+Record actual verified manual transfer amounts for each refund installment. Cumulative transfers are capped at the approved obligation and duplicate GCash references are rejected. Retain the original approval, payer checks, and existing transfer evidence. The migration carries historical Hall transfers forward at their previously attested approved amounts because the actual transfer amount was not stored separately.
+
+Each verified online guest can report one short refund per owned item. Staff record one audited resolution visible to that guest. Reports do not alter payment records or move money. Previously incorrect transfer records require reconciliation against the actual GCash ledger. The owner separately approved migration `20261125003200_partial_refunds_and_reports.sql`, which was applied to the pinned D-040 development project.
+
+## Staff navigation badges
+
+Show positive counts from the authenticated operational dashboard next to their destinations. Collapsed desktop groups and mobile tabs show totals for their visible destinations. Counts refresh on navigation, when the page becomes visible, and every 30 seconds while visible.
+
+## Staff incident review
+
+The owner removed smoking incident review from Extensions and charges. The staff review form accepts overtime only. Existing financial history remains supported for historical charges and credits.
+
 ## Function Hall staff reservation workflow
+
+The staff Calendar uses plain language for the Hall's current condition and shows a separate held-until time for a protected booking window. Staff can confirm the Hall is clean after checkout while the original window remains protected through scheduled cleanup.
+
+The Hall desk checks the authenticated staff member's saved action automatically after an interrupted request. It reuses the original payload and request key only if the server reports no committed result. A definitive rejection releases the desk and shows the reason. If the result remains uncertain, the desk retains the saved action for recovery on reload.
+
+The Function Hall report is accessed from Management → Analytics. It remains separate from room analytics and uses its existing Manila date filters, collections, refunds and utilization.
+
+Ready is a staff status. Guests see Check availability for your event date when the hall is ready, and a separate result for the selected time. Staff can create a timed out-of-service block. The existing exclusive Hall schedule protects it from overlapping bookings and preserves existing bookings. When it ends, staff mark the hall ready after preparation.
+
+On 2026-11-24, the owner approved applying `20261124003100_function_hall_out_of_service.sql` to the pinned D-040 Supabase development project to restore normal development startup. The startup migration check remains required.
+
+Manage refund is the only refund entry on the Function Hall Calendar. It opens pending approvals first, and a new approval moves to the repayment step in place. Staff record completion only after returning the money. The existing approval and completion records remain separate.
+
+Staff use Extend event to check and pay for extra time. Confirmation rechecks the schedule and verified funding. If the slot becomes unavailable after payment is recorded, the system retains the receipt and original schedule for staff follow-up.
+
+Staff can extend a Hall event without entering a reason. The existing staff audit and schedule revision record the change. Payment and availability checks for extensions still apply.
+
+The public Hall status shows current use, a protected booking window, temporary unavailability or availability. It exposes only a status, without booking or guest details. Guests check their chosen date and time separately, and the existing booking activation and transactional availability rules still apply.
+
+Staff can book a Function Hall walk-in directly after checking the schedule and recording actual cash received or verified GCash. Confirmation requires the existing 50% deposit and protected availability check. If another booking wins the slot, the receipt stays on an inquiry for staff follow-up. Confirmed walk-ins can start during the booked interval with 50% verified funding after refunds and refund approvals. Other Hall channels still require full funding before start. The hall must be vacant and ready.
+
+Staff use the quote check for tentative requests and book directly when the guest is ready. The New booking form no longer offers manual inquiry creation.
 
 Checkout uses the existing audited event completion action. Staff confirm actual departure while an event is in progress. Early departure keeps the original protected booking window, and staff mark the hall ready after cleaning. The countdown uses the scheduled end and reaches zero without submitting checkout.
 

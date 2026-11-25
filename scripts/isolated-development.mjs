@@ -15,9 +15,16 @@ const authEnv = existsSync("backend/.env")
   ? parseEnv(readFileSync("backend/.env", "utf8"))
   : {};
 const supabaseUrl = process.env.SUPABASE_URL || authEnv.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY || authEnv.SUPABASE_PUBLISHABLE_KEY;
-if (!supabaseUrl || !supabaseKey || /REPLACE_ME|YOUR_PROJECT_REF/.test(supabaseUrl + supabaseKey))
-  throw new Error("Guest email OTP requires SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY in backend/.env (or the environment). Use a development Supabase project.");
+const supabaseKey =
+  process.env.SUPABASE_PUBLISHABLE_KEY || authEnv.SUPABASE_PUBLISHABLE_KEY;
+if (
+  !supabaseUrl ||
+  !supabaseKey ||
+  /REPLACE_ME|YOUR_PROJECT_REF/.test(supabaseUrl + supabaseKey)
+)
+  throw new Error(
+    "Guest email OTP requires SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY in backend/.env (or the environment). Use a development Supabase project.",
+  );
 
 const toolPath =
   process.env.EMBEDDED_POSTGRES_MODULE ||
@@ -131,7 +138,8 @@ try {
     }
     await new Promise((resume) => setTimeout(resume, 250));
   }
-  if (!ready) throw new Error("The local development API did not become ready.");
+  if (!ready)
+    throw new Error("The local development API did not become ready.");
   children.push(
     spawn(
       process.execPath,

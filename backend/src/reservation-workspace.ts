@@ -1,4 +1,5 @@
 import { onlineHallItems, unifiedInstalled } from "./unified-booking.js";
+import { hallRefundTransferAmount } from "./hall-payments.js";
 import type { Express, RequestHandler } from "express";
 import { BookingError } from "./booking-quote.js";
 import { databasePool } from "./database.js";
@@ -133,7 +134,15 @@ export async function staffReservationDetail(
     ).rows;
     const refunds = (
       await db.query(
-        `select b.id as "roomBookingId",d.refund_centavos::float8 as "amountCentavos",case when t.room_booking_id is not null then 'recorded' when c.room_booking_id is not null then 'processing' else 'due' end as status,t.transferred_at as "transferredAt" from staytrack.room_bookings b join staytrack.cancellation_decisions d on d.room_booking_id=b.id left join staytrack.refund_claims c on c.room_booking_id=b.id left join staytrack.refund_transfers t on t.room_booking_id=b.id where b.reservation_id=$1 and d.approved and d.refund_centavos>0`,
+        `select b.id as "roomBookingId",d.refund_centavos::float8 as "amountCentavos",
+        paid.amount::float8 as "refundedCentavos",(d.refund_centavos-paid.amount)::float8 as "remainingCentavos",
+        case when paid.amount=d.refund_centavos then 'recorded' when c.room_booking_id is not null then 'processing' else 'due' end as status,
+        paid.last_transfer as "transferredAt" from staytrack.room_bookings b
+        join staytrack.cancellation_decisions d on d.room_booking_id=b.id
+        left join staytrack.refund_claims c on c.room_booking_id=b.id
+        cross join lateral(select coalesce(sum(t.amount_centavos),0) amount,max(t.transferred_at) last_transfer
+          from staytrack.refund_transfers t where t.room_booking_id=b.id) paid
+        where b.reservation_id=$1 and d.approved and d.refund_centavos>0`,
         [id],
       )
     ).rows;
@@ -154,10 +163,13 @@ export async function staffReservationDetail(
         ...(
           await db.query(
             `select a.id,null::uuid as "roomBookingId",a.reservation_id as "hallReservationId",
-        a.amount_centavos::float8 as "amountCentavos",case when t.approval_id is not null then 'recorded' else 'due' end as status,
-        t.transferred_at as "transferredAt" from staytrack.hall_refund_approvals a
+        a.amount_centavos::float8 as "amountCentavos",paid.amount::float8 as "refundedCentavos",
+        (a.amount_centavos-paid.amount)::float8 as "remainingCentavos",
+        case when paid.amount=a.amount_centavos then 'recorded' when paid.amount>0 then 'processing' else 'due' end as status,
+        paid.last_transfer as "transferredAt" from staytrack.hall_refund_approvals a
         join staytrack.online_hall_items o on o.hall_reservation_id=a.reservation_id
-        left join staytrack.hall_refund_transfers t on t.approval_id=a.id
+        cross join lateral(select coalesce(sum(${hallRefundTransferAmount}),0) amount,max(t.transferred_at) last_transfer
+          from staytrack.hall_refund_transfers t where t.approval_id=a.id) paid
         where o.reservation_id=$1 and a.amount_centavos>0 order by a.id`,
             [id],
           )

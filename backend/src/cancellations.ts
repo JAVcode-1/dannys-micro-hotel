@@ -264,15 +264,20 @@ export async function recordManualRefund(
     return await claimTransaction(async (db) => {
       await activeStaff(db, actor);
       await lockItem(db, id);
-      const table = v.action === "claim" ? "refund_claims" : "refund_transfers";
       const prior = (
-        await db.query(
-          `select * from staytrack.${table} where room_booking_id=$1`,
-          [id],
-        )
+        v.action === "claim"
+          ? await db.query(
+              "select * from staytrack.refund_claims where room_booking_id=$1",
+              [id],
+            )
+          : await db.query(
+              "select * from staytrack.refund_transfers where actor_auth_user_id=$1 and request_key=$2",
+              [actor, v.requestKey],
+            )
       ).rows[0];
       if (prior) {
         const same =
+          prior.room_booking_id === id.toLowerCase() &&
           prior.actor_auth_user_id === actor &&
           prior.request_key === v.requestKey &&
           (v.action === "claim"
@@ -335,17 +340,32 @@ export async function cancellationRows(
     `select b.id,b.reservation_id as "reservationId",r.channel,b.category_code as category,b.start_at as "startAt",b.end_at as "endAt",
  b.total_centavos::float8 as "originalCentavos",q.requested_at as "requestedAt",q.confirmation_at as "confirmationAt",q.eligibility,
  d.approved,d.refund_centavos::float8 as "refundCentavos",d.reason as "decisionReason",
- case when f.room_booking_id is not null then 'recorded' when c.room_booking_id is not null then 'processing' when d.approved and d.refund_centavos>0 then 'due' else 'not_due' end as "refundStatus",
+ f.amount::float8 as "refundedCentavos",
+ greatest(coalesce(d.refund_centavos,0)-f.amount,0)::float8 as "remainingRefundCentavos",
+ case when d.refund_centavos>0 and f.amount>=d.refund_centavos then 'recorded'
+      when c.room_booking_id is not null then 'processing' when d.approved and d.refund_centavos>0 then 'due' else 'not_due' end as "refundStatus",
  ${staff ? `(select p.id from staytrack.payment_submissions p join staytrack.verified_online_payments v on v.submission_id=p.id where p.reservation_id=r.id and p.status='confirmed' order by v.verified_at,p.id limit 1)` : "null::uuid"} as "paymentId",
  ${staff ? "c.actor_auth_user_id" : "null::uuid"} as "claimedBy",${staff ? "c.payer_name" : "null::text"} as "payerName",${staff ? "c.payer_account" : "null::text"} as "payerAccount",c.claimed_at as "verifiedAt",
  ${staff ? "f.normalized_reference" : "null::text"} as "transferReference",f.transferred_at as "transferredAt",
+ ${staff ? "f.history" : "'[]'::jsonb"} as "transferHistory",
  a.balance_centavos::float8 as "balanceCentavos",a.refund_due_centavos::float8 as "refundDueCentavos",a.net_charge_centavos::float8 as "netChargeCentavos"
  from staytrack.cancellation_requests q join staytrack.room_bookings b on b.id=q.room_booking_id
  join staytrack.reservations r on r.id=b.reservation_id join staytrack.reservation_financials a on a.reservation_id=r.id
- left join staytrack.cancellation_decisions d using(room_booking_id) left join staytrack.refund_claims c using(room_booking_id) left join staytrack.refund_transfers f using(room_booking_id)
+ left join staytrack.cancellation_decisions d using(room_booking_id) left join staytrack.refund_claims c using(room_booking_id)
+ cross join lateral (
+   select coalesce(sum(t.amount_centavos),0) as amount,max(t.transferred_at) transferred_at
+   ${
+     staff
+       ? `,(array_agg(t.normalized_reference order by t.transferred_at desc,t.recorded_at desc,t.normalized_reference))[1] normalized_reference,
+     coalesce(jsonb_agg(jsonb_build_object('amountCentavos',t.amount_centavos,'reference',t.normalized_reference,'transferredAt',t.transferred_at)
+       order by t.transferred_at desc,t.recorded_at desc,t.normalized_reference),'[]'::jsonb) history`
+       : ""
+   }
+   from staytrack.refund_transfers t where t.room_booking_id=b.id
+ ) f
  ${staff ? "" : `where r.owner_auth_user_id=$1 and lower(r.verified_email)=$2 and r.channel='online'`}
  ${reservationId ? `${staff ? "where" : "and"} r.id=${staff ? "$2" : "$4"}::uuid` : ""}
- order by (f.room_booking_id is not null or d.approved=false),q.requested_at desc,b.id limit 100 offset ${staff ? "$1" : "$3"}`,
+ order by (d.refund_centavos>0 and f.amount>=d.refund_centavos or d.approved=false),q.requested_at desc,b.id limit 100 offset ${staff ? "$1" : "$3"}`,
     [
       ...(staff
         ? [page * 100]

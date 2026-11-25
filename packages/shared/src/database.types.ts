@@ -347,8 +347,9 @@ export type Database = {
         Row: {
           id: string;
           resource_id: number;
-          setup: string;
-          attendees: number;
+          purpose: string;
+          setup: string | null;
+          attendees: number | null;
           event_start: string;
           event_end: string;
           preparation_start: string;
@@ -358,8 +359,9 @@ export type Database = {
         Insert: {
           id?: string;
           resource_id?: number;
-          setup: string;
-          attendees: number;
+          purpose?: string;
+          setup?: string | null;
+          attendees?: number | null;
           event_start: string;
           event_end: string;
           preparation_start: string;
@@ -369,8 +371,9 @@ export type Database = {
         Update: {
           id?: string;
           resource_id?: number;
-          setup?: string;
-          attendees?: number;
+          purpose?: string;
+          setup?: string | null;
+          attendees?: number | null;
           event_start?: string;
           event_end?: string;
           preparation_start?: string;
@@ -500,6 +503,8 @@ export type Database = {
           reference: string | null;
           transferred_at: string;
           evidence: string;
+          id: string;
+          amount_centavos: number;
         };
         Insert: {
           approval_id: string;
@@ -507,6 +512,8 @@ export type Database = {
           reference?: string | null;
           transferred_at: string;
           evidence: string;
+          id?: string;
+          amount_centavos: number;
         };
         Update: {
           approval_id?: string;
@@ -514,12 +521,14 @@ export type Database = {
           reference?: string | null;
           transferred_at?: string;
           evidence?: string;
+          id?: string;
+          amount_centavos?: number;
         };
         Relationships: [
           {
             foreignKeyName: "hall_refund_transfers_approval_id_fkey";
             columns: "{approval_id}";
-            isOneToOne: true;
+            isOneToOne: false;
             referencedRelation: "hall_refund_approvals";
             referencedColumns: "{id}";
           },
@@ -1360,6 +1369,63 @@ export type Database = {
           },
         ];
       };
+      refund_issues: {
+        Row: {
+          kind: string;
+          item_id: string;
+          room_item_id: string | null;
+          hall_item_id: string | null;
+          received_centavos: number;
+          details: string;
+          reported_by: string;
+          reported_at: string;
+          resolution: string | null;
+          resolved_by: string | null;
+          resolved_at: string | null;
+        };
+        Insert: {
+          kind: string;
+          item_id: string;
+          room_item_id?: never;
+          hall_item_id?: never;
+          received_centavos: number;
+          details: string;
+          reported_by: string;
+          reported_at?: string;
+          resolution?: string | null;
+          resolved_by?: string | null;
+          resolved_at?: string | null;
+        };
+        Update: {
+          kind?: string;
+          item_id?: string;
+          room_item_id?: never;
+          hall_item_id?: never;
+          received_centavos?: number;
+          details?: string;
+          reported_by?: string;
+          reported_at?: string;
+          resolution?: string | null;
+          resolved_by?: string | null;
+          resolved_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "refund_issues_hall_item_id_fkey";
+            columns: "{hall_item_id}";
+            isOneToOne: false;
+            referencedRelation: "hall_reservations";
+            referencedColumns: "{id}";
+          },
+          {
+            foreignKeyName: "refund_issues_room_item_id_fkey";
+            columns: "{room_item_id}";
+            isOneToOne: false;
+            referencedRelation: "room_bookings";
+            referencedColumns: "{id}";
+          },
+        ];
+      };
       refund_transfers: {
         Row: {
           room_booking_id: string;
@@ -1371,6 +1437,7 @@ export type Database = {
           transferred_at: string;
           recorded_at: string;
           transfer_checked: boolean;
+          id: string;
         };
         Insert: {
           room_booking_id: string;
@@ -1382,6 +1449,7 @@ export type Database = {
           transferred_at: string;
           recorded_at?: string;
           transfer_checked: boolean;
+          id?: string;
         };
         Update: {
           room_booking_id?: string;
@@ -1393,12 +1461,13 @@ export type Database = {
           transferred_at?: string;
           recorded_at?: string;
           transfer_checked?: boolean;
+          id?: string;
         };
         Relationships: [
           {
             foreignKeyName: "refund_transfers_room_booking_id_fkey";
             columns: "{room_booking_id}";
-            isOneToOne: true;
+            isOneToOne: false;
             referencedRelation: "refund_claims";
             referencedColumns: "{room_booking_id}";
           },

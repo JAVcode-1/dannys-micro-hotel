@@ -110,18 +110,21 @@ test("verified guest submits reviewed server price, contact, acknowledgement and
         ],
       };
     const body = JSON.parse(options.body);
-    if (url.endsWith("/guest/quote"))
+    if (url.endsWith("/availability"))
       return {
         ok: true,
         json: async () => ({
-          items: body.items.map((item) => ({
-            ...item,
-            endAt: "2027-01-01T09:00:00Z",
-            baseCentavos: 20000,
-            extraBedCentavos: 0,
+          available: true,
+          quote: {
+            items: body.items.map((item) => ({
+              ...item,
+              endAt: "2027-01-01T09:00:00Z",
+              baseCentavos: 20000,
+              extraBedCentavos: 0,
+              totalCentavos: 20000,
+            })),
             totalCentavos: 20000,
-          })),
-          totalCentavos: 20000,
+          },
         }),
       };
     if (url.endsWith("/guest/reservations")) {
@@ -141,17 +144,26 @@ test("verified guest submits reviewed server price, contact, acknowledgement and
   fireEvent.change(roomField("Arrival date", 1), {
     target: { value: "2027-01-01" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Get total" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Check availability & price" }),
+  );
   await waitFor(() =>
     assert.ok(screen.getByText("₱200.00", { selector: "p.text-3xl" })),
   );
-  const policiesToggle = screen.getByRole("button", { name: /Show booking policies/i });
+  const policySection = screen.getByRole("region", {
+    name: "Booking policies",
+  });
+  const policiesToggle = within(policySection).getByRole("button", {
+    name: /^Show/,
+  });
   assert.equal(policiesToggle.getAttribute("aria-expanded"), "false");
-  const policiesContent = globalThis.document.getElementById(policiesToggle.getAttribute("aria-controls"));
+  const policiesContent = globalThis.document.getElementById(
+    policiesToggle.getAttribute("aria-controls"),
+  );
   assert.equal(policiesContent.hidden, true);
   fireEvent.click(policiesToggle);
   assert.equal(policiesContent.hidden, false);
-  fireEvent.click(screen.getByRole("button", { name: /Hide booking policies/i }));
+  fireEvent.click(within(policySection).getByRole("button", { name: /^Hide/ }));
   assert.equal(policiesContent.hidden, true);
   fireEvent.change(screen.getByLabelText("Primary guest name"), {
     target: { value: "Synthetic Guest" },
@@ -287,18 +299,24 @@ test("guest can add independently scheduled Family room, repeat blocks and recei
           },
         ],
       };
+    if (url.endsWith("/guest/booking-status"))
+      return { ok: true, json: async () => ({ enabled: false }) };
+    assert.ok(url.endsWith("/availability"));
     submitted = JSON.parse(options.body);
     return {
       ok: true,
       json: async () => ({
-        items: submitted.items.map((item, index) => ({
-          ...item,
-          endAt: index ? "2027-01-04T06:00:00Z" : "2027-01-01T09:00:00Z",
-          baseCentavos: index ? 240000 : 20000,
-          extraBedCentavos: index ? 10000 : 0,
-          totalCentavos: index ? 250000 : 20000,
-        })),
-        totalCentavos: 270000,
+        available: true,
+        quote: {
+          items: submitted.items.map((item, index) => ({
+            ...item,
+            endAt: index ? "2027-01-04T06:00:00Z" : "2027-01-01T09:00:00Z",
+            baseCentavos: index ? 240000 : 20000,
+            extraBedCentavos: index ? 10000 : 0,
+            totalCentavos: index ? 250000 : 20000,
+          })),
+          totalCentavos: 270000,
+        },
       }),
     };
   };
@@ -324,11 +342,11 @@ test("guest can add independently scheduled Family room, repeat blocks and recei
     roomField("How long will you stay?", 2).textContent,
     /3 hours/,
   );
-  fireEvent.click(
-    screen.getAllByRole("button", { name: "+ Add time" })[1],
-  );
+  fireEvent.click(screen.getAllByRole("button", { name: "+ Add time" })[1]);
   fireEvent.click(screen.getByRole("checkbox"));
-  fireEvent.click(screen.getByRole("button", { name: "Get total" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Check availability & price" }),
+  );
   await waitFor(() => assert.ok(screen.getByText("₱2,700.00")));
   assert.equal(submitted.items[0].startAt, "2027-01-01T14:00:00+08:00");
   assert.equal(submitted.items[1].startAt, "2027-01-02T14:00:00+08:00");
@@ -419,22 +437,29 @@ test("Hall-only quote sends independent schedule and renders combined authoritat
       };
     if (url.endsWith("/guest/booking-status"))
       return { ok: true, json: async () => ({ enabled: false }) };
+    if (url.endsWith("/guest/hall-status"))
+      return { ok: true, json: async () => ({ status: "available" }) };
+    assert.ok(url.endsWith("/availability"));
     payload = JSON.parse(options.body);
     return {
       ok: true,
       json: async () => ({
-        items: [],
-        hall: {
-          setup: "theater",
-          attendees: 1,
-          minutes: 180,
-          start: "2027-03-01T00:00:00Z",
-          end: "2027-03-01T03:00:00Z",
-          base: 300000,
-          additional: 0,
-          total: 300000,
+        available: true,
+        hallAvailable: true,
+        quote: {
+          items: [],
+          hall: {
+            setup: "theater",
+            attendees: 1,
+            minutes: 180,
+            start: "2027-03-01T00:00:00Z",
+            end: "2027-03-01T03:00:00Z",
+            base: 300000,
+            additional: 0,
+            total: 300000,
+          },
+          totalCentavos: 300000,
         },
-        totalCentavos: 300000,
       }),
     };
   };
@@ -443,7 +468,9 @@ test("Hall-only quote sends independent schedule and renders combined authoritat
     fireEvent.change(screen.getByLabelText("Event date"), {
       target: { value: "2027-03-01" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Get total" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Check availability & price" }),
+    );
     await waitFor(() =>
       assert.ok(screen.getByText("₱3,000.00", { selector: "p.text-3xl" })),
     );

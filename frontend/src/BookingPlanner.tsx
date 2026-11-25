@@ -1,5 +1,10 @@
-import TimePartInput, { hourPattern, manilaClock, minutePattern } from "./TimePartInput";
-import { useEffect, useState } from "react";
+import TimePartInput, {
+  hourPattern,
+  manilaClock,
+  minutePattern,
+} from "./TimePartInput";
+import PublicHallStatus from "./PublicHallStatus";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { notifySuccess } from "./notifications";
 import type { FormEvent } from "react";
 import type { BookingQuote } from "@staytrack/shared";
@@ -72,7 +77,8 @@ const scheduleTime = ({
   hour,
   minute,
   period,
-}: Pick<Draft, "hour" | "minute" | "period">) => manilaClock(hour, minute, period);
+}: Pick<Draft, "hour" | "minute" | "period">) =>
+  manilaClock(hour, minute, period);
 
 const hallInput = (hall: HallDraft) => ({
   setup: hall.setup,
@@ -212,6 +218,10 @@ export default function BookingPlanner({
   hallEnabled?: boolean;
 }) {
   const guest = useGuestSession();
+  const verifiedGuestId =
+    guest?.access.status === "authenticated" ? guest.access.id : null;
+  const scheduleForm = useRef<HTMLFormElement>(null);
+  const automaticallyCheckedGuest = useRef<string | null>(null);
   const [items, setItems] = useState<Draft[]>(restoreDraft);
   const [hall, setHall] = useState<HallDraft | null>(() =>
     hallEnabled ? restoreHall() : null,
@@ -243,6 +253,11 @@ export default function BookingPlanner({
   const [acknowledged, setAcknowledged] = useState(false);
   const [policiesExpanded, setPoliciesExpanded] = useState(false);
   const [availability, setAvailability] = useState<boolean | null>(null);
+  const [checkedHall, setCheckedHall] = useState<{
+    key: string;
+    available: boolean;
+  }>();
+  const hallSelectionKey = hall ? JSON.stringify(hallInput(hall)) : null;
   const [request, setRequest] = useState<{ body: string; key: string } | null>(
     null,
   );
@@ -349,6 +364,7 @@ export default function BookingPlanner({
   function updateHall(patch: Partial<HallDraft>) {
     setHall((current) => (current ? { ...current, ...patch } : current));
     setQuote(null);
+    setCheckedHall(undefined);
     setAvailability(null);
     setMessage("");
   }
@@ -379,13 +395,17 @@ export default function BookingPlanner({
       setBusy(false);
     }
   }
-  async function checkAvailability(form: HTMLFormElement | null) {
+  async function checkAvailability(
+    form: HTMLFormElement | null,
+    announce = true,
+  ) {
     setScheduleAttempted(true);
     if (!form?.reportValidity()) return;
     setHoldMessage("");
     setBusy(true);
     setMessage("");
     setAvailability(null);
+    setCheckedHall(undefined);
     try {
       const response = await fetch(`${apiBase}/availability`, {
         method: "POST",
@@ -394,6 +414,7 @@ export default function BookingPlanner({
       });
       const data = (await response.json()) as {
         available: boolean;
+        hallAvailable?: boolean;
         quote: BookingQuote;
         reason?: string;
         error?: string;
@@ -402,13 +423,18 @@ export default function BookingPlanner({
         throw new Error(data.error ?? "Availability is unavailable.");
       setQuote(data.quote);
       setAvailability(data.available);
-      if (data.available)
+      if (hallSelectionKey && typeof data.hallAvailable === "boolean")
+        setCheckedHall({
+          key: hallSelectionKey,
+          available: data.hallAvailable,
+        });
+      if (data.available && announce)
         notifySuccess(
           "Your selected schedules are available. Continue to reserve them.",
         );
       setMessage(
         data.available
-          ? "Available now. Capacity is reserved only when your hold succeeds."
+          ? "Your selected schedules are available. Capacity is reserved only when your hold succeeds."
           : (data.reason ??
               "These schedules are unavailable. Choose another time or category."),
       );
@@ -420,6 +446,29 @@ export default function BookingPlanner({
       setBusy(false);
     }
   }
+  const checkAfterVerification = useEffectEvent((guestId: string) => {
+    const form = scheduleForm.current;
+    if (
+      automaticallyCheckedGuest.current === guestId ||
+      quote ||
+      busy ||
+      !form ||
+      (!items.length && !hall) ||
+      form.querySelector(":invalid")
+    )
+      return;
+    automaticallyCheckedGuest.current = guestId;
+    void checkAvailability(form, false);
+  });
+  useEffect(() => {
+    if (!verifiedGuestId) {
+      automaticallyCheckedGuest.current = null;
+      return;
+    }
+    if (bookingEnabled && (!items.length || rates.length))
+      checkAfterVerification(verifiedGuestId);
+  }, [bookingEnabled, verifiedGuestId, items.length, rates.length]);
+
   async function hold(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (
@@ -541,6 +590,7 @@ export default function BookingPlanner({
         </ol>
         <div className="booking-columns grid items-start gap-8 lg:grid-cols-[1fr_320px]">
           <form
+            ref={scheduleForm}
             onSubmit={(event) => void submit(event)}
             onInvalid={() => setScheduleAttempted(true)}
           >
@@ -574,12 +624,14 @@ export default function BookingPlanner({
                       setHall(newHall());
                       setQuote(null);
                       setAvailability(null);
+                      setCheckedHall(undefined);
                     }}
                   >
                     + Add Function Hall
                   </button>
                 )}
               </div>
+              {hallEnabled && <PublicHallStatus />}
               {items.map((item, index) => (
                 <section
                   key={item.id}
@@ -647,10 +699,13 @@ export default function BookingPlanner({
                         className={inputClass}
                         min={todayInManila}
                         aria-invalid={
-                          isPastDate(item.date) || (scheduleAttempted && !item.date)
+                          isPastDate(item.date) ||
+                          (scheduleAttempted && !item.date)
                         }
                         aria-describedby={
-                          isPastDate(item.date) ? `past-room-date-${item.id}` : undefined
+                          isPastDate(item.date)
+                            ? `past-room-date-${item.id}`
+                            : undefined
                         }
                         value={item.date}
                         onChange={(event) =>
@@ -676,7 +731,9 @@ export default function BookingPlanner({
                           part="hour"
                           label="Hour"
                           value={item.hour}
-                          invalid={scheduleAttempted && !hourPattern.test(item.hour)}
+                          invalid={
+                            scheduleAttempted && !hourPattern.test(item.hour)
+                          }
                           onChange={(value) => update(item.id, { hour: value })}
                           className={inputClass}
                         />
@@ -687,8 +744,13 @@ export default function BookingPlanner({
                           part="minute"
                           label="Minute"
                           value={item.minute}
-                          invalid={scheduleAttempted && !minutePattern.test(item.minute)}
-                          onChange={(value) => update(item.id, { minute: value })}
+                          invalid={
+                            scheduleAttempted &&
+                            !minutePattern.test(item.minute)
+                          }
+                          onChange={(value) =>
+                            update(item.id, { minute: value })
+                          }
                           className={inputClass}
                         />
                       </div>
@@ -845,6 +907,7 @@ export default function BookingPlanner({
                         setHall(null);
                         setQuote(null);
                         setAvailability(null);
+                        setCheckedHall(undefined);
                       }}
                     >
                       Remove hall
@@ -881,7 +944,8 @@ export default function BookingPlanner({
                         className={inputClass}
                         min={todayInManila}
                         aria-invalid={
-                          isPastDate(hall.date) || (scheduleAttempted && !hall.date)
+                          isPastDate(hall.date) ||
+                          (scheduleAttempted && !hall.date)
                         }
                         aria-describedby={
                           isPastDate(hall.date) ? "past-hall-date" : undefined
@@ -908,7 +972,9 @@ export default function BookingPlanner({
                           part="hour"
                           label="Hour"
                           value={hall.hour}
-                          invalid={scheduleAttempted && !hourPattern.test(hall.hour)}
+                          invalid={
+                            scheduleAttempted && !hourPattern.test(hall.hour)
+                          }
                           onChange={(value) => updateHall({ hour: value })}
                           className={inputClass}
                         />
@@ -919,7 +985,10 @@ export default function BookingPlanner({
                           part="minute"
                           label="Minute"
                           value={hall.minute}
-                          invalid={scheduleAttempted && !minutePattern.test(hall.minute)}
+                          invalid={
+                            scheduleAttempted &&
+                            !minutePattern.test(hall.minute)
+                          }
                           onChange={(value) => updateHall({ minute: value })}
                           className={inputClass}
                         />
@@ -948,8 +1017,14 @@ export default function BookingPlanner({
                         part="duration"
                         label="Event duration (hours)"
                         className={inputClass}
-                        value={Number.isNaN(hall.minutes) ? "" : String(hall.minutes / 60)}
-                        invalid={scheduleAttempted && Number.isNaN(hall.minutes)}
+                        value={
+                          Number.isNaN(hall.minutes)
+                            ? ""
+                            : String(hall.minutes / 60)
+                        }
+                        invalid={
+                          scheduleAttempted && Number.isNaN(hall.minutes)
+                        }
                         onChange={(hours) =>
                           updateHall({
                             minutes: hours === "" ? NaN : Number(hours) * 60,
@@ -970,9 +1045,12 @@ export default function BookingPlanner({
                           scheduleAttempted &&
                           (!Number.isInteger(hall.attendees) ||
                             hall.attendees < 1 ||
-                            hall.attendees > (hall.setup === "theater" ? 70 : 50))
+                            hall.attendees >
+                              (hall.setup === "theater" ? 70 : 50))
                         }
-                        value={Number.isNaN(hall.attendees) ? "" : hall.attendees}
+                        value={
+                          Number.isNaN(hall.attendees) ? "" : hall.attendees
+                        }
                         onChange={(e) =>
                           updateHall({ attendees: e.target.valueAsNumber })
                         }
@@ -997,9 +1075,20 @@ export default function BookingPlanner({
                       Three-hour package: ₱3,000 for starts from 8:00 AM to
                       before 5:00 PM, or ₱5,000 for other start times. Each
                       additional full hour is ₱1,000. Same-day and overnight
-                      events are subject to availability, including setup and cleanup.
+                      events are subject to availability, including setup and
+                      cleanup.
                     </p>
                   </details>
+                  {checkedHall && checkedHall.key === hallSelectionKey && (
+                    <p
+                      role="status"
+                      className="mt-4 rounded-lg bg-selected p-3 font-semibold text-main"
+                    >
+                      {checkedHall.available
+                        ? "Available for your selected time"
+                        : "Unavailable for your selected time"}
+                    </p>
+                  )}
                 </section>
               )}
               <div className="booking-actions flex flex-wrap gap-3">
@@ -1322,10 +1411,7 @@ export default function BookingPlanner({
                     )}
                     <button
                       disabled={
-                        busy ||
-                        !quote ||
-                        !policy ||
-                        availability === false
+                        busy || !quote || !policy || availability === false
                       }
                       className="guest-primary-action min-h-11 w-full rounded-xl bg-booking px-4 font-semibold text-main disabled:opacity-50"
                     >

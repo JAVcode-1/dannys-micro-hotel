@@ -43,10 +43,7 @@ async function start() {
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
       <SuccessToasts />
-      <App
-        hallEnabled={hallEnabled}
-        reviewsEnabled={isolatedDevelopment}
-      />
+      <App hallEnabled={hallEnabled} reviewsEnabled={isolatedDevelopment} />
     </StrictMode>,
   );
 }

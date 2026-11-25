@@ -74,7 +74,11 @@ function ArrivalFields({
 }) {
   return (
     <fieldset className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <legend className="mb-2 text-sm font-semibold">{label} · Manila</legend>
+      <legend
+        className={shortLabels ? "sr-only" : "mb-2 text-sm font-semibold"}
+      >
+        {label} · Manila
+      </legend>
       <label className="text-sm">
         {shortLabels ? "Date" : `${label} date`}
         <input

@@ -7,7 +7,9 @@ export const minutes = Array.from({ length: 60 }, (_, index) =>
   String(index).padStart(2, "0"),
 );
 
-const durationHours = Array.from({ length: 22 }, (_, index) => String(index + 3));
+const durationHours = Array.from({ length: 22 }, (_, index) =>
+  String(index + 3),
+);
 const parts = {
   hour: {
     pattern: hourPattern,
@@ -86,7 +88,9 @@ export default function TimePartInput({
           value=""
           onChange={(event) => onChange(event.target.value)}
         >
-          <option value="" disabled>Choose {part}</option>
+          <option value="" disabled>
+            Choose {part}
+          </option>
           {options.map((option) => (
             <option key={option} value={option}>
               {part === "duration" ? `${option} hours` : option}

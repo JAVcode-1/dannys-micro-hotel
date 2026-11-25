@@ -4,7 +4,59 @@ status: in-progress
 ---
 # 14 — Milestones & Work Tracker
 
+## Function Hall and refunds development checkpoint
+
+Build, typecheck, lint and the GitHub CI formatting check passed. The application suite passed 128 backend and 101 frontend tests after correcting the staff reschedule form props and aligning test fixtures with the current workflows. All 40 integration tests passed on disposable loopback PostgreSQL. The targeted unified-booking runner also applied all 32 migrations on loopback and verified payment confirmation, availability locking, refund backfill, partial transfer caps, retry and reference checks, and refund report authorization. Manual browser acceptance and the formal milestone gate remain pending.
+
+## Partial refunds and guest reports
+
+Room and Function Hall staff can record each verified manual transfer and see the remaining approved amount. Guests see the recorded amount and balance in My bookings and can report a short refund. Staff can find open reports on Cancellations and refunds and record a response visible to the guest. No dependency was added. Manual browser acceptance remains pending.
+
+The owner approved migration `20261125003200_partial_refunds_and_reports.sql` on the pinned D-040 Supabase development project. A rolled-back preview and the committed transaction both preserved historical transfers and financial totals and verified the report permissions and refund guards. All 32 local and hosted migration versions match. `npm run dev` started Express and Vite, both returned HTTP 200, and the unauthenticated staff report queue returned HTTP 401.
+
+Eleven focused frontend tests and lint passed. Disposable PostgreSQL with all 32 migrations verified the historical Hall backfill, partial transfers and balances, retry behavior, concurrent room refund caps, duplicate references across room and Hall transfers, guest ownership and staff resolution, and HTTP access to the open-report queue. The full build and typecheck encounter the existing Staff Reservations rescheduling prop mismatch. The root test suite stopped at two existing backend verified-payment failures. No milestone checklist, commit, or push was completed.
+
+## Staff navigation badges
+
+The desktop and mobile staff navigation show counts for arrivals, payment proofs, overdue checkouts, room cleaning, and today's Hall bookings. Browser and device acceptance is pending.
+
+Lint and the desktop and mobile navigation checks passed. Two dashboard assertions and two backend payment tests still fail outside this change. The existing Staff Reservations prop mismatch still blocks the full build and typecheck. The change remains local.
+
+## Extensions and charges
+
+Removed smoking incident review from the staff screen and blocked new incident reviews through the staff API. Staff can still record overtime reviews and manage charges. Manual acceptance is pending.
+
 ## Function Hall staff reservation workflow
+
+On 2026-11-25, the staff Hall Calendar began showing cleaning readiness and the current booking hold separately. The protected window end is shown in Manila time. Eight focused Hall tests, lint, and the Hall subtest on disposable PostgreSQL passed. Full build and typecheck hit the existing Staff Reservations prop mismatch. The root test command still failed two backend verified-payment tests, and the broader PostgreSQL run had three other failing subtests. Manual acceptance and the development checkpoint remain pending.
+
+On 2026-11-25, the Hall desk replaced its two manual recovery buttons with automatic lookup and same-key retry for interrupted actions. Seven focused Hall tests, lint, and standalone Vite bundling passed. The existing Staff Reservations prop error blocked the full build and typecheck. The root test command stopped at two backend verified-payment tests (125 passed). A direct frontend test run produced 60 passes and 38 failures outside the focused Hall tests. The checkpoint and manual Hall acceptance remain pending.
+
+The existing Function Hall report moved from the Hall Calendar workspace to Management → Analytics → Function Hall. Both focused Analytics tests and scoped lint passed. The existing Staff Reservations error blocks frontend typechecking. Manual acceptance is pending.
+
+Renamed Hall readiness to Hall status. Staff controls cover marking the hall ready, taking it out of service for a set period, and ending that period early. Guests are prompted to check their event date and see a Hall-specific availability result. Manual acceptance is pending.
+
+On 2026-11-24, the owner approved `20261124003100_function_hall_out_of_service.sql` for the D-040 Supabase development project. The CLI dry run failed during login-role initialization. A PostgreSQL transaction preview rolled back successfully, then the migration and its history entry were committed together. An independent read confirmed 31 applied versions and the validated Hall claim constraint. `npm run dev` started Express and Vite and both returned HTTP 200. The full application test suite was not rerun for this startup fix.
+
+The backend build, scoped lint, and a disposable PostgreSQL check for migration, readiness, reopening, and overlap protection passed. The existing Staff Reservations prop mismatch blocks frontend typechecking.
+
+The Calendar now opens approval and repayment from one Manage refund action. Staff can continue after approval in the same panel or reopen an existing pending refund. Manual acceptance is pending.
+
+The Extend event form checks the extra time, shows the revised price and amount due, and records verified payment when staff confirm. The Calendar keeps Collect balance for existing balances and no longer shows a separate Record additional payment action. Manual acceptance is pending.
+
+Routine staff Hall extensions no longer require a written reason. Booking checks refresh after guest email verification, and the staff payment review keeps the time check when using the booking timestamp without replacing a different selected time. The walk-in form hides its redundant arrival heading. Manual acceptance is pending.
+
+Confirmed walk-in cards show Start event after booking and keep Collect balance available separately when needed. The API permits a walk-in start with the verified 50% deposit during the booked interval. Manual acceptance is pending.
+
+Lint, the six focused Hall application checks, and the deposit-funded start scenario on disposable PostgreSQL passed. Build and typecheck still hit the existing Staff Reservations prop mismatch. Unrelated payment and accommodation checks still fail in the full suites, so this change was left local.
+
+The hotel website, public Hall page and online booking now display the Hall's current status. Staff schedule forms use Event date and start time. Browser acceptance remains pending.
+
+Lint, the public Hall page test and all four Hall status cases on disposable PostgreSQL passed. The existing Staff Reservations prop mismatch still blocks the full build and typecheck.
+
+The New booking form lets staff check price and availability, then confirm a walk-in and record its deposit in one action. The staff form no longer offers manual inquiry creation. Manual acceptance remains pending.
+
+Lint passed. Five Hall unit checks, two Hall recovery UI checks, and the Hall scenario on disposable PostgreSQL passed, including request replay and competing bookings. The full build and typecheck are blocked by the existing Staff Reservations prop mismatch. The full integration run also reported accommodation failures. No checkpoint was committed or pushed.
 
 The staff calendar puts in-progress events first and shows a live hours, minutes and seconds countdown. Staff can confirm checkout as soon as the guest finishes, including before the scheduled end. Completed cards show the actual departure time. Manual acceptance is pending. No tests were run at the owner's request.
 

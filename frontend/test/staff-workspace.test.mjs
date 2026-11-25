@@ -107,11 +107,11 @@ test("staff requests a reschedule for one eligible room without changing its sib
   fireEvent.change(screen.getByLabelText("Arrival date - item-one"), {
     target: { value: "2027-01-03" },
   });
-  fireEvent.change(screen.getByLabelText("Request reason - item-one"), {
+  fireEvent.change(screen.getByLabelText("Note for staff - item-one"), {
     target: { value: "Guest asked staff to move one room" },
   });
   fireEvent.submit(
-    screen.getByLabelText("Request reason - item-one").closest("form"),
+    screen.getByLabelText("Note for staff - item-one").closest("form"),
   );
   await waitFor(() => assert.ok(submitted));
   assert.equal(submitted.url, "/api/staff/reschedules/item-one/request");
@@ -119,7 +119,7 @@ test("staff requests a reschedule for one eligible room without changing its sib
   assert.equal(submitted.body.expectedRevision, 7);
   assert.equal(submitted.body.startAt, "2027-01-03T14:00:00+08:00");
   assert.equal(screen.queryByLabelText("Arrival date - item-two"), null);
-  assert.ok(screen.getByText(/original schedule remains active/));
+  assert.ok(screen.getByText(/current booking stays active/));
 });
 test("closed production workspace explains why no assisted reschedule can be created", async () => {
   globalThis.fetch = async () => ({
@@ -160,7 +160,7 @@ test("unified staff detail keeps Hall operations separate from room check-in", a
   });
   view();
   await waitFor(() =>
-    assert.ok(screen.getByText("Accommodation + Function Hall")),
+    assert.ok(screen.getByText(/Accommodation \+ Function Hall/)),
   );
   assert.ok(screen.getByText(/Function Hall · Theater Type/));
   assert.equal(
@@ -169,6 +169,15 @@ test("unified staff detail keeps Hall operations separate from room check-in", a
       .getAttribute("href"),
     "/staff/hall?item=hall-event",
   );
-  assert.equal(screen.getAllByRole("link", { name: "Check-in" }).length, 2);
+  assert.equal(
+    screen.getByRole("link", { name: "Check-in" }).getAttribute("href"),
+    "/staff/check-ins?item=item-one",
+  );
+  assert.equal(
+    screen
+      .getByRole("link", { name: "Stay and checkout" })
+      .getAttribute("href"),
+    "/staff/stays?item=item-two",
+  );
   assert.match(screen.getByText(/60 attendees/).textContent, /3,000.00/);
 });

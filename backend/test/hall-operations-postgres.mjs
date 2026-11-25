@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { URL } from "node:url";
 import { hallCommand } from "../dist/hall-reservations.js";
+import { readPublicHallStatus } from "../dist/hall-routes.js";
+import { readHallStatus } from "../dist/hall-status.js";
 import { hallReport } from "../dist/hall-reports.js";
 import { loadAnalyticsRows } from "../dist/analytics-data.js";
 import { calculateAnalytics } from "../dist/analytics-report.js";
@@ -102,7 +104,9 @@ export async function hallOperationsPostgres(t, pool) {
         method: "cash",
         verified: true,
       });
-      const { rows: [cashReceipt] } = await pool.query(
+      const {
+        rows: [cashReceipt],
+      } = await pool.query(
         "select received_at<=clock_timestamp() as received, evidence, normalized_reference from staytrack.hall_receipts where id=$1",
         [cash.receiptId],
       );
@@ -237,6 +241,7 @@ export async function hallOperationsPostgres(t, pool) {
       await command("complete_refund", {
         id: loser,
         approval,
+        amount: 100000,
         method: "cash",
         verified: true,
         evidence: "Synthetic return",
@@ -314,12 +319,133 @@ export async function hallOperationsPostgres(t, pool) {
         await command("complete_refund", {
           id: winner,
           approval: racing[1].value.id,
+          amount: 150000,
           method: "cash",
           verified: true,
           evidence: "Synthetic transfer",
           transferredAt: new Date(Date.now() - 1000).toISOString(),
         });
-        await assert.rejects(command("start", { id: winner }), /Full verified/);
+        await assert.rejects(
+          command("start", { id: winner }),
+          /Full verified|at least half/,
+        );
+      }
+      const direct = {
+        ...schedule,
+        start: date.event_day + "T23:00",
+        method: "cash",
+        amount: 250000,
+        verified: true,
+      };
+      await assert.rejects(
+        command("book_walk_in", { ...direct, amount: 249999 }),
+        /at least half/,
+      );
+      const directKey = "hall-direct-walk-in-001";
+      const competing = await Promise.all([
+        command("book_walk_in", direct, directKey),
+        command("book_walk_in", direct),
+      ]);
+      assert.equal(
+        competing.filter((result) => result.status === "confirmed").length,
+        1,
+      );
+      const collision = competing.find((result) => result.issue);
+      assert.match(collision.issue, /unavailable/);
+      assert.equal(collision.status, "inquiry");
+      assert.equal(collision.claim, undefined);
+      assert.ok(collision.receiptId);
+      assert.deepEqual(
+        await command("book_walk_in", direct, directKey),
+        competing[0],
+      );
+      const recorded = await pool.query(
+        `select r.channel,r.payment_resolution,count(p.id)::int as receipts
+         from staytrack.hall_reservations r
+         join staytrack.hall_receipts p on p.reservation_id=r.id
+         where r.id=$1 or r.id=$2 group by r.id order by r.payment_resolution`,
+        competing.map((result) => result.id),
+      );
+      assert.deepEqual(recorded.rows, [
+        { channel: "walk_in", payment_resolution: false, receipts: 1 },
+        { channel: "walk_in", payment_resolution: true, receipts: 1 },
+      ]);
+      const directWinner = competing.find(
+        (result) => result.status === "confirmed",
+      );
+      await assert.rejects(
+        command("start", { id: directWinner.id }),
+        /scheduled interval/,
+      );
+      await pool.query(
+        `insert into staytrack.hall_revisions(reservation_id,claim_id,total_centavos,quote)
+         select reservation_id,claim_id,total_centavos,
+           quote || jsonb_build_object('start',now() - interval '5 minutes','end',now() + interval '3 hours')
+         from staytrack.hall_revisions where reservation_id=$1 order by id desc limit 1`,
+        [directWinner.id],
+      );
+      await command("ready", { reason: "Synthetic cleanup verified" });
+      assert.equal(
+        (await command("start", { id: directWinner.id })).status,
+        "in_progress",
+      );
+      await command("complete", { id: directWinner.id });
+      const statusDb = await pool.connect();
+      try {
+        await statusDb.query("begin");
+        await statusDb.query(
+          "update staytrack.hall_resource set ready=true where id=1",
+        );
+        assert.deepEqual(await readPublicHallStatus(statusDb), {
+          status: "available",
+        });
+        await statusDb.query(
+          "update staytrack.hall_resource set ready=false where id=1",
+        );
+        assert.deepEqual(await readPublicHallStatus(statusDb), {
+          status: "not_ready",
+        });
+        await statusDb.query(
+          "update staytrack.hall_claims set released_at=clock_timestamp() where released_at is null",
+        );
+        const {
+          rows: [currentClaim],
+        } = await statusDb.query(
+          `insert into staytrack.hall_claims(setup,attendees,event_start,event_end,preparation_start,cleanup_end)
+           values ('room', 20, now() + interval '5 minutes', now() + interval '185 minutes',
+                   now() - interval '1 minute', now() + interval '215 minutes') returning id, cleanup_end`,
+        );
+        assert.deepEqual(await readPublicHallStatus(statusDb), {
+          status: "reserved",
+        });
+        await statusDb.query(
+          "update staytrack.hall_resource set ready=true where id=1",
+        );
+        const readyAndHeld = await readHallStatus(statusDb);
+        assert.equal(readyAndHeld.ready, true);
+        assert.equal(readyAndHeld.reserved, true);
+        assert.deepEqual(readyAndHeld.reservedUntil, currentClaim.cleanup_end);
+        await statusDb.query(
+          "update staytrack.hall_resource set ready=false where id=1",
+        );
+        await statusDb.query(
+          "update staytrack.hall_claims set released_at=clock_timestamp() where id=$1",
+          [currentClaim.id],
+        );
+        assert.equal((await readHallStatus(statusDb)).reservedUntil, null);
+        assert.deepEqual(await readPublicHallStatus(statusDb), {
+          status: "not_ready",
+        });
+        await statusDb.query(
+          "update staytrack.hall_reservations set status='in_progress',actual_start=clock_timestamp(),actual_end=null where id=$1",
+          [winner],
+        );
+        assert.deepEqual(await readPublicHallStatus(statusDb), {
+          status: "in_use",
+        });
+      } finally {
+        await statusDb.query("rollback");
+        statusDb.release();
       }
       assert.deepEqual(await accommodationSnapshot(pool), accommodationBefore);
     },

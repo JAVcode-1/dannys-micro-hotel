@@ -48,9 +48,10 @@ export function createDevelopmentAuth(
   async function load(kind: "guest" | "staff") {
     const response = await request(`${base}/development/session?kind=${kind}`, {
       cache: "no-store",
-      headers: kind === "staff"
-        ? { Authorization: `Bearer ${storage.getItem(staffTokenKey) ?? ""}` }
-        : {},
+      headers:
+        kind === "staff"
+          ? { Authorization: `Bearer ${storage.getItem(staffTokenKey) ?? ""}` }
+          : {},
     });
     if (!response.ok)
       throw new Error("The isolated development API is unavailable.");
@@ -70,7 +71,7 @@ export function createDevelopmentAuth(
     for (const listener of listeners) listener(event, next);
   }
   async function login(kind: "guest" | "staff", issued?: Session) {
-    const next = issued ?? await load(kind);
+    const next = issued ?? (await load(kind));
     if (kind === "staff") storage.setItem(staffTokenKey, next.access_token);
     storage.setItem(key, kind);
     restoration = Promise.resolve(next);
@@ -128,8 +129,12 @@ export function createDevelopmentAuth(
         body: JSON.stringify({ username: email, password }),
       });
       if (!response.ok) return failure();
-      const issued = await response.json() as Session;
-      if (!issued.access_token || !issued.user?.id || !issued.user.email?.endsWith("@example.test"))
+      const issued = (await response.json()) as Session;
+      if (
+        !issued.access_token ||
+        !issued.user?.id ||
+        !issued.user.email?.endsWith("@example.test")
+      )
         return failure();
       return login("staff", issued);
     },

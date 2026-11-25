@@ -93,7 +93,9 @@ export default function GuestReviewAccess({
                   purpose,
                 });
           setChallenge(result.challenge);
-          notifySuccess("Verification code requested. Check your email if the details match.");
+          notifySuccess(
+            "Verification code requested. Check your email if the details match.",
+          );
           setMessage(
             "If the details match, a verification code will arrive by email.",
           );
@@ -139,7 +141,13 @@ export default function GuestReviewAccess({
         );
       if (purpose === "withdrawal")
         await send("/reviews/withdrawal", access, requestKey);
-      notifySuccess(purpose === "review" ? "Review submitted." : purpose === "feedback" ? "Private feedback sent." : "Review withdrawn.");
+      notifySuccess(
+        purpose === "review"
+          ? "Review submitted."
+          : purpose === "feedback"
+            ? "Private feedback sent."
+            : "Review withdrawn.",
+      );
       setMessage(
         purpose === "review"
           ? "Review submitted."
@@ -311,7 +319,9 @@ export default function GuestReviewAccess({
                 reservation,
                 consent: true,
               });
-              notifySuccess("Review invitation requested. Email delivery depends on stay eligibility.");
+              notifySuccess(
+                "Review invitation requested. Email delivery depends on stay eligibility.",
+              );
               setMessage(
                 "If the stay qualifies, an invitation will arrive at the verified booking email.",
               );

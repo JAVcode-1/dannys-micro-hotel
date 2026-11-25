@@ -21,19 +21,14 @@ test("W01 synthetic planner is distinct from W02 and cannot check a guest in", (
   render(createElement(App));
   assert.ok(screen.getByRole("heading", { name: "Walk-in desk" }));
   assert.ok(screen.getByText(/Synthetic preview/));
-  assert.ok(
-    screen.getByRole("button", { name: "Check-in is recorded separately" })
-      .disabled,
-  );
+  assert.equal(screen.queryByRole("button", { name: /check.in/i }), null);
 });
 test("W01 preview journals mixed payments and requires a fresh quote after successful creation", async () => {
   render(createElement(App));
   fireEvent.change(screen.getByLabelText("Primary guest name"), {
     target: { value: "SYNTHETIC GUEST" },
   });
-  fireEvent.click(
-    screen.getByRole("button", { name: "Calculate fixture quote" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Preview total" }));
   const create = screen.getByRole("button", {
     name: "Create synthetic walk-in",
   });
@@ -66,7 +61,7 @@ test("W01 preview journals mixed payments and requires a fresh quote after succe
   fireEvent.change(screen.getByLabelText("GCash reference"), {
     target: { value: "SYNTHETIC-REF-123" },
   });
-  fireEvent.change(screen.getByLabelText("Receiving payee label"), {
+  fireEvent.change(screen.getByLabelText("Receiving account name"), {
     target: { value: "SYNTHETIC PAYEE" },
   });
   for (const box of screen.getAllByRole("checkbox")) fireEvent.click(box);
@@ -74,10 +69,7 @@ test("W01 preview journals mixed payments and requires a fresh quote after succe
     screen.getByRole("button", { name: "Record synthetic payment" }),
   );
   await waitFor(() => assert.ok(screen.getByText("gcash")));
-  assert.ok(
-    screen.getByRole("button", { name: "Check-in is recorded separately" })
-      .disabled,
-  );
+  assert.equal(screen.queryByRole("button", { name: /check.in/i }), null);
   assert.equal(
     screen
       .getByRole("button", { name: "Record synthetic payment" })
@@ -131,9 +123,7 @@ test("W01 planner preserves independent AM/PM schedules and charges one Family b
   fireEvent.click(
     screen.getByRole("checkbox", { name: /One Family extra bed/ }),
   );
-  fireEvent.click(
-    screen.getByRole("button", { name: "Calculate fixture quote" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Preview total" }));
   await waitFor(() => assert.ok(screen.getByText(/Total ₱1,500.00/)));
   fireEvent.click(
     screen.getByRole("button", { name: "Create synthetic walk-in" }),

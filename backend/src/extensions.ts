@@ -288,6 +288,8 @@ export function registerStayChanges(
   for (const [path, action] of actions)
     app.post(path, staff, closed, async (req, res) => {
       try {
+        if (action === recordStayReview && req.body?.kind === "smoking")
+          throw new BookingError("Only overtime reviews are available.", 400);
         res.json(
           await action(
             res.locals.actorId,

@@ -42,11 +42,17 @@ function GuestLayout() {
   const session = useGuestSession();
   const { pathname } = useLocation();
   const bookingPage =
-    /^\/(book|rooms|function-hall|verify|login|register|reservations)(\/|$)/.test(pathname);
+    /^\/(book|rooms|function-hall|verify|login|register|reservations)(\/|$)/.test(
+      pathname,
+    );
   const step =
-    pathname === "/book" ? 1
-      : ["/verify", "/login", "/register"].includes(pathname) ? 2
-        : /^\/reservations\/[^/]+\/payment$/.test(pathname) ? 3 : 0;
+    pathname === "/book"
+      ? 1
+      : ["/verify", "/login", "/register"].includes(pathname)
+        ? 2
+        : /^\/reservations\/[^/]+\/payment$/.test(pathname)
+          ? 3
+          : 0;
   const [message, setMessage] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
@@ -79,15 +85,27 @@ function GuestLayout() {
   }, [menuOpen]);
   const navigationLinks = (
     <>
-      <NavLink ref={firstMenuLink} to="/rooms" onClick={() => setMenuOpen(false)}>Rooms &amp; rates</NavLink>
-      <NavLink to="/function-hall" onClick={() => setMenuOpen(false)}>Function Hall</NavLink>
-      <NavLink to="/reservations" onClick={() => setMenuOpen(false)}>My bookings</NavLink>
+      <NavLink
+        ref={firstMenuLink}
+        to="/rooms"
+        onClick={() => setMenuOpen(false)}
+      >
+        Rooms &amp; rates
+      </NavLink>
+      <NavLink to="/function-hall" onClick={() => setMenuOpen(false)}>
+        Function Hall
+      </NavLink>
+      <NavLink to="/reservations" onClick={() => setMenuOpen(false)}>
+        My bookings
+      </NavLink>
       {session?.access.status === "authenticated" && (
         <button
           type="button"
           onClick={() => {
             setMenuOpen(false);
-            void session.signOut().catch(() => setMessage("Sign-out failed. Try again."));
+            void session
+              .signOut()
+              .catch(() => setMessage("Sign-out failed. Try again."));
           }}
         >
           Sign out
@@ -97,7 +115,9 @@ function GuestLayout() {
   );
   return (
     <div className="guest-journey min-h-svh bg-canvas text-main">
-      <a href="#guest-main" className="guest-skip">Skip to main content</a>
+      <a href="#guest-main" className="guest-skip">
+        Skip to main content
+      </a>
       <header
         ref={header}
         className="guest-header print:hidden"
@@ -111,10 +131,7 @@ function GuestLayout() {
             setMenuOpen(false);
         }}
       >
-        <nav
-          aria-label="Guest navigation"
-          className="guest-navigation"
-        >
+        <nav aria-label="Guest navigation" className="guest-navigation">
           <Link to="/" className="guest-brand">
             <img src="/hotel/logo-full.webp" alt="" width="64" height="48" />
             <span>
@@ -146,21 +163,31 @@ function GuestLayout() {
         </nav>
       </header>
       {message && (
-        <p role="alert" className="guest-session-message">{message}</p>
+        <p role="alert" className="guest-session-message">
+          {message}
+        </p>
       )}
       {step > 0 && (
         <div className="guest-progress-wrap">
           <div className="guest-mobile-progress">
-            <p aria-live="polite">Step {step} of 3 · <strong>{stepLabels[step - 1]}</strong></p>
+            <p aria-live="polite">
+              Step {step} of 3 · <strong>{stepLabels[step - 1]}</strong>
+            </p>
             <div className="guest-progress-segments" aria-hidden="true">
               {stepLabels.map((label, index) => (
-                <span key={label} data-complete={index < step ? "" : undefined} />
+                <span
+                  key={label}
+                  data-complete={index < step ? "" : undefined}
+                />
               ))}
             </div>
           </div>
           <ol className="guest-progress" aria-label="Booking steps">
             {stepLabels.map((label, index) => (
-              <li key={label} aria-current={step === index + 1 ? "step" : undefined}>
+              <li
+                key={label}
+                aria-current={step === index + 1 ? "step" : undefined}
+              >
                 <span className="guest-step-number" aria-hidden="true">
                   0{index + 1}
                 </span>
@@ -172,9 +199,11 @@ function GuestLayout() {
       )}
       <main
         id="guest-main"
-        className={bookingPage
-          ? `guest-content guest-booking-area${/^\/(rooms|verify|login|register|function-hall)\/?$/.test(pathname) ? " guest-compact-top" : ""}`
-          : "mx-auto max-w-6xl px-4 py-8"}
+        className={
+          bookingPage
+            ? `guest-content guest-booking-area${/^\/(rooms|verify|login|register|function-hall)\/?$/.test(pathname) ? " guest-compact-top" : ""}`
+            : "mx-auto max-w-6xl px-4 py-8"
+        }
       >
         <Outlet />
       </main>
@@ -337,7 +366,10 @@ export default function App({
                 )
               }
             />
-            <Route path="/payment-preview" element={<Navigate to="/book" replace />} />
+            <Route
+              path="/payment-preview"
+              element={<Navigate to="/book" replace />}
+            />
             {import.meta.env?.DEV && (
               <>
                 <Route

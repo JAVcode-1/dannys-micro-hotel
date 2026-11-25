@@ -22,21 +22,26 @@ afterEach(() => {
   cleanup();
   sessionStorage.clear();
 });
-test("W03 synthetic preview keeps overdue occupied, requires unpaid reason and departs only one room", async () => {
+test("W03 synthetic preview keeps overdue occupied, requires unpaid reason and departs only one room", async (t) => {
+  t.mock.timers.enable({
+    apis: ["Date"],
+    now: new Date("2026-11-25T00:00:00Z"),
+  });
   const mounted = render(createElement(App));
-  assert.ok(
-    screen.getByRole("heading", { name: "Stay countdown and checkout" }),
-  );
+  assert.ok(screen.getByRole("heading", { name: "Stays and checkout" }));
   assert.ok(screen.getByText(/Package expired/));
   assert.ok(screen.getByText(/not actual hotel room identifiers/));
-  const original = JSON.stringify(
+  const otherRooms = () =>
     [...document.querySelectorAll("article")]
-      .slice(1)
-      .map((e) => e.textContent),
-  );
+      .filter((article) =>
+        /Synthetic fixture [BC]/.test(article.querySelector("h3").textContent),
+      )
+      .map((article) => article.textContent);
+  const original = otherRooms();
+  assert.equal(original.length, 2);
   fireEvent.click(
     screen.getByRole("button", {
-      name: "Record checkout � Synthetic fixture A",
+      name: "Record checkout · Synthetic fixture A",
     }),
   );
   await waitFor(() =>
@@ -44,7 +49,7 @@ test("W03 synthetic preview keeps overdue occupied, requires unpaid reason and d
   );
   fireEvent.change(
     screen.getByLabelText(
-      "Unpaid-departure exception reason � Synthetic fixture A",
+      "Unpaid-departure exception reason · Synthetic fixture A",
     ),
     {
       target: {
@@ -55,23 +60,16 @@ test("W03 synthetic preview keeps overdue occupied, requires unpaid reason and d
   );
   fireEvent.click(
     screen.getByRole("button", {
-      name: "Record checkout � Synthetic fixture A",
+      name: "Record checkout · Synthetic fixture A",
     }),
   );
   await waitFor(() =>
     assert.ok(screen.getByText(/Unpaid-departure exception recorded/)),
   );
-  assert.equal(
-    JSON.stringify(
-      [...document.querySelectorAll("article")]
-        .slice(1)
-        .map((e) => e.textContent),
-    ),
-    original,
-  );
+  assert.deepEqual(otherRooms(), original);
   assert.ok(
     screen.getByRole("button", {
-      name: "Record checkout � Synthetic fixture B",
+      name: "Record checkout · Synthetic fixture B",
     }),
   );
   mounted.unmount();

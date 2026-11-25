@@ -15,7 +15,8 @@ type Settings = {
 };
 
 export default function OperationalSettings({ token }: { token: string }) {
-  const { signOut } = useOutletContext<{ signOut?: () => Promise<void> } | null>() ?? {};
+  const { signOut } =
+    useOutletContext<{ signOut?: () => Promise<void> } | null>() ?? {};
   const [signingOut, setSigningOut] = React.useState(false);
   const [value, setValue] = React.useState<Settings | null>(null);
   const [message, setMessage] = React.useState("");
@@ -158,7 +159,9 @@ export default function OperationalSettings({ token }: { token: string }) {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h3 className="font-semibold">Your session</h3>
-            <p className="mt-1 text-sm text-muted">Sign out of your Staff/Admin account.</p>
+            <p className="mt-1 text-sm text-muted">
+              Sign out of your Staff/Admin account.
+            </p>
           </div>
           <button
             type="button"

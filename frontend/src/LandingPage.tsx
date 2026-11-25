@@ -1,5 +1,6 @@
 ﻿import type { PublishedReviewPage } from "@staytrack/shared";
 import { useEffect, useRef, useState } from "react";
+import PublicHallStatus from "./PublicHallStatus";
 import { hotelContact } from "./hotel-contact";
 import { apiBase } from "./staff-auth";
 
@@ -785,6 +786,9 @@ export default function LandingPage({
                 5:00 PM, or ₱5,000.00 for other start times. Additional full
                 hours: ₱1,000.00.
               </p>
+              <div className="mb-5">
+                <PublicHallStatus />
+              </div>
               <div className="landing-hall-actions">
                 {hallEnabled && (
                   <a

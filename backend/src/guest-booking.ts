@@ -168,7 +168,8 @@ export async function createGuestHold(
       );
     if (claims.status !== "created")
       throw new BookingError(
-        claims.reason ?? "The selected rooms are unavailable for these schedules. Please check availability again.",
+        claims.reason ??
+          "The selected rooms are unavailable for these schedules. Please check availability again.",
         409,
       );
     const reservation = await client.query<{ id: string }>(

@@ -103,7 +103,7 @@ const additionalPages: Page[] = [
   {
     path: "/staff/analytics",
     label: "Analytics",
-    component: StaffAnalytics,
+    component: StaffAnalyticsPage,
   },
 ];
 
@@ -132,6 +132,11 @@ function StaffDashboardPage({ token }: { token: string }) {
     hallEnabled: boolean;
   }>();
   return <StaffDashboard token={token} hallEnabled={hallEnabled} />;
+}
+
+function StaffAnalyticsPage({ token }: { token: string }) {
+  const { hallEnabled } = useOutletContext<{ hallEnabled: boolean }>();
+  return <StaffAnalytics token={token} hallEnabled={hallEnabled} />;
 }
 
 function StaffPage({ component: Component }: Pick<Page, "component">) {

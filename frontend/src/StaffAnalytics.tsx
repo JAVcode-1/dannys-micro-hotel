@@ -3,6 +3,16 @@ import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
 
 type Money = { gross: string; refunds: string; net: string };
+type HallReport = Money & {
+  days: (Money & { day: string })[];
+  utilization: {
+    bookings: number;
+    scheduled_minutes: number;
+    actual_minutes: number;
+    preparation_minutes: number;
+    cleanup_minutes: number;
+  };
+};
 type Report = {
   overall: Money;
   trends: (Money & { period: string })[];
@@ -34,6 +44,12 @@ function pesos(value: string) {
     String(absolute % 100n).padStart(2, "0")
   );
 }
+
+const money = (row: Money) => [
+  pesos(row.gross),
+  pesos(row.refunds),
+  pesos(row.net),
+];
 
 function Table({
   title,
@@ -101,7 +117,7 @@ function Table({
   );
 }
 
-export default function StaffAnalytics({ token }: { token: string }) {
+function RoomAnalytics({ token }: { token: string }) {
   const today = new Intl.DateTimeFormat("sv-SE", {
     timeZone: "Asia/Manila",
     dateStyle: "short",
@@ -183,14 +199,8 @@ export default function StaffAnalytics({ token }: { token: string }) {
     }
   }
   const filters = new URLSearchParams(query);
-  const money = (row: Money) => [
-    pesos(row.gross),
-    pesos(row.refunds),
-    pesos(row.net),
-  ];
   return (
-    <section className="mt-8 space-y-6">
-      <h2 className="text-2xl font-semibold">Analytics</h2>
+    <section aria-label="Room analytics" className="space-y-6">
       <form
         className="flex flex-wrap items-end gap-4 rounded-xl bg-canvas p-4"
         onSubmit={(event) => {
@@ -340,6 +350,167 @@ export default function StaffAnalytics({ token }: { token: string }) {
             ])}
           />
         </>
+      )}
+    </section>
+  );
+}
+
+function HallAnalytics({ token }: { token: string }) {
+  const [filters, setFilters] = React.useState<URLSearchParams>();
+  const [result, setResult] = React.useState<{
+    filters: URLSearchParams;
+    report?: HallReport;
+    error?: string;
+  }>();
+  const report = result?.filters === filters ? result?.report : undefined;
+  const error = result?.filters === filters ? result?.error : undefined;
+
+  React.useEffect(() => {
+    if (!filters) return;
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const response = await fetch(
+          `${apiBase}/staff/hall/reports?${filters}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
+          },
+        );
+        const data = await response.json();
+        if (!response.ok)
+          throw new Error(data.error ?? "Function Hall report unavailable.");
+        if (!controller.signal.aborted) setResult({ filters, report: data });
+      } catch (cause) {
+        if (!controller.signal.aborted)
+          setResult({
+            filters,
+            error:
+              cause instanceof Error
+                ? cause.message
+                : "Function Hall report unavailable.",
+          });
+      }
+    })();
+    return () => controller.abort();
+  }, [filters, token]);
+
+  return (
+    <section aria-label="Function Hall report" className="space-y-6">
+      <form
+        className="flex flex-wrap items-end gap-4 rounded-xl bg-canvas p-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const form = new FormData(event.currentTarget);
+          setFilters(
+            new URLSearchParams({
+              from: String(form.get("from")),
+              to: String(form.get("to")),
+            }),
+          );
+        }}
+      >
+        <label>
+          From (Manila)
+          <input
+            className="block min-h-11 rounded border border-subtle bg-white px-2"
+            name="from"
+            type="date"
+            required
+          />
+        </label>
+        <label>
+          Through (Manila)
+          <input
+            className="block min-h-11 rounded border border-subtle bg-white px-2"
+            name="to"
+            type="date"
+            required
+          />
+        </label>
+        <button
+          className="min-h-11 rounded bg-primary px-4 text-white disabled:opacity-50"
+          disabled={!!filters && !report && !error}
+        >
+          View report
+        </button>
+      </form>
+      {error && <p role="alert">{error}</p>}
+      {filters && !error && !report && (
+        <p role="status">Loading Function Hall report…</p>
+      )}
+      {report && (
+        <>
+          <dl className="grid gap-3 sm:grid-cols-3">
+            {["Gross collections", "Completed refunds", "Net Collections"].map(
+              (label, index) => (
+                <div key={label} className="rounded-xl bg-canvas p-4">
+                  <dt>{label}</dt>
+                  <dd className="break-all text-xl font-semibold">
+                    {money(report)[index]}
+                  </dd>
+                </div>
+              ),
+            )}
+          </dl>
+          <p>
+            {report.utilization.bookings} bookings ·{" "}
+            {report.utilization.scheduled_minutes} scheduled event minutes ·{" "}
+            {report.utilization.actual_minutes} actual occupied minutes ·{" "}
+            {report.utilization.preparation_minutes} setup minutes ·{" "}
+            {report.utilization.cleanup_minutes} cleanup minutes
+          </p>
+          <Table
+            title="Daily Hall collections"
+            columns={["Manila day", "Gross", "Refunds", "Net Collections"]}
+            rows={report.days.map((day) => [day.day, ...money(day)])}
+          />
+        </>
+      )}
+    </section>
+  );
+}
+
+export default function StaffAnalytics({
+  token,
+  hallEnabled = false,
+}: {
+  token: string;
+  hallEnabled?: boolean;
+}) {
+  const [hallSelected, setHallSelected] = React.useState(false);
+  const showingHall = hallEnabled && hallSelected;
+
+  return (
+    <section className="mt-8 space-y-6">
+      <h2 className="text-2xl font-semibold">Analytics</h2>
+      {hallEnabled && (
+        <nav aria-label="Analytics reports" className="flex flex-wrap gap-3">
+          {(
+            [
+              ["Rooms", false],
+              ["Function Hall", true],
+            ] as const
+          ).map(([label, hall]) => (
+            <button
+              key={label}
+              type="button"
+              aria-pressed={showingHall === hall}
+              onClick={() => setHallSelected(hall)}
+              className="min-h-11 rounded-lg border border-subtle px-4 font-semibold text-primary aria-pressed:bg-selected"
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+      )}
+      <div hidden={showingHall}>
+        <RoomAnalytics token={token} />
+      </div>
+      {hallEnabled && (
+        <div hidden={!showingHall}>
+          <HallAnalytics key={token} token={token} />
+        </div>
       )}
     </section>
   );

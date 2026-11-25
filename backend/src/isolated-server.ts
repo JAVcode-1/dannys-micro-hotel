@@ -42,19 +42,28 @@ const staff = {
   id: "a3333333-3333-4333-8333-333333333333",
   email: "staff@example.test",
 };
-const adminFile = new URL("../../.quality/isolated-development/admin-account.json", import.meta.url);
+const adminFile = new URL(
+  "../../.quality/isolated-development/admin-account.json",
+  import.meta.url,
+);
 const admin = existsSync(adminFile)
-  ? JSON.parse(readFileSync(adminFile, "utf8")) as {
-      id: string; username: string; email: string; salt: string; passwordHash: string;
-    }
+  ? (JSON.parse(readFileSync(adminFile, "utf8")) as {
+      id: string;
+      username: string;
+      email: string;
+      salt: string;
+      passwordHash: string;
+    })
   : null;
-if (admin && (
-  !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(admin.id) ||
-  !/^[a-z0-9_-]{1,40}$/.test(admin.username) ||
-  !/^[a-z0-9_-]+@example\.test$/.test(admin.email) ||
-  !/^[0-9a-f]{64}$/.test(admin.salt) ||
-  !/^[0-9a-f]{128}$/.test(admin.passwordHash)
-)) throw new Error("Invalid local admin account configuration.");
+if (
+  admin &&
+  (!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(admin.id) ||
+    !/^[a-z0-9_-]{1,40}$/.test(admin.username) ||
+    !/^[a-z0-9_-]+@example\.test$/.test(admin.email) ||
+    !/^[0-9a-f]{64}$/.test(admin.salt) ||
+    !/^[0-9a-f]{128}$/.test(admin.passwordHash))
+)
+  throw new Error("Invalid local admin account configuration.");
 // JWT-shaped fixture identifiers support subject-scoped UI retry storage. These are
 // never signature-verified: this isolated server accepts only its exact random tokens.
 const fixtureToken = (id: string) =>
@@ -67,7 +76,8 @@ const fixtureToken = (id: string) =>
 const staffToken = fixtureToken(staff.id);
 const adminToken = admin ? fixtureToken(admin.id) : null;
 const staffSessions = new Map([[staffToken, staff]]);
-if (admin && adminToken) staffSessions.set(adminToken, { id: admin.id, email: admin.email });
+if (admin && adminToken)
+  staffSessions.set(adminToken, { id: admin.id, email: admin.email });
 await pool.query(
   "select 'staytrack.notification_outbox'::regclass,'staytrack.reservation_booking_contacts'::regclass",
 );
@@ -80,7 +90,10 @@ await pool.query(
   [staff.id],
 );
 if (admin) {
-  await pool.query("insert into auth.users(id) values($1) on conflict do nothing", [admin.id]);
+  await pool.query(
+    "insert into auth.users(id) values($1) on conflict do nothing",
+    [admin.id],
+  );
   await pool.query(
     "insert into staytrack.staff_accounts(auth_user_id,active) values($1,true) on conflict(auth_user_id) do nothing",
     [admin.id],
@@ -99,7 +112,8 @@ const app = createIsolatedApp({
     const identity = staffSessions.get(token);
     if (!identity) return null;
     const active = await pool.query(
-      "select 1 from staytrack.staff_accounts where auth_user_id=$1 and active", [identity.id],
+      "select 1 from staytrack.staff_accounts where auth_user_id=$1 and active",
+      [identity.id],
     );
     return active.rowCount === 1 ? identity : null;
   },
@@ -145,17 +159,24 @@ app.post("/development/login", (req, res) => {
   if (Date.now() - loginWindow.started >= 60000)
     loginWindow = { started: Date.now(), attempts: 0 };
   if (++loginWindow.attempts > 10) {
-    res.status(429).json({ error: "Too many sign-in attempts. Try again in a minute." });
+    res
+      .status(429)
+      .json({ error: "Too many sign-in attempts. Try again in a minute." });
     return;
   }
-  const username = typeof req.body?.username === "string" ? req.body.username.trim().toLowerCase() : "";
+  const username =
+    typeof req.body?.username === "string"
+      ? req.body.username.trim().toLowerCase()
+      : "";
   const password = req.body?.password;
   let token: string | null = null;
   if (typeof password === "string" && password.length <= 256) {
     if (admin && (username === admin.username || username === admin.email)) {
       const hash = scryptSync(password, Buffer.from(admin.salt, "hex"), 64);
-      if (timingSafeEqual(hash, Buffer.from(admin.passwordHash, "hex"))) token = adminToken;
-    } else if (username === staff.email && password === "development-only") token = staffToken;
+      if (timingSafeEqual(hash, Buffer.from(admin.passwordHash, "hex")))
+        token = adminToken;
+    } else if (username === staff.email && password === "development-only")
+      token = staffToken;
   }
   if (!token) {
     res.status(401).json({ error: "Invalid local staff credentials." });

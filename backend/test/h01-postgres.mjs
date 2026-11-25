@@ -478,7 +478,9 @@ export async function h01Postgres(t, pool) {
         pool,
       );
       const originalDeadlines = await Promise.all(
-        [alreadyReady, awaitingReady].map(async (room) => (await board(room)).turnover_until),
+        [alreadyReady, awaitingReady].map(
+          async (room) => (await board(room)).turnover_until,
+        ),
       );
       await pool.query(
         readFileSync(
@@ -506,7 +508,10 @@ export async function h01Postgres(t, pool) {
             [room.item.id],
           )
         ).rows[0];
-        assert.deepEqual(block.planned_turnover_end_at, originalDeadlines[index]);
+        assert.deepEqual(
+          block.planned_turnover_end_at,
+          originalDeadlines[index],
+        );
         await checkIn(actor, room.sibling.id, room.room, key(), pool);
       }
     },

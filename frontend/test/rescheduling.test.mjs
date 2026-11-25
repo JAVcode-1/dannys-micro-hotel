@@ -83,9 +83,7 @@ test("X02 guest form isolates item state and preserves inputs on conflict", asyn
   fireEvent.change(screen.getByLabelText("Note for staff - A"), {
     target: { value: "New arrival" },
   });
-  fireEvent.click(
-    screen.getByRole("button", { name: "Send request - A" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Send request - A" }));
   await waitFor(() => assert.ok(screen.getByRole("alert")));
   assert.equal(screen.getByLabelText("Arrival date - A").value, "2027-01-02");
   assert.equal(screen.getByLabelText("Arrival date - B").value, peer);

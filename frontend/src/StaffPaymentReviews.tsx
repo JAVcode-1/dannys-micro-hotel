@@ -84,8 +84,13 @@ export function PaymentReviewPanel({
     );
     return () => clearTimeout(timer);
   }, [proof]);
+  const receivedClock = manilaClock(hour, minute, period);
   function syncReceivedTime() {
-    const manila = new Date(Date.parse(review.submittedAt) + 8 * 60 * 60 * 1000);
+    const previousTime = Date.parse(
+      syncedTime ?? `${date}T${receivedClock}:00+08:00`,
+    );
+    const bookingTime = Date.parse(review.submittedAt);
+    const manila = new Date(bookingTime + 8 * 60 * 60 * 1000);
     const syncedHour = manila.getUTCHours();
     setSyncedTime(review.submittedAt);
     setCorrectingTime(false);
@@ -93,9 +98,9 @@ export function PaymentReviewPanel({
     setHour(String(syncedHour % 12 || 12));
     setMinute(String(manila.getUTCMinutes()).padStart(2, "0"));
     setPeriod(syncedHour >= 12 ? "PM" : "AM");
-    setChecks([checks[0], checks[1], false]);
+    if (Number.isFinite(previousTime) && previousTime !== bookingTime)
+      setChecks(([ledger, account]) => [ledger, account, false]);
   }
-  const receivedClock = manilaClock(hour, minute, period);
   async function submit(event: FormEvent, choice = decision) {
     event.preventDefault();
     if (busy) return;
@@ -125,7 +130,11 @@ export function PaymentReviewPanel({
     }
     if (choice === "confirmed") {
       const receivedMs = Date.parse(`${date}T${receivedClock}:00+08:00`);
-      if (!Number.isFinite(receivedMs) || !receivedCentavos || !review.payeeLabel) {
+      if (
+        !Number.isFinite(receivedMs) ||
+        !receivedCentavos ||
+        !review.payeeLabel
+      ) {
         setMessage(
           "Enter the received amount and verify the configured payee and received time.",
         );
@@ -608,7 +617,6 @@ export default function StaffPaymentReviews({ token }: { token: string }) {
           Refresh queue
         </button>
       </div>
-      <NotificationDeliveryStatus token={token} revision={revision} />
       {message && (
         <p role="status" className="mb-4 text-muted">
           {message}
@@ -670,61 +678,6 @@ export default function StaffPaymentReviews({ token }: { token: string }) {
         </div>
       )}
     </section>
-  );
-}
-
-function NotificationDeliveryStatus({
-  token,
-  revision,
-}: {
-  token: string;
-  revision: number;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const [message, setMessage] = useState("");
-  useEffect(() => {
-    if (!expanded) return;
-    const controller = new AbortController();
-    void fetch(`${apiBase}/staff/notifications`, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Notification status unavailable.");
-        const data = (await response.json()) as {
-          deliveryConfigured: boolean;
-          states: { state: string; count: number }[];
-        };
-        const count = (state: string) =>
-          data.states.find((row) => row.state === state)?.count ?? 0;
-        if (!controller.signal.aborted)
-          setMessage(
-            `${data.deliveryConfigured ? "Booking email delivery configured" : "Booking emails are queued until the email provider is configured"}. Pending: ${count("pending")}. Failed: ${count("failed")}. Provider acceptance does not guarantee inbox delivery.`,
-          );
-      })
-      .catch(() => {
-        if (!controller.signal.aborted)
-          setMessage("Email delivery status is unavailable.");
-      });
-    return () => controller.abort();
-  }, [expanded, token, revision]);
-  return (
-    <details
-      className="mb-4 text-sm"
-      onToggle={(event) => {
-        setExpanded(event.currentTarget.open);
-        if (!event.currentTarget.open) setMessage("");
-      }}
-    >
-      <summary className="cursor-pointer font-semibold text-primary">
-        Booking email status
-      </summary>
-      {expanded && (
-        <p role="status" className="mt-2 text-muted">
-          {message || "Loading email delivery status…"}
-        </p>
-      )}
-    </details>
   );
 }
 

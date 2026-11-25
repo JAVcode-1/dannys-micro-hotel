@@ -48,10 +48,10 @@ test("H03 staff audit sends filters and cursor and displays missing historical s
       target: { value: "fixture.open" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Search audit" }));
-    await screen.findByText("fixture.open");
+    await screen.findByText("Fixture open");
     assert.equal(requests.at(-1).get("action"), "fixture.open");
     fireEvent.click(screen.getByRole("button", { name: "Next page" }));
-    await screen.findByText("fixture.next");
+    await screen.findByText("Fixture next");
     assert.equal(requests.at(-1).get("action"), "fixture.open");
     assert.equal(requests.at(-1).get("cursor"), "next-cursor");
   } finally {

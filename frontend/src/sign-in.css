@@ -43,8 +43,12 @@
   font-size: 14px;
   line-height: 1.7;
 }
-.staff-signin-content form { margin-top: 32px; }
-.staff-signin-field + .staff-signin-field { margin-top: 24px; }
+.staff-signin-content form {
+  margin-top: 32px;
+}
+.staff-signin-field + .staff-signin-field {
+  margin-top: 24px;
+}
 .staff-signin-field label {
   font-size: 13px;
   font-weight: 600;
@@ -66,7 +70,12 @@
   border-radius: 10px;
   background: var(--surface-card);
 }
-.staff-signin-input > svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--text-muted); }
+.staff-signin-input > svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
 .staff-signin-input input {
   width: 100%;
   min-width: 0;
@@ -78,14 +87,22 @@
   color: var(--text-main);
   font-size: 16px;
 }
-.staff-signin-input input::placeholder { color: var(--text-muted); opacity: 0.8; font-size: 14px; }
+.staff-signin-input input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.8;
+  font-size: 14px;
+}
 .staff-signin-input:focus-within {
   border-color: var(--brand-primary);
-  box-shadow: 0 0 0 0.5px var(--brand-primary), 0 0 0 4px rgb(36 67 182 / 9%);
+  box-shadow:
+    0 0 0 0.5px var(--brand-primary),
+    0 0 0 4px rgb(36 67 182 / 9%);
 }
 .staff-signin-field[data-invalid="true"] .staff-signin-input {
   border-color: #b42318;
-  box-shadow: 0 0 0 0.5px #b42318, 0 0 0 4px rgb(180 35 24 / 7%);
+  box-shadow:
+    0 0 0 0.5px #b42318,
+    0 0 0 4px rgb(180 35 24 / 7%);
 }
 .staff-signin-eye {
   display: grid;
@@ -110,7 +127,12 @@
   font-weight: 600;
   cursor: pointer;
 }
-.staff-signin-field-error { margin-top: 8px; color: #b42318; font-size: 12px; line-height: 1.6; }
+.staff-signin-field-error {
+  margin-top: 8px;
+  color: #b42318;
+  font-size: 12px;
+  line-height: 1.6;
+}
 .staff-signin-submit {
   position: relative;
   isolation: isolate;
@@ -126,27 +148,84 @@
   font-weight: 650;
   cursor: pointer;
 }
-.staff-signin-submit:disabled { cursor: wait; }
+.staff-signin-submit:disabled {
+  cursor: wait;
+}
 .staff-signin-submit::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: linear-gradient(110deg, transparent 20%, rgb(255 255 255 / 22%) 50%, transparent 80%);
+  background: linear-gradient(
+    110deg,
+    transparent 20%,
+    rgb(255 255 255 / 22%) 50%,
+    transparent 80%
+  );
   transform: translateX(-100%);
   opacity: 0;
 }
-.staff-signin-submit-label { display: grid; overflow: hidden; line-height: 24px; }
-.staff-signin-submit-label > span { grid-area: 1 / 1; transition: transform 180ms var(--signin-ease), opacity 180ms var(--signin-ease); }
-.staff-signin-submit-label > span:last-child { transform: translateY(100%); opacity: 0; }
-.staff-signin-submit[data-busy="true"] .staff-signin-submit-label > span:first-child { transform: translateY(-100%); opacity: 0; }
-.staff-signin-submit[data-busy="true"] .staff-signin-submit-label > span:last-child { transform: translateY(0); opacity: 1; }
-.staff-signin-access { margin-top: 24px; text-align: center; color: var(--text-muted); font-size: 12px; line-height: 1.8; }
-.staff-signin-access strong { color: var(--text-main); font-weight: 550; }
-.staff-signin-message { margin-top: 20px; padding: 12px 16px; border-radius: 8px; background: var(--surface-selected); color: var(--text-main); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
-.staff-signin-footer { text-align: center; font-size: 11px; color: var(--text-muted); line-height: 1.7; }
-.staff-signin-mobile-brand { display: none; }
-.staff-signin-shell :is(a, button):focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 4px; }
+.staff-signin-submit-label {
+  display: grid;
+  overflow: hidden;
+  line-height: 24px;
+}
+.staff-signin-submit-label > span {
+  grid-area: 1 / 1;
+  transition:
+    transform 180ms var(--signin-ease),
+    opacity 180ms var(--signin-ease);
+}
+.staff-signin-submit-label > span:last-child {
+  transform: translateY(100%);
+  opacity: 0;
+}
+.staff-signin-submit[data-busy="true"]
+  .staff-signin-submit-label
+  > span:first-child {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+.staff-signin-submit[data-busy="true"]
+  .staff-signin-submit-label
+  > span:last-child {
+  transform: translateY(0);
+  opacity: 1;
+}
+.staff-signin-access {
+  margin-top: 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.staff-signin-access strong {
+  color: var(--text-main);
+  font-weight: 550;
+}
+.staff-signin-message {
+  margin-top: 20px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--surface-selected);
+  color: var(--text-main);
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.staff-signin-footer {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+.staff-signin-mobile-brand {
+  display: none;
+}
+.staff-signin-shell :is(a, button):focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 4px;
+}
 .staff-signin-hotel {
   position: relative;
   isolation: isolate;
@@ -158,7 +237,13 @@
   overflow: hidden;
   border-radius: 22px;
   color: white;
-  background: radial-gradient(ellipse at 100% 0%, rgb(161 181 255 / 38%), transparent 55%), linear-gradient(160deg, var(--brand-primary), var(--text-main));
+  background:
+    radial-gradient(
+      ellipse at 100% 0%,
+      rgb(161 181 255 / 38%),
+      transparent 55%
+    ),
+    linear-gradient(160deg, var(--brand-primary), var(--text-main));
 }
 .staff-signin-hotel::before {
   content: "";
@@ -166,64 +251,258 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: radial-gradient(circle, rgb(255 255 255 / 22%) 1px, transparent 1.5px) 0 0 / 22px 22px;
+  background: radial-gradient(
+      circle,
+      rgb(255 255 255 / 22%) 1px,
+      transparent 1.5px
+    )
+    0 0 / 22px 22px;
   mask-image: linear-gradient(black, transparent 80%);
 }
-.staff-signin-hotel .signin-brand { gap: 12px; }
-.staff-signin-hotel .signin-brand img { width: 48px; height: 48px; }
-.staff-signin-hotel-copy { margin-top: clamp(32px, 5vh, 64px); }
-.staff-signin-hotel-copy .signin-eyebrow { color: rgb(255 255 255 / 75%); }
-.staff-signin-hotel-copy h2 { margin-top: 16px; font-family: "Palatino Linotype", Palatino, Georgia, serif; font-size: clamp(32px, 3.6vw, 54px); font-weight: 400; line-height: 1.1; letter-spacing: -0.035em; }
-.staff-signin-hotel-copy > p:last-child { max-width: 36ch; margin-top: 20px; color: rgb(255 255 255 / 78%); font-size: 14px; line-height: 1.8; }
-.staff-signin-hotel-scene { position: relative; width: 100%; max-width: 540px; min-height: 340px; margin: auto; padding-block: 36px; }
-.staff-signin-hotel-photo { position: absolute; inset: 32px 24px 44px; overflow: hidden; border: 1px solid rgb(255 255 255 / 24%); border-radius: 16px; background: var(--text-main); box-shadow: 0 24px 48px rgb(0 0 0 / 18%); }
-.staff-signin-hotel-photo img { width: 100%; height: 100%; object-fit: cover; }
-.staff-signin-hotel-photo::after { content: ""; position: absolute; inset: 40% 0 0; background: linear-gradient(transparent, rgb(23 33 61 / 85%)); }
-.staff-signin-hotel-photo figcaption { position: absolute; bottom: 20px; left: 20px; right: 20px; z-index: 1; font-size: 12px; }
-.staff-signin-glass { position: absolute; display: flex; align-items: center; gap: 12px; max-width: 90%; padding: 14px 16px; border: 1px solid rgb(255 255 255 / 25%); border-radius: 12px; background: rgb(23 33 61 / 76%); backdrop-filter: blur(12px); box-shadow: 0 8px 24px rgb(0 0 0 / 12%); }
-.staff-signin-glass > span { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 9px; background: rgb(255 255 255 / 12%); }
-.staff-signin-glass small { display: block; color: rgb(255 255 255 / 72%); font-size: 8px; letter-spacing: 0.1em; font-weight: 650; }
-.staff-signin-glass strong { display: block; margin-top: 5px; font-size: 12px; font-weight: 600; }
-.staff-signin-glass p { margin-top: 3px; color: rgb(255 255 255 / 78%); font-size: 11px; }
-.staff-signin-glass-arrival { top: 12px; left: 0; }
-.staff-signin-glass-rooms { top: 40%; right: 0; }
-.staff-signin-glass-care { bottom: 16px; left: 16px; }
-.staff-signin-hotel-footer { margin-top: 24px; padding-top: 24px; border-top: 1px solid rgb(255 255 255 / 18%); }
-.staff-signin-hotel-footer p { max-width: 38ch; font-family: "Palatino Linotype", Palatino, Georgia, serif; font-size: 18px; line-height: 1.5; }
-.staff-signin-hotel-footer > span { display: block; margin-top: 12px; color: rgb(255 255 255 / 65%); font-size: 10px; }
-.staff-signin-hotel a:focus-visible { outline-color: white; }
+.staff-signin-hotel .signin-brand {
+  gap: 12px;
+}
+.staff-signin-hotel .signin-brand img {
+  width: 48px;
+  height: 48px;
+}
+.staff-signin-hotel-copy {
+  margin-top: clamp(32px, 5vh, 64px);
+}
+.staff-signin-hotel-copy .signin-eyebrow {
+  color: rgb(255 255 255 / 75%);
+}
+.staff-signin-hotel-copy h2 {
+  margin-top: 16px;
+  font-family: "Palatino Linotype", Palatino, Georgia, serif;
+  font-size: clamp(32px, 3.6vw, 54px);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+}
+.staff-signin-hotel-copy > p:last-child {
+  max-width: 36ch;
+  margin-top: 20px;
+  color: rgb(255 255 255 / 78%);
+  font-size: 14px;
+  line-height: 1.8;
+}
+.staff-signin-hotel-scene {
+  position: relative;
+  width: 100%;
+  max-width: 540px;
+  min-height: 340px;
+  margin: auto;
+  padding-block: 36px;
+}
+.staff-signin-hotel-photo {
+  position: absolute;
+  inset: 32px 24px 44px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 24%);
+  border-radius: 16px;
+  background: var(--text-main);
+  box-shadow: 0 24px 48px rgb(0 0 0 / 18%);
+}
+.staff-signin-hotel-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.staff-signin-hotel-photo::after {
+  content: "";
+  position: absolute;
+  inset: 40% 0 0;
+  background: linear-gradient(transparent, rgb(23 33 61 / 85%));
+}
+.staff-signin-hotel-photo figcaption {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  right: 20px;
+  z-index: 1;
+  font-size: 12px;
+}
+.staff-signin-glass {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 90%;
+  padding: 14px 16px;
+  border: 1px solid rgb(255 255 255 / 25%);
+  border-radius: 12px;
+  background: rgb(23 33 61 / 76%);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+}
+.staff-signin-glass > span {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: rgb(255 255 255 / 12%);
+}
+.staff-signin-glass small {
+  display: block;
+  color: rgb(255 255 255 / 72%);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  font-weight: 650;
+}
+.staff-signin-glass strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.staff-signin-glass p {
+  margin-top: 3px;
+  color: rgb(255 255 255 / 78%);
+  font-size: 11px;
+}
+.staff-signin-glass-arrival {
+  top: 12px;
+  left: 0;
+}
+.staff-signin-glass-rooms {
+  top: 40%;
+  right: 0;
+}
+.staff-signin-glass-care {
+  bottom: 16px;
+  left: 16px;
+}
+.staff-signin-hotel-footer {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgb(255 255 255 / 18%);
+}
+.staff-signin-hotel-footer p {
+  max-width: 38ch;
+  font-family: "Palatino Linotype", Palatino, Georgia, serif;
+  font-size: 18px;
+  line-height: 1.5;
+}
+.staff-signin-hotel-footer > span {
+  display: block;
+  margin-top: 12px;
+  color: rgb(255 255 255 / 65%);
+  font-size: 10px;
+}
+.staff-signin-hotel a:focus-visible {
+  outline-color: white;
+}
 @media (hover: hover) and (pointer: fine) {
-  .staff-signin-submit:not(:disabled):hover { background: var(--brand-primary-hover); }
-  .staff-signin-eye:hover { background: var(--surface-selected); color: var(--brand-primary); }
-  .staff-signin-recover:not(:disabled):hover { text-decoration: underline; text-underline-offset: 3px; }
+  .staff-signin-submit:not(:disabled):hover {
+    background: var(--brand-primary-hover);
+  }
+  .staff-signin-eye:hover {
+    background: var(--surface-selected);
+    color: var(--brand-primary);
+  }
+  .staff-signin-recover:not(:disabled):hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .staff-signin-glass { animation: staff-signin-float 7s cubic-bezier(0.77, 0, 0.175, 1) infinite; }
-  .staff-signin-glass-rooms { animation-delay: -2.3s; }
-  .staff-signin-glass-care { animation-delay: -4.6s; }
-  .staff-signin-submit[data-busy="true"]::before { opacity: 1; animation: staff-signin-sheen 1.8s linear infinite; }
-  .staff-signin-field[data-invalid="true"] .staff-signin-input { animation: staff-signin-shake 380ms cubic-bezier(0.77, 0, 0.175, 1); }
-  @keyframes staff-signin-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-  @keyframes staff-signin-sheen { to { transform: translateX(100%); } }
-  @keyframes staff-signin-shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-4px); } 40%, 80% { transform: translateX(4px); } }
+  .staff-signin-glass {
+    animation: staff-signin-float 7s cubic-bezier(0.77, 0, 0.175, 1) infinite;
+  }
+  .staff-signin-glass-rooms {
+    animation-delay: -2.3s;
+  }
+  .staff-signin-glass-care {
+    animation-delay: -4.6s;
+  }
+  .staff-signin-submit[data-busy="true"]::before {
+    opacity: 1;
+    animation: staff-signin-sheen 1.8s linear infinite;
+  }
+  .staff-signin-field[data-invalid="true"] .staff-signin-input {
+    animation: staff-signin-shake 380ms cubic-bezier(0.77, 0, 0.175, 1);
+  }
+  @keyframes staff-signin-float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-8px);
+    }
+  }
+  @keyframes staff-signin-sheen {
+    to {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes staff-signin-shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    20%,
+    60% {
+      transform: translateX(-4px);
+    }
+    40%,
+    80% {
+      transform: translateX(4px);
+    }
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .staff-signin-submit-label > span { transition: none; }
+  .staff-signin-submit-label > span {
+    transition: none;
+  }
 }
 @media (max-width: 1000px) and (min-width: 760px) {
-  .staff-signin-hotel { padding: 28px; }
-  .staff-signin-hotel-scene { min-height: 360px; }
-  .staff-signin-glass { gap: 8px; padding: 12px; }
-  .staff-signin-glass strong { font-size: 11px; }
-  .staff-signin-glass-care { left: 0; }
+  .staff-signin-hotel {
+    padding: 28px;
+  }
+  .staff-signin-hotel-scene {
+    min-height: 360px;
+  }
+  .staff-signin-glass {
+    gap: 8px;
+    padding: 12px;
+  }
+  .staff-signin-glass strong {
+    font-size: 11px;
+  }
+  .staff-signin-glass-care {
+    left: 0;
+  }
 }
 @media (max-width: 759px) {
-  .staff-signin-shell { grid-template-columns: minmax(0, 1fr); }
-  .staff-signin-hotel { display: none; }
-  .staff-signin-form-panel { padding: max(20px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); }
-  .staff-signin-form-wrap { padding-block: 32px; }
-  .staff-signin-mobile-brand { display: inline-flex; margin-bottom: 28px; }
-  .staff-signin-mobile-brand img { width: 48px; height: 48px; border-radius: 8px; object-fit: contain; }
+  .staff-signin-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .staff-signin-hotel {
+    display: none;
+  }
+  .staff-signin-form-panel {
+    padding: max(20px, env(safe-area-inset-top))
+      max(24px, env(safe-area-inset-right))
+      max(20px, env(safe-area-inset-bottom))
+      max(24px, env(safe-area-inset-left));
+  }
+  .staff-signin-form-wrap {
+    padding-block: 32px;
+  }
+  .staff-signin-mobile-brand {
+    display: inline-flex;
+    margin-bottom: 28px;
+  }
+  .staff-signin-mobile-brand img {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    object-fit: contain;
+  }
 }
 /* Shared guest sign-in presentation. */
 .signin-shell {
@@ -242,7 +521,9 @@
   display: grid;
   align-content: center;
   padding: clamp(1rem, 3vw, 2rem);
-  background: linear-gradient(rgb(250 250 253 / 92%), rgb(238 233 250 / 95%)), url("/hotel/daytime-1440.webp") center / cover;
+  background:
+    linear-gradient(rgb(250 250 253 / 92%), rgb(238 233 250 / 95%)),
+    url("/hotel/daytime-1440.webp") center / cover;
 }
 .signin-brand-panel {
   position: relative;
@@ -253,7 +534,9 @@
   min-width: 0;
   padding: 1.75rem;
   color: white;
-  background: linear-gradient(160deg, rgb(36 67 182 / 96%) 15%, rgb(23 33 61 / 88%) 100%), url("/hotel/daytime-960.webp") center / cover;
+  background:
+    linear-gradient(160deg, rgb(36 67 182 / 96%) 15%, rgb(23 33 61 / 88%) 100%),
+    url("/hotel/daytime-960.webp") center / cover;
 }
 .signin-brand {
   display: inline-flex;
@@ -264,17 +547,38 @@
   color: white;
   text-decoration: none;
 }
-.signin-brand img { flex-shrink: 0; width: 3rem; height: 3rem; padding: 0.25rem; border-radius: 0.6rem; background: white; object-fit: contain; }
+.signin-brand img {
+  flex-shrink: 0;
+  width: 3rem;
+  height: 3rem;
+  padding: 0.25rem;
+  border-radius: 0.6rem;
+  background: white;
+  object-fit: contain;
+}
 .signin-brand > span {
   font-family: "Palatino Linotype", Palatino, Georgia, serif;
   font-size: 1.5rem;
   font-weight: 700;
   line-height: 1;
 }
-.signin-brand small { display: block; margin-top: 0.4rem; font: 600 0.6rem "Segoe UI", sans-serif; letter-spacing: 0.18em; }
-.signin-brand-copy { margin-top: 1.5rem; }
+.signin-brand small {
+  display: block;
+  margin-top: 0.4rem;
+  font:
+    600 0.6rem "Segoe UI",
+    sans-serif;
+  letter-spacing: 0.18em;
+}
+.signin-brand-copy {
+  margin-top: 1.5rem;
+}
 .signin-eyebrow,
-.signin-form-eyebrow { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.16em; }
+.signin-form-eyebrow {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
 .signin-brand-panel .signin-brand-copy h2 {
   margin-top: 0.8rem;
   color: white;
@@ -284,8 +588,20 @@
   line-height: 1.06;
   letter-spacing: -0.04em;
 }
-.signin-brand-copy > p:last-child { max-width: 35ch; margin-top: 1rem; font-size: 0.875rem; line-height: 1.7; color: rgb(255 255 255 / 80%); }
-.signin-card-scene { position: relative; width: 100%; max-width: 25rem; height: 13rem; margin: 1.25rem auto 1rem; }
+.signin-brand-copy > p:last-child {
+  max-width: 35ch;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.7;
+  color: rgb(255 255 255 / 80%);
+}
+.signin-card-scene {
+  position: relative;
+  width: 100%;
+  max-width: 25rem;
+  height: 13rem;
+  margin: 1.25rem auto 1rem;
+}
 .signin-photo-card {
   position: absolute;
   inset: 1rem 2rem 1rem 3rem;
@@ -297,7 +613,12 @@
   box-shadow: 0 20px 35px rgb(0 0 0 / 20%);
   transform: rotate(-5deg);
 }
-.signin-photo-card > img { width: 100%; height: 100%; object-fit: cover; object-position: center 70%; }
+.signin-photo-card > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 70%;
+}
 .signin-floating-card {
   position: absolute;
   display: flex;
@@ -311,21 +632,76 @@
   color: var(--text-main);
   box-shadow: 0 12px 28px rgb(0 0 0 / 18%);
 }
-.signin-floating-top { top: 0; right: 0; transform: rotate(3deg); }
-.signin-floating-bottom { bottom: 0; left: 0; transform: rotate(2deg); }
-.signin-floating-card > div { display: grid; gap: 0.2rem; min-width: 0; }
-.signin-floating-card small { color: var(--text-muted); font-size: 0.5rem; letter-spacing: 0.1em; font-weight: 700; }
-.signin-floating-card strong { font-size: 0.8rem; }
-.signin-floating-card div > span { color: var(--text-muted); font-size: 0.65rem; }
-.signin-card-symbol { display: grid; place-items: center; flex-shrink: 0; width: 2rem; height: 2rem; border-radius: 0.6rem; color: var(--brand-primary); background: var(--surface-selected); font-size: 1.2rem; }
-.signin-floating-bottom .signin-card-symbol { color: var(--text-main); background: var(--accent-lavender); }
-.signin-quote { margin-top: auto; padding-top: 1rem; border-top: 1px solid rgb(255 255 255 / 22%); }
+.signin-floating-top {
+  top: 0;
+  right: 0;
+  transform: rotate(3deg);
+}
+.signin-floating-bottom {
+  bottom: 0;
+  left: 0;
+  transform: rotate(2deg);
+}
+.signin-floating-card > div {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.signin-floating-card small {
+  color: var(--text-muted);
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+}
+.signin-floating-card strong {
+  font-size: 0.8rem;
+}
+.signin-floating-card div > span {
+  color: var(--text-muted);
+  font-size: 0.65rem;
+}
+.signin-card-symbol {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.6rem;
+  color: var(--brand-primary);
+  background: var(--surface-selected);
+  font-size: 1.2rem;
+}
+.signin-floating-bottom .signin-card-symbol {
+  color: var(--text-main);
+  background: var(--accent-lavender);
+}
+.signin-quote {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid rgb(255 255 255 / 22%);
+}
 .signin-quote blockquote,
-.signin-brand-promise { margin-top: 0.6rem; font-family: "Palatino Linotype", Palatino, Georgia, serif; font-size: 1.1rem; line-height: 1.45; }
-.signin-quote blockquote { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; overflow-wrap: anywhere; }
+.signin-brand-promise {
+  margin-top: 0.6rem;
+  font-family: "Palatino Linotype", Palatino, Georgia, serif;
+  font-size: 1.1rem;
+  line-height: 1.45;
+}
+.signin-quote blockquote {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
 .signin-quote figcaption,
-.signin-quote-caption { margin-top: 0.85rem; font-size: 0.7rem; }
-.signin-quote figcaption span { color: rgb(255 255 255 / 70%); }
+.signin-quote-caption {
+  margin-top: 0.85rem;
+  font-size: 0.7rem;
+}
+.signin-quote figcaption span {
+  color: rgb(255 255 255 / 70%);
+}
 .signin-form-panel {
   grid-column: 2;
   grid-row: 1;
@@ -334,43 +710,132 @@
   min-width: 0;
   padding: clamp(1.5rem, 3vw, 2.5rem);
 }
-.signin-back { display: inline-flex; align-items: center; align-self: flex-start; min-height: 2.75rem; color: var(--text-muted); font-size: 0.8rem; text-decoration: none; }
-.signin-form-wrap { width: 100%; max-width: 21rem; margin: auto; padding-block: 1.5rem; }
-.signin-form-eyebrow { margin-bottom: 1rem; color: var(--brand-primary); }
-.signin-form-content > p:first-child { display: none; }
-.signin-shell .signin-form-content h1 { color: var(--text-main); font-family: "Palatino Linotype", Palatino, Georgia, serif; font-size: clamp(1.75rem, 2.5vw, 2.15rem); font-weight: 700; letter-spacing: -0.04em; line-height: 1.12; }
-.signin-form-content form { margin-top: 1.5rem; }
-.signin-form-content input { min-height: 3rem; font-size: 1rem; background: var(--surface-canvas); }
-.signin-form-content button { min-height: 2.75rem; }
-.signin-form-footer { text-align: center; font-size: 0.7rem; line-height: 1.6; color: var(--text-muted); }
-.signin-shell :is(a, button, input):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 4px; }
-.signin-brand-panel a:focus-visible { outline-color: white; }
+.signin-back {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: 2.75rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+.signin-form-wrap {
+  width: 100%;
+  max-width: 21rem;
+  margin: auto;
+  padding-block: 1.5rem;
+}
+.signin-form-eyebrow {
+  margin-bottom: 1rem;
+  color: var(--brand-primary);
+}
+.signin-form-content > p:first-child {
+  display: none;
+}
+.signin-shell .signin-form-content h1 {
+  color: var(--text-main);
+  font-family: "Palatino Linotype", Palatino, Georgia, serif;
+  font-size: clamp(1.75rem, 2.5vw, 2.15rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.12;
+}
+.signin-form-content form {
+  margin-top: 1.5rem;
+}
+.signin-form-content input {
+  min-height: 3rem;
+  font-size: 1rem;
+  background: var(--surface-canvas);
+}
+.signin-form-content button {
+  min-height: 2.75rem;
+}
+.signin-form-footer {
+  text-align: center;
+  font-size: 0.7rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+.signin-shell :is(a, button, input):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 4px;
+}
+.signin-brand-panel a:focus-visible {
+  outline-color: white;
+}
 .guest-content:has(> .signin-shell),
-.guest-content:has(> .email-code-screen) { padding-block: 1.25rem; }
+.guest-content:has(> .email-code-screen) {
+  padding-block: 1.25rem;
+}
 .signin-shell-compact {
   width: min(100%, 50rem);
   min-height: 0;
 }
 .signin-shell-compact .signin-brand-panel,
-.signin-shell-compact .signin-form-panel { padding: 1.25rem; }
-.signin-shell-compact .signin-brand img { width: 2.5rem; height: 2.5rem; }
-.signin-shell-compact .signin-brand > span { font-size: 1.3rem; }
-.signin-shell-compact .signin-brand-copy { margin-top: 1.25rem; }
-.signin-shell-compact .signin-brand-copy h2 { font-size: 2rem; }
-.signin-shell-compact .signin-brand-copy > p:last-child { margin-top: 0.75rem; font-size: 0.8rem; line-height: 1.6; }
-.signin-shell-compact .signin-card-scene { height: 10.5rem; margin-block: 1rem; }
-.signin-shell-compact .signin-photo-card { inset: 0.75rem 1.5rem 0.75rem 2rem; }
-.signin-shell-compact .signin-floating-card { gap: 0.5rem; padding: 0.5rem 0.65rem; }
-.signin-shell-compact .signin-floating-card strong { font-size: 0.7rem; }
-.signin-shell-compact .signin-floating-card div > span { font-size: 0.6rem; }
-.signin-shell-compact .signin-card-symbol { width: 1.75rem; height: 1.75rem; }
-.signin-shell-compact .signin-quote { padding-top: 0.75rem; }
+.signin-shell-compact .signin-form-panel {
+  padding: 1.25rem;
+}
+.signin-shell-compact .signin-brand img {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+.signin-shell-compact .signin-brand > span {
+  font-size: 1.3rem;
+}
+.signin-shell-compact .signin-brand-copy {
+  margin-top: 1.25rem;
+}
+.signin-shell-compact .signin-brand-copy h2 {
+  font-size: 2rem;
+}
+.signin-shell-compact .signin-brand-copy > p:last-child {
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+.signin-shell-compact .signin-card-scene {
+  height: 10.5rem;
+  margin-block: 1rem;
+}
+.signin-shell-compact .signin-photo-card {
+  inset: 0.75rem 1.5rem 0.75rem 2rem;
+}
+.signin-shell-compact .signin-floating-card {
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+}
+.signin-shell-compact .signin-floating-card strong {
+  font-size: 0.7rem;
+}
+.signin-shell-compact .signin-floating-card div > span {
+  font-size: 0.6rem;
+}
+.signin-shell-compact .signin-card-symbol {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+.signin-shell-compact .signin-quote {
+  padding-top: 0.75rem;
+}
 .signin-shell-compact .signin-brand-promise,
-.signin-shell-compact .signin-quote blockquote { font-size: 1rem; }
-.signin-shell-compact .signin-form-wrap { max-width: 20rem; padding-block: 1.25rem; }
-.signin-shell-compact .signin-form-content h1 { font-size: 1.8rem; }
-.signin-shell-compact .signin-form-content > p { font-size: 0.85rem; line-height: 1.6; }
-.signin-shell-compact .signin-form-content form { margin-top: 1.25rem; }
+.signin-shell-compact .signin-quote blockquote {
+  font-size: 1rem;
+}
+.signin-shell-compact .signin-form-wrap {
+  max-width: 20rem;
+  padding-block: 1.25rem;
+}
+.signin-shell-compact .signin-form-content h1 {
+  font-size: 1.8rem;
+}
+.signin-shell-compact .signin-form-content > p {
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.signin-shell-compact .signin-form-content form {
+  margin-top: 1.25rem;
+}
 .email-code-screen {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.85fr);
@@ -382,13 +847,40 @@
   background: var(--surface-card);
   box-shadow: 0 20px 60px rgb(23 33 61 / 7%);
 }
-.email-code-form { align-self: center; min-width: 0; padding: clamp(1.25rem, 3vw, 2rem); }
-.email-code-eyebrow { color: var(--brand-primary); font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em; }
-.email-code-screen .email-code-form h1 { margin-top: 0.75rem; font-size: 2rem; }
-.email-code-form > p:last-of-type { margin-top: 1rem; color: var(--text-muted); font-size: 0.9rem; line-height: 1.7; }
-.email-code-form strong { color: var(--text-main); overflow-wrap: anywhere; }
-.email-code-fields { min-width: 0; margin-top: 1.5rem; }
-.email-code-boxes { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: clamp(0.3rem, 1vw, 0.65rem); }
+.email-code-form {
+  align-self: center;
+  min-width: 0;
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+.email-code-eyebrow {
+  color: var(--brand-primary);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+}
+.email-code-screen .email-code-form h1 {
+  margin-top: 0.75rem;
+  font-size: 2rem;
+}
+.email-code-form > p:last-of-type {
+  margin-top: 1rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+.email-code-form strong {
+  color: var(--text-main);
+  overflow-wrap: anywhere;
+}
+.email-code-fields {
+  min-width: 0;
+  margin-top: 1.5rem;
+}
+.email-code-boxes {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: clamp(0.3rem, 1vw, 0.65rem);
+}
 .email-code-screen .email-code-boxes input {
   width: 100%;
   min-width: 0;
@@ -403,42 +895,166 @@
   font-weight: 650;
   caret-color: var(--brand-primary);
 }
-.email-code-screen .email-code-boxes input:focus { border-color: var(--brand-primary); outline: 2px solid var(--surface-selected); outline-offset: 2px; }
-.email-code-screen .email-code-boxes[data-invalid] input { border-color: #b91c1c; }
-.email-code-screen .email-code-submit { width: 100%; min-height: 3rem; margin-top: 1.5rem; border-radius: 0.65rem; background: var(--accent-booking); color: var(--text-main); font-weight: 700; }
-.email-code-screen .email-code-change { margin-top: 1rem; border: 0; padding-inline: 0; background: transparent; color: var(--brand-primary); }
-.email-code-fields:disabled { opacity: 0.65; }
-.email-code-message { margin-top: 1rem; font-size: 0.875rem; line-height: 1.6; color: var(--text-muted); }
-.email-code-message[role="alert"] { color: #b91c1c; }
-.email-code-device { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; background: var(--surface-selected); text-align: center; }
-.email-code-phone { display: flex; flex-direction: column; align-items: center; gap: 0.7rem; width: 9rem; min-height: 13rem; padding: 0.65rem 0.75rem 1rem; border: 4px solid var(--text-main); border-radius: 1.5rem; background: var(--surface-card); box-shadow: 8px 12px 0 rgb(36 67 182 / 8%); transform: rotate(5deg); }
-.email-code-phone-camera { width: 3rem; height: 0.3rem; border-radius: 1rem; background: var(--text-main); }
-.email-code-phone img { width: 3rem; height: 3rem; object-fit: contain; }
-.email-code-envelope { display: grid; place-items: center; width: 3rem; height: 3rem; border-radius: 1rem; color: var(--brand-primary); background: var(--surface-selected); font-size: 1.75rem; }
-.email-code-phone > strong { font-size: 0.8rem; }
-.email-code-phone-dots { display: flex; gap: 0.35rem; }
-.email-code-phone-dots span { width: 0.45rem; height: 0.45rem; border-radius: 50%; background: var(--brand-primary); }
-.email-code-device h2 { margin-top: 1.5rem; font-size: 1rem; font-weight: 700; }
-.email-code-device > p { max-width: 28ch; margin-top: 0.6rem; color: var(--text-muted); font-size: 0.8rem; line-height: 1.7; }
+.email-code-screen .email-code-boxes input:focus {
+  border-color: var(--brand-primary);
+  outline: 2px solid var(--surface-selected);
+  outline-offset: 2px;
+}
+.email-code-screen .email-code-boxes[data-invalid] input {
+  border-color: #b91c1c;
+}
+.email-code-screen .email-code-submit {
+  width: 100%;
+  min-height: 3rem;
+  margin-top: 1.5rem;
+  border-radius: 0.65rem;
+  background: var(--accent-booking);
+  color: var(--text-main);
+  font-weight: 700;
+}
+.email-code-screen .email-code-change {
+  margin-top: 1rem;
+  border: 0;
+  padding-inline: 0;
+  background: transparent;
+  color: var(--brand-primary);
+}
+.email-code-fields:disabled {
+  opacity: 0.65;
+}
+.email-code-message {
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+.email-code-message[role="alert"] {
+  color: #b91c1c;
+}
+.email-code-device {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: var(--surface-selected);
+  text-align: center;
+}
+.email-code-phone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  width: 9rem;
+  min-height: 13rem;
+  padding: 0.65rem 0.75rem 1rem;
+  border: 4px solid var(--text-main);
+  border-radius: 1.5rem;
+  background: var(--surface-card);
+  box-shadow: 8px 12px 0 rgb(36 67 182 / 8%);
+  transform: rotate(5deg);
+}
+.email-code-phone-camera {
+  width: 3rem;
+  height: 0.3rem;
+  border-radius: 1rem;
+  background: var(--text-main);
+}
+.email-code-phone img {
+  width: 3rem;
+  height: 3rem;
+  object-fit: contain;
+}
+.email-code-envelope {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 1rem;
+  color: var(--brand-primary);
+  background: var(--surface-selected);
+  font-size: 1.75rem;
+}
+.email-code-phone > strong {
+  font-size: 0.8rem;
+}
+.email-code-phone-dots {
+  display: flex;
+  gap: 0.35rem;
+}
+.email-code-phone-dots span {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--brand-primary);
+}
+.email-code-device h2 {
+  margin-top: 1.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.email-code-device > p {
+  max-width: 28ch;
+  margin-top: 0.6rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.7;
+}
 @media (prefers-reduced-motion: no-preference) {
-  .email-code-boxes[data-shaking] { animation: email-code-shake 200ms cubic-bezier(0.77, 0, 0.175, 1); }
+  .email-code-boxes[data-shaking] {
+    animation: email-code-shake 200ms cubic-bezier(0.77, 0, 0.175, 1);
+  }
   @keyframes email-code-shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-4px); }
-    75% { transform: translateX(4px); }
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    25% {
+      transform: translateX(-4px);
+    }
+    75% {
+      transform: translateX(4px);
+    }
   }
 }
 @media (max-width: 52rem) {
-  .email-code-screen { grid-template-columns: minmax(0, 1fr); }
-  .email-code-device { padding-block: 1.5rem; }
-  .email-code-phone { min-height: 13rem; width: 9rem; gap: 0.65rem; }
-  .signin-shell { grid-template-columns: minmax(0, 1fr); min-height: 0; border-radius: 1rem; }
+  .email-code-screen {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .email-code-device {
+    padding-block: 1.5rem;
+  }
+  .email-code-phone {
+    min-height: 13rem;
+    width: 9rem;
+    gap: 0.65rem;
+  }
+  .signin-shell {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+    border-radius: 1rem;
+  }
   .signin-form-panel,
-  .signin-brand-panel { grid-column: auto; grid-row: auto; }
-  .signin-form-panel { padding: 1.5rem; }
-  .signin-form-wrap { padding-block: 1.25rem; }
-  .signin-brand-panel { padding: 1.5rem; }
-  .signin-brand-copy { margin-top: 1.75rem; }
-  .signin-card-scene { max-width: 24rem; }
-  .signin-quote { margin-top: 1rem; }
+  .signin-brand-panel {
+    grid-column: auto;
+    grid-row: auto;
+  }
+  .signin-form-panel {
+    padding: 1.5rem;
+  }
+  .signin-form-wrap {
+    padding-block: 1.25rem;
+  }
+  .signin-brand-panel {
+    padding: 1.5rem;
+  }
+  .signin-brand-copy {
+    margin-top: 1.75rem;
+  }
+  .signin-card-scene {
+    max-width: 24rem;
+  }
+  .signin-quote {
+    margin-top: 1rem;
+  }
 }

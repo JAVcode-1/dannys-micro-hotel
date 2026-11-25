@@ -11,6 +11,8 @@ export type CancellationRow = {
   eligibility: string;
   approved: boolean | null;
   refundCentavos: number | null;
+  refundedCentavos: number;
+  remainingRefundCentavos: number;
   decisionReason: string | null;
   refundStatus: "not_due" | "due" | "processing" | "recorded";
   paymentId: string | null;
@@ -20,6 +22,11 @@ export type CancellationRow = {
   verifiedAt: string | null;
   transferReference: string | null;
   transferredAt: string | null;
+  transferHistory: {
+    amountCentavos: number;
+    reference: string;
+    transferredAt: string;
+  }[];
   balanceCentavos: number;
   refundDueCentavos: number;
   netChargeCentavos: number;

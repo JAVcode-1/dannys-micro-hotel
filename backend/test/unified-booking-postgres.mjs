@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import console from "node:console";
 import { Buffer } from "node:buffer";
-import { createGuestHold, guestReservations } from "../dist/guest-booking.js";
+import {
+  bookingPolicy,
+  createGuestHold,
+  guestReservations,
+} from "../dist/guest-booking.js";
 import {
   guestPaymentSession,
   submitPaymentProof,
@@ -10,6 +14,16 @@ import { decidePaymentReview } from "../dist/payment-review.js";
 import { expireClaims } from "../dist/claim-holds.js";
 import { guestHallAction } from "../dist/unified-hall-actions.js";
 import { hallCommand } from "../dist/hall-reservations.js";
+import {
+  reportRefundIssue,
+  resolveRefundIssue,
+} from "../dist/refund-issues.js";
+import {
+  requestCancellation,
+  decideCancellation,
+  recordManualRefund,
+  cancellationRows,
+} from "../dist/cancellations.js";
 import { claimTransaction } from "../dist/inventory-claims.js";
 import { quoteUnified } from "../dist/unified-booking.js";
 import {
@@ -73,7 +87,7 @@ export async function unifiedBookingPostgres(pool) {
   ];
   const contact = {
     phone: "09123456789",
-    policyVersion: "booking-v1",
+    policyVersion: bookingPolicy.version,
     policyAcknowledged: true,
   };
   const make = (key, items, h) =>
@@ -269,16 +283,195 @@ export async function unifiedBookingPostgres(pool) {
       [hallId],
     )
   ).rows[0];
-  await hallCommand(pool, actor, "unified-refund-000001", "complete_refund", {
+  const transfer = {
     id: hallId,
     approval: approval.id,
     method: "gcash",
+    amount: 200000,
     reference: "SYNTHETIC-UB-REFUND",
     transferredAt: new Date().toISOString(),
     verified: true,
     evidence: "SYNTHETIC transfer only",
+  };
+  await hallCommand(
+    pool,
+    actor,
+    "unified-refund-000001",
+    "complete_refund",
+    transfer,
+  );
+  await hallCommand(
+    pool,
+    actor,
+    "unified-refund-000001",
+    "complete_refund",
+    transfer,
+  );
+  const partialHall = (
+    await guestReservations(guest, pool, { reservationId: mixed.id })
+  )[0].hall;
+  assert.equal(partialHall.refundedCentavos, 200000);
+  assert.equal(partialHall.refundDueCentavos, 100000);
+  await assert.rejects(
+    hallCommand(pool, actor, "unified-refund-over01", "complete_refund", {
+      ...transfer,
+      amount: 100001,
+      reference: "SYNTHETIC-UB-OVER",
+    }),
+  );
+  const report = {
+    receivedCentavos: 200000,
+    details: "Only the first transfer arrived.",
+  };
+  await assert.rejects(
+    reportRefundIssue(pool, "hall", hallId, { ...guest, id: actor }, report),
+    { status: 404 },
+  );
+  assert.equal(
+    (await reportRefundIssue(pool, "hall", hallId, guest, report)).status,
+    "open",
+  );
+  assert.equal(
+    (await reportRefundIssue(pool, "hall", hallId, guest, report)).status,
+    "open",
+  );
+  await hallCommand(pool, actor, "unified-refund-000002", "complete_refund", {
+    ...transfer,
+    amount: 100000,
+    reference: "SYNTHETIC-UB-BALANCE",
   });
+  await assert.rejects(
+    resolveRefundIssue(pool, "hall", hallId, guest.id, {
+      resolution: "Denied",
+    }),
+    { status: 403 },
+  );
+  assert.equal(
+    (
+      await resolveRefundIssue(pool, "hall", hallId, actor, {
+        resolution: "Balance sent.",
+      })
+    ).status,
+    "resolved",
+  );
   await assertHallCancellationFinance(pool, mixed.id, true);
+  const roomId = mixedGuest.items[0].id;
+  const payment = (
+    await pool.query(
+      "select id from staytrack.payment_submissions where reservation_id=$1 and status='confirmed'",
+      [mixed.id],
+    )
+  ).rows[0].id;
+  await requestCancellation(
+    guest,
+    roomId,
+    {
+      requestKey: "unified-room-cancel-1",
+      reason: "Synthetic room cancellation",
+    },
+    pool,
+  );
+  const roomDecision = await decideCancellation(
+    actor,
+    roomId,
+    {
+      requestKey: "unified-room-approve-1",
+      reason: "Synthetic verified eligibility",
+      approved: true,
+    },
+    pool,
+  );
+  const roomAmount = Number(roomDecision.refund_centavos);
+  assert.ok(roomAmount > 1);
+  await recordManualRefund(
+    actor,
+    roomId,
+    {
+      action: "claim",
+      requestKey: "unified-room-claim-1",
+      originalPaymentId: payment,
+      payerName: "Synthetic payer",
+      payerAccount: "09999999999",
+      verificationNote: "Synthetic match",
+      ledgerChecked: true,
+      originalPayerMatched: true,
+    },
+    pool,
+  );
+  const roomTransfer = {
+    action: "transfer",
+    requestKey: "unified-room-out-001",
+    amountCentavos: roomAmount - 1,
+    transferredAt: new Date().toISOString(),
+    reference: "SYNTHETIC-ROOM-OUT1",
+    transferChecked: true,
+  };
+  await recordManualRefund(actor, roomId, roomTransfer, pool);
+  assert.equal(
+    (await recordManualRefund(actor, roomId, roomTransfer, pool)).replayed,
+    true,
+  );
+  const partialRoom = (await cancellationRows(guest, pool, 0, mixed.id))[0];
+  assert.equal(partialRoom.remainingRefundCentavos, 1);
+  assert.equal(partialRoom.refundedCentavos, roomAmount - 1);
+  await assert.rejects(
+    recordManualRefund(
+      actor,
+      roomId,
+      {
+        ...roomTransfer,
+        requestKey: "unified-room-over-01",
+        amountCentavos: 2,
+        reference: "SYNTHETIC-ROOM-OVER",
+      },
+      pool,
+    ),
+  );
+  await assert.rejects(
+    recordManualRefund(
+      actor,
+      roomId,
+      {
+        ...roomTransfer,
+        requestKey: "unified-room-cross-1",
+        amountCentavos: 1,
+        reference: transfer.reference,
+      },
+      pool,
+    ),
+  );
+  assert.equal(
+    (
+      await reportRefundIssue(pool, "room", roomId, guest, {
+        receivedCentavos: roomAmount - 1,
+        details: "Synthetic outstanding balance",
+      })
+    ).status,
+    "open",
+  );
+  const finalRoomTransfers = await Promise.allSettled(
+    [2, 3].map((attempt) =>
+      recordManualRefund(
+        actor,
+        roomId,
+        {
+          ...roomTransfer,
+          requestKey: `unified-room-out-00${attempt}`,
+          amountCentavos: 1,
+          reference: `SYNTHETIC-ROOM-OUT${attempt}`,
+        },
+        pool,
+      ),
+    ),
+  );
+  assert.equal(
+    finalRoomTransfers.filter((result) => result.status === "fulfilled").length,
+    1,
+  );
+  assert.equal(
+    (await cancellationRows(guest, pool, 0, mixed.id))[0].refundStatus,
+    "recorded",
+  );
   const hallOnly = await make("unified-hallonly-00001", [], hall(3));
   const onlySession = await guestPaymentSession(
     guest,
@@ -549,6 +742,7 @@ export async function unifiedBookingPostgres(pool) {
   await hallCommand(pool, actor, "unified-cheaper-return", "complete_refund", {
     id: cheaperHall.id,
     approval: surplus.id,
+    amount: 200000,
     method: "gcash",
     reference: "SYNTHETIC-CHEAPER-REFUND",
     verified: true,

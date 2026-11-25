@@ -16,5 +16,7 @@ test("hall information publishes rates and setup-specific unified booking entry 
   assert.match(html, /one full GCash payment/);
   assert.match(html, /Staff verify the actual transaction/);
   assert.match(html, /mineral water/);
+  assert.match(html, /Function Hall status/);
+  assert.match(html, /Availability depends on your event date and time/);
   assert.doesNotMatch(html, /<form/);
 });

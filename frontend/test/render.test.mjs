@@ -18,7 +18,7 @@ test("guest landing renders alongside existing Royal Horizon tokens", () => {
   assert.doesNotMatch(html, /href="\/function-hall"/);
   assert.match(
     renderToStaticMarkup(createElement(App, { hallEnabled: true })),
-    /href="\/function-hall"[^>]*>Ask about the hall/,
+    /href="\/function-hall"[^>]*>Explore hall &amp; rates/,
   );
 
   const cssFile = readdirSync(new URL("../dist/assets/", import.meta.url)).find(

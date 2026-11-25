@@ -1,9 +1,17 @@
 import { createClient } from "@supabase/supabase-js";
 import { databasePool } from "./database.js";
 
-export type StaffIdentity = { id: string; email: string | null; username?: string };
+export type StaffIdentity = {
+  id: string;
+  email: string | null;
+  username?: string;
+};
 
-type AuthUser = { id: string; email?: string; app_metadata?: Record<string, unknown> };
+type AuthUser = {
+  id: string;
+  email?: string;
+  app_metadata?: Record<string, unknown>;
+};
 type StaffDependencies = {
   getUser(token: string): Promise<AuthUser | null>;
   query(sql: string, params: unknown[]): Promise<{ rowCount: number | null }>;
@@ -20,8 +28,11 @@ export function createStaffVerifier({ getUser, query }: StaffDependencies) {
     if (result.rowCount !== 1) return null;
     const username = user.app_metadata?.staff_username;
     return {
-      id: user.id, email: user.email ?? null,
-      ...(typeof username === "string" && /^[a-z0-9_-]{1,40}$/.test(username) ? { username } : {}),
+      id: user.id,
+      email: user.email ?? null,
+      ...(typeof username === "string" && /^[a-z0-9_-]{1,40}$/.test(username)
+        ? { username }
+        : {}),
     };
   };
 }

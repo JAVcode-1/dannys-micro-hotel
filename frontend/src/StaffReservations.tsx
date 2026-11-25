@@ -95,6 +95,8 @@ type Detail = {
     hallReservationId?: string;
     amountCentavos: number;
     status: string;
+    refundedCentavos?: number;
+    remainingCentavos?: number;
     transferredAt?: string | null;
   }[];
 };
@@ -467,7 +469,9 @@ export function StaffReservationDetail({ token }: { token: string }) {
           data.refunds.map((r) => (
             <p key={r.id ?? r.roomBookingId ?? r.hallReservationId}>
               {r.hallReservationId ? "Function Hall" : "Accommodation"} ·{" "}
-              {money(r.amountCentavos)} · {r.status}
+              {money(r.amountCentavos)} approved ·{" "}
+              {money(r.refundedCentavos ?? 0)} refunded ·{" "}
+              {money(r.remainingCentavos ?? r.amountCentavos)} still due
               {r.transferredAt ? ` · ${time(r.transferredAt)}` : ""}
             </p>
           ))
@@ -551,8 +555,6 @@ function StaffAssistedReschedule({
     return {
       revision: current.scheduleRevision ?? 0,
       startAt: current.startAt,
-      endAt: current.endAt,
-      confirmationAt: current.confirmationAt ?? null,
       pending: current.pendingReschedule ?? false,
     };
   }
@@ -569,9 +571,7 @@ function StaffAssistedReschedule({
         itemId={item.id}
         revision={item.scheduleRevision ?? 0}
         startAt={item.startAt}
-        endAt={item.endAt}
         blocks={item.blocks}
-        confirmationAt={item.confirmationAt ?? null}
         refresh={readSnapshot}
         submit={async (input) => {
           const response = await fetch(
@@ -741,7 +741,12 @@ export function StaffDashboard({
             "payments",
             "Awaiting GCash verification",
           ],
-          ["overdue", "Expired stay packages", "clock", "Requires staff review"],
+          [
+            "overdue",
+            "Expired stay packages",
+            "clock",
+            "Requires staff review",
+          ],
           ...(hallEnabled
             ? [
                 [

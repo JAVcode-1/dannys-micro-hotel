@@ -84,8 +84,8 @@ test("verified confirmed payment is displayed as confirmed after the old proof d
               },
             ],
           }
-        : sql.includes("as verified")
-          ? { rows: [{ verified: true }] }
+        : sql.includes("from staytrack.verified_online_payments")
+          ? { rows: [{ amount: 20000 }] }
           : {
               rows: [
                 {
@@ -104,6 +104,7 @@ test("verified confirmed payment is displayed as confirmed after the old proof d
   );
   assert.equal(result.status, "confirmed");
   assert.equal(result.qrUrl, null);
+  assert.equal(result.receivedAmountCentavos, 20000);
 });
 
 test("verified payment remains verified after one room is released by checkout or cancellation", async () => {
@@ -118,8 +119,8 @@ test("verified payment remains verified after one room is released by checkout o
               },
             ],
           }
-        : sql.includes("as verified")
-          ? { rows: [{ verified: true }] }
+        : sql.includes("from staytrack.verified_online_payments")
+          ? { rows: [{ amount: 40000 }] }
           : {
               rows: ["released", "confirmed"].map((state) => ({
                 state,
@@ -136,6 +137,7 @@ test("verified payment remains verified after one room is released by checkout o
   );
   assert.equal(result.status, "confirmed");
   assert.equal(result.qrUrl, null);
+  assert.equal(result.receivedAmountCentavos, 40000);
 });
 test("refund detail filters one reservation inside the owned query", async () => {
   let query;

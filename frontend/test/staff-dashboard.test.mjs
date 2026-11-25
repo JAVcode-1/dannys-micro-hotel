@@ -21,12 +21,15 @@ const { default: StaffWorkspaceLayout } =
   await import("../src/StaffWorkspaceLayout.tsx");
 const originalFetch = globalThis.fetch;
 const originalMatchMedia = window.matchMedia;
+const originalResizeObserver = globalThis.ResizeObserver;
 const { default: StaffMobileNavigation } =
   await import("../src/StaffMobileNavigation.tsx");
 afterEach(() => {
   cleanup();
   globalThis.fetch = originalFetch;
   window.matchMedia = originalMatchMedia;
+  globalThis.ResizeObserver = originalResizeObserver;
+  Reflect.deleteProperty(globalThis.document, "hidden");
 });
 
 test("mobile navigation keeps Today centered and closes accessible fan actions on Escape and scrim", () => {
@@ -87,6 +90,39 @@ test("mobile navigation keeps Today centered and closes accessible fan actions o
   fireEvent.click(trigger);
   fireEvent.click(screen.getByRole("link", { name: "Overview" }));
   assert.equal(trigger.getAttribute("aria-expanded"), "false");
+});
+
+test("mobile navigation shows task counts on the group and destination", () => {
+  window.matchMedia = () => ({
+    matches: true,
+    addEventListener() {},
+    removeEventListener() {},
+  });
+  const groups = [
+    {
+      label: "Front desk",
+      icon: "folder",
+      entries: [
+        { path: "/staff/payments", label: "Payments", icon: "payments" },
+      ],
+    },
+  ];
+  render(
+    createElement(
+      MemoryRouter,
+      null,
+      createElement(StaffMobileNavigation, {
+        groups,
+        counts: { "/staff/payments": 3 },
+      }),
+    ),
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: /Front desk.*3 to check/ }),
+  );
+  assert.ok(
+    screen.getByRole("link", { name: /Payments.*3 payment proofs to review/ }),
+  );
 });
 
 test("mobile overflow keeps every permitted destination and sign-out reachable", async () => {
@@ -169,7 +205,8 @@ test("dashboard keeps loading distinct from zero and hides disabled Hall navigat
     screen.queryByRole("link", { name: /Function Hall operations/ }),
     null,
   );
-  assert.ok(screen.getByText("15 physical rooms"));
+  assert.ok(screen.getByText("10 rooms"));
+  assert.ok(screen.getByText("5 rooms"));
   assert.equal(screen.queryByText("0"), null);
 });
 
@@ -200,13 +237,19 @@ test("dashboard presents authoritative counts and actionable queue links", async
   );
   assert.equal(
     screen
-      .getByRole("link", { name: /Review overdue stays/ })
+      .getByRole("link", { name: /Review Expired stay packages/ })
       .getAttribute("href"),
     "/staff/stays",
   );
-  assert.ok(screen.getByRole("link", { name: /Function Hall operations/ }));
-  assert.ok(
-    screen.getByText(/Screenshot submission is not payment verification/),
+  assert.equal(
+    screen
+      .getByRole("link", { name: "Upcoming Hall events" })
+      .getAttribute("href"),
+    "/staff/hall",
+  );
+  assert.equal(
+    screen.getByRole("link", { name: /Review GCash payments/ }).title,
+    "Check the actual transaction before confirming.",
   );
 });
 
@@ -221,6 +264,27 @@ test("dashboard failure retains working queue links without fabricated counts", 
 
 test("staff shell preserves outlet context, capability gates and menu controls", async () => {
   let signOutCalls = 0;
+  globalThis.ResizeObserver = class {
+    observe() {}
+    disconnect() {}
+  };
+  window.matchMedia = () => ({
+    matches: false,
+    addEventListener() {},
+    removeEventListener() {},
+  });
+  Object.defineProperty(globalThis.document, "hidden", {
+    configurable: true,
+    value: false,
+  });
+  globalThis.fetch = async (_url, options) => {
+    assert.equal(options.headers.Authorization, "Bearer test-staff");
+    return globalThis.Response.json({
+      arrivals: 4,
+      paymentReviews: 2,
+      needsCleaning: 0,
+    });
+  };
   function Page() {
     const { token } = useOutletContext();
     return createElement("p", null, `Outlet token: ${token}`);
@@ -228,6 +292,8 @@ test("staff shell preserves outlet context, capability gates and menu controls",
   const pages = [
     { path: "/staff", label: "Today", component: Page },
     { path: "/staff/reservations", label: "Reservations", component: Page },
+    { path: "/staff/check-ins", label: "Check-in", component: Page },
+    { path: "/staff/payments", label: "Payments", component: Page },
     { path: "/staff/rooms", label: "Rooms", component: Page },
     { path: "/staff/hall", label: "Function Hall", component: Page },
     { path: "/staff/reviews", label: "Review moderation", component: Page },
@@ -280,6 +346,9 @@ test("staff shell preserves outlet context, capability gates and menu controls",
     "page",
   );
   const frontDesk = screen.getByRole("button", { name: "Front desk" });
+  await screen.findByRole("link", {
+    name: /Payments.*2 payment proofs to review/,
+  });
   assert.ok(
     screen.getByRole("link", { name: "Today" }).closest(".staff-nav-group") ===
       null,
@@ -288,6 +357,7 @@ test("staff shell preserves outlet context, capability gates and menu controls",
   assert.equal(frontDesk.getAttribute("aria-expanded"), "true");
   fireEvent.click(frontDesk);
   assert.equal(frontDesk.getAttribute("aria-expanded"), "false");
+  assert.match(frontDesk.textContent, /6 to check/);
   assert.equal(screen.queryByRole("link", { name: "Reservations" }), null);
   const children = globalThis.document.getElementById(
     frontDesk.getAttribute("aria-controls"),
@@ -333,11 +403,7 @@ test("staff shell preserves outlet context, capability gates and menu controls",
       .getAttribute("aria-expanded"),
     "false",
   );
-  assert.ok(screen.getByRole("heading", { name: "Staff workspace" }));
-  assert.equal(
-    globalThis.document.querySelector(".staff-page-title").textContent,
-    "Reservations",
-  );
+  assert.ok(screen.getByRole("heading", { name: "Reservations", level: 1 }));
   fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
   await waitFor(() =>
     assert.ok(screen.getByText("Sign-out failed. Please try again.")),

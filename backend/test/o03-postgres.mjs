@@ -236,10 +236,7 @@ export async function o03Postgres(t, pool) {
             row.state === "proof_pending_review" && row.status === "pending",
         ),
       );
-      const races = await Promise.all([
-        make("0300000002"),
-        make("0300000002"),
-      ]);
+      const races = await Promise.all([make("0300000002"), make("0300000002")]);
       const results = await Promise.allSettled(races.map((row) => decide(row)));
       assert.equal(
         results.filter((row) => row.status === "fulfilled").length,

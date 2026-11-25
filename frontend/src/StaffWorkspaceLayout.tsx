@@ -5,6 +5,9 @@ import { notifySuccess } from "./notifications";
 import { staffAuth } from "./staff-auth";
 import StaffIcon from "./StaffIcon";
 import StaffMobileNavigation from "./StaffMobileNavigation";
+import StaffNavBadge from "./StaffNavBadge";
+import type { StaffNavCounts } from "./StaffNavBadge";
+import useStaffNavCounts from "./useStaffNavCounts";
 
 export type StaffPageDefinition = {
   path: string;
@@ -45,14 +48,20 @@ function StaffNavGroup({
   closeMenu,
   open,
   toggle,
+  counts,
 }: {
   label: string;
   entries: StaffPageDefinition[];
   closeMenu: () => void;
   open: boolean;
   toggle: () => void;
+  counts: StaffNavCounts;
 }) {
   const contentId = useId();
+  const count = entries.reduce(
+    (sum, entry) => sum + (counts[entry.path] ?? 0),
+    0,
+  );
 
   if (!entries.length) return null;
   return (
@@ -65,7 +74,8 @@ function StaffNavGroup({
         onClick={toggle}
       >
         <StaffIcon name={groupIcons[label]} />
-        <span>{label}</span>
+        <span className="staff-nav-label">{label}</span>
+        {!open && <StaffNavBadge count={count} />}
         <span className="staff-nav-chevron">
           <StaffIcon name="chevron" />
         </span>
@@ -91,7 +101,8 @@ function StaffNavGroup({
               }
             >
               <StaffIcon name={icons[entry.path]} />
-              <span>{entry.label}</span>
+              <span className="staff-nav-label">{entry.label}</span>
+              <StaffNavBadge count={counts[entry.path]} path={entry.path} />
             </NavLink>
           ))}
         </div>
@@ -118,6 +129,7 @@ export default function StaffWorkspaceLayout({
   notice: string;
 }) {
   const { pathname } = useLocation();
+  const counts = useStaffNavCounts(token, pathname);
   const [menuOpen, setMenuOpen] = useState(false);
   const [groupChoice, setGroupChoice] = useState<{
     pathname: string;
@@ -143,7 +155,10 @@ export default function StaffWorkspaceLayout({
       return;
     const animation = content.current?.animate?.(
       [
-        { opacity: 0.65, transform: `translateY(${-16 * navigationDirection.current}px)` },
+        {
+          opacity: 0.65,
+          transform: `translateY(${-16 * navigationDirection.current}px)`,
+        },
         { opacity: 1, transform: "translateY(0)" },
       ],
       { duration: 250, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
@@ -221,7 +236,9 @@ export default function StaffWorkspaceLayout({
     // Follow the original accordion animation without moving or remounting links.
     const observer = new ResizeObserver(positionSelection);
     observer.observe(nav);
-    nav.querySelectorAll(".staff-nav-children").forEach((group) => observer.observe(group));
+    nav
+      .querySelectorAll(".staff-nav-children")
+      .forEach((group) => observer.observe(group));
     return () => observer.disconnect();
   }, [pathname, openGroup]);
 
@@ -248,22 +265,37 @@ export default function StaffWorkspaceLayout({
         const control = (event.target as Element).closest<HTMLElement>(
           'a[href^="/staff"], .staff-navigation button, .staff-mobile-navigation button, .staff-content nav button',
         );
-        if (!control || control.classList.contains("staff-mobile-scrim")) return;
+        if (!control || control.classList.contains("staff-mobile-scrim"))
+          return;
         const links = Array.from(
-          navigation.current?.querySelectorAll<HTMLAnchorElement>(".staff-nav-link") ?? [],
+          navigation.current?.querySelectorAll<HTMLAnchorElement>(
+            ".staff-nav-link",
+          ) ?? [],
         );
-        const currentIndex = links.findIndex((link) => link.getAttribute("aria-current") === "page");
+        const currentIndex = links.findIndex(
+          (link) => link.getAttribute("aria-current") === "page",
+        );
         const destination = control.getAttribute("href")?.split("?")[0];
-        const nextIndex = links.findIndex((link) => link.getAttribute("href") === destination);
-        navigationDirection.current = nextIndex >= 0 && currentIndex >= 0
-          ? (nextIndex >= currentIndex ? 1 : -1)
-          : (control.getAttribute("aria-expanded") === "true" ? -1 : 1);
+        const nextIndex = links.findIndex(
+          (link) => link.getAttribute("href") === destination,
+        );
+        navigationDirection.current =
+          nextIndex >= 0 && currentIndex >= 0
+            ? nextIndex >= currentIndex
+              ? 1
+              : -1
+            : control.getAttribute("aria-expanded") === "true"
+              ? -1
+              : 1;
         navigationMotion.current?.cancel();
         // Independent translate preserves the mobile fan's existing transforms.
         navigationMotion.current =
           control.animate?.(
             [
-              { translate: `0 ${-6 * navigationDirection.current}px`, opacity: 0.65 },
+              {
+                translate: `0 ${-6 * navigationDirection.current}px`,
+                opacity: 0.65,
+              },
               { translate: "0 0", opacity: 1 },
             ],
             { duration: 200, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
@@ -338,7 +370,11 @@ export default function StaffWorkspaceLayout({
               ]?.focus();
             }}
           >
-            <span ref={selection} className="staff-nav-selection" aria-hidden="true" />
+            <span
+              ref={selection}
+              className="staff-nav-selection"
+              aria-hidden="true"
+            />
             <NavLink
               to="/staff"
               end
@@ -365,6 +401,7 @@ export default function StaffWorkspaceLayout({
                   pages.filter((entry) => entry.path === path),
                 )}
                 closeMenu={() => setMenuOpen(false)}
+                counts={counts}
               />
             ))}
           </nav>
@@ -450,6 +487,7 @@ export default function StaffWorkspaceLayout({
         </div>
       </div>
       <StaffMobileNavigation
+        counts={counts}
         groups={groups.map(([label, paths]) => ({
           label,
           icon: groupIcons[label],

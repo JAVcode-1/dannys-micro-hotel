@@ -12,6 +12,7 @@ import { hotelTime, peso } from "./BookingPlanner";
 import GuestPayment from "./GuestPayment";
 import { notifySuccess } from "./notifications";
 import GuestReviewAccess from "./GuestReviewAccess";
+import { GuestRefundIssue } from "./RefundIssue";
 import { safeGuestReturnTo, useGuestSession } from "./GuestSession";
 
 import { bookingReference, readableLabel } from "./presentation";
@@ -229,6 +230,9 @@ export default function GuestReservations({
                     {readableLabel(row.hall.status)}
                   </p>
                 )}
+                {row.items.some((item) => item.status === "cancelled") && (
+                  <RefundHistory token={token} reservationId={row.id} />
+                )}
                 <a className={action} href={`/reservations/${row.id}`}>
                   View booking
                 </a>
@@ -352,9 +356,12 @@ export default function GuestReservations({
                           {confirmed && cancellationDeadline !== null && (
                             <p>
                               Original free-cancellation deadline:{" "}
-                              {hotelTime(new Date(cancellationDeadline).toISOString())}.
-                              A schedule change keeps this deadline. Free cancellation
-                              ends sooner if you check in before it.
+                              {hotelTime(
+                                new Date(cancellationDeadline).toISOString(),
+                              )}
+                              . A schedule change keeps this deadline. Free
+                              cancellation ends sooner if you check in before
+                              it.
                             </p>
                           )}
                           {!cancelEligible && (
@@ -377,9 +384,17 @@ export default function GuestReservations({
                           blocks={item.blocks}
                         />
                       ) : item.pendingReschedule ? (
-                        <div role="status" className="mt-3 rounded-lg bg-selected p-3">
-                          <p className="font-semibold">Awaiting staff approval</p>
-                          <p>Your current booking stays active while staff check availability.</p>
+                        <div
+                          role="status"
+                          className="mt-3 rounded-lg bg-selected p-3"
+                        >
+                          <p className="font-semibold">
+                            Awaiting staff approval
+                          </p>
+                          <p>
+                            Your current booking stays active while staff check
+                            availability.
+                          </p>
                         </div>
                       ) : null}
                     </section>
@@ -415,7 +430,9 @@ export default function GuestReservations({
                   </summary>
                   <p className="mt-2 break-all">Full booking ID: {row.id}</p>
                   <p>Created {hotelTime(row.createdAt)}</p>
-                  <RefundHistory token={token} reservationId={row.id} />
+                  {!row.items.some((item) => item.status === "cancelled") && (
+                    <RefundHistory token={token} reservationId={row.id} />
+                  )}
                 </details>
                 {reviewsEnabled && (
                   <section className="mt-5 border-t border-subtle pt-4">
@@ -529,12 +546,30 @@ function RefundHistory({
       {message ? (
         <p className="mt-2 text-sm text-muted">{message}</p>
       ) : rows.length ? (
-        rows.map((row) => (
-          <p key={row.id} className="mt-2 text-sm">
-            {readableLabel(row.refundStatus)} · {peso(row.refundCentavos ?? 0)}
-            {row.transferredAt ? ` · ${hotelTime(row.transferredAt)}` : ""}
-          </p>
-        ))
+        rows.map((row) => {
+          const approved = row.refundCentavos ?? 0;
+          const refunded =
+            row.refundedCentavos ??
+            (row.refundStatus === "recorded" ? approved : 0);
+          const due = row.remainingRefundCentavos ?? approved - refunded;
+          return (
+            <div key={row.id} className="mt-2 text-sm">
+              <p>
+                {readableLabel(row.category)} · {hotelTime(row.startAt)}
+              </p>
+              {approved > 0 ? (
+                <>
+                  <p>
+                    Refunded: {peso(refunded)} · Still due: {peso(due)}
+                  </p>
+                  <GuestRefundIssue token={token} kind="room" itemId={row.id} />
+                </>
+              ) : (
+                <p>{readableLabel(row.refundStatus)}</p>
+              )}
+            </div>
+          );
+        })
       ) : (
         <p className="mt-2 text-sm text-muted">
           No accommodation cancellation refund recorded. Refunds require manual
@@ -593,7 +628,7 @@ function GuestHallItem({
         "Hall cancellation recorded. Eligible refunds are processed manually.",
       );
       setMessage(
-        "Hall cancellation recorded. Eligible refunds are transferred manually by staff; your other reservation items are unchanged.",
+        "Hall cancelled. Staff will send the refund manually through GCash. Check the refund balance here.",
       );
       onRefresh();
     } catch (error) {
@@ -619,10 +654,13 @@ function GuestHallItem({
       <p>Status: {readableLabel(hall.status)}</p>
       {hall.actualStart && <p>Event started: {hotelTime(hall.actualStart)}</p>}
       {(!!hall.refundDueCentavos || !!hall.refundedCentavos) && (
-        <p>
-          Hall refund due: {peso(hall.refundDueCentavos ?? 0)} · Refunded
-          manually: {peso(hall.refundedCentavos ?? 0)}
-        </p>
+        <>
+          <p>
+            Refunded: {peso(hall.refundedCentavos ?? 0)} · Still due:{" "}
+            {peso(hall.refundDueCentavos ?? 0)}
+          </p>
+          <GuestRefundIssue token={token} kind="hall" itemId={hall.id} />
+        </>
       )}
       {confirmed && <GuestHallChange hall={hall} token={token} />}
       {cancelEligible ? (

@@ -29,9 +29,17 @@ test("fixture OTP and staff login reject real identities and preserve explicit s
     setItem: (key, value) => values.set(key, value),
     removeItem: (key) => values.delete(key),
   };
-  const request = async (url) => {
+  const request = async (url, options) => {
     requests++;
-    const kind = new URL(url, "http://localhost").searchParams.get("kind");
+    const endpoint = new URL(url, "http://localhost");
+    const isLogin = endpoint.pathname === "/api/development/login";
+    if (isLogin) {
+      assert.equal(options.method, "POST");
+      const { username, password } = JSON.parse(options.body);
+      if (username !== "staff@example.test" || password !== "development-only")
+        return { ok: false };
+    }
+    const kind = isLogin ? "staff" : endpoint.searchParams.get("kind");
     return {
       ok: true,
       json: async () => ({

@@ -82,7 +82,12 @@ export async function createClaimsInTransaction(
   if (
     categories.rowCount !== new Set(items.map((item) => item.category)).size
   ) {
-    return { status: "unavailable", ids: [], reason: "A selected room category is not currently offered for booking. Please contact the hotel." };
+    return {
+      status: "unavailable",
+      ids: [],
+      reason:
+        "A selected room category is not currently offered for booking. Please contact the hotel.",
+    };
   }
   for (const category of categories.rows)
     await client.query("select pg_advisory_xact_lock($1::bigint)", [
@@ -101,18 +106,33 @@ export async function createClaimsInTransaction(
     [categories.rows.map((row) => row.code)],
   );
   for (const category of categories.rows) {
-    const registered = roomRows.rows.filter(row => row.category === category.code);
-    const label = category.code === "double_standard" ? "Double Standard" : "Family Executive";
+    const registered = roomRows.rows.filter(
+      (row) => row.category === category.code,
+    );
+    const label =
+      category.code === "double_standard"
+        ? "Double Standard"
+        : "Family Executive";
     if (!registered.length)
-      return { status: "unavailable", ids: [], reason: `No physical rooms are registered for ${label} yet. Please contact the hotel.` };
-    if (!registered.some(row => row.active))
-      return { status: "unavailable", ids: [], reason: `No ${label} rooms are currently active for booking. Please contact the hotel.` };
+      return {
+        status: "unavailable",
+        ids: [],
+        reason: `No physical rooms are registered for ${label} yet. Please contact the hotel.`,
+      };
+    if (!registered.some((row) => row.active))
+      return {
+        status: "unavailable",
+        ids: [],
+        reason: `No ${label} rooms are currently active for booking. Please contact the hotel.`,
+      };
   }
-  const rooms: Room[] = roomRows.rows.filter(row => row.active).map((row) => ({
-    id: safeId(row.id),
-    category: row.category,
-    ready: row.operational_state === "ready",
-  }));
+  const rooms: Room[] = roomRows.rows
+    .filter((row) => row.active)
+    .map((row) => ({
+      id: safeId(row.id),
+      category: row.category,
+      ready: row.operational_state === "ready",
+    }));
   const firstStart = instant(Math.min(...items.map((item) => item.start)));
   const lastEnd = instant(
     Math.max(...items.map((item) => item.end + item.bufferMinutes * 60000)),
@@ -161,7 +181,12 @@ export async function createClaimsInTransaction(
   }));
   const assignment = allocateRooms(rooms, existing, blocks, cart);
   if (!assignment) {
-    return { status: "unavailable", ids: [], reason: "No rooms are available for all selected schedules, including required cleaning and maintenance time. Choose another schedule or contact the hotel." };
+    return {
+      status: "unavailable",
+      ids: [],
+      reason:
+        "No rooms are available for all selected schedules, including required cleaning and maintenance time. Choose another schedule or contact the hotel.",
+    };
   }
 
   if (availabilityOnly) return { status: "created", ids: [] };

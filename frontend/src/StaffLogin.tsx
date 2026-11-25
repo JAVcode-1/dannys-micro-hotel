@@ -62,7 +62,10 @@ export default function StaffLogin({
     try {
       let error;
       if (isolatedDevelopment || email.includes("@")) {
-        ({ error } = await authClient.auth.signInWithPassword({ email: email.trim(), password }));
+        ({ error } = await authClient.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        }));
       } else {
         const response = await fetch(`${apiBase}/staff/sign-in`, {
           method: "POST",
@@ -70,12 +73,17 @@ export default function StaffLogin({
           body: JSON.stringify({ username: email.trim(), password }),
         });
         if (!response.ok) {
-          setMessage(response.status === 401
-            ? "Sign-in failed. Check your credentials or contact an administrator."
-            : "Sign-in is unavailable. Please try again.");
+          setMessage(
+            response.status === 401
+              ? "Sign-in failed. Check your credentials or contact an administrator."
+              : "Sign-in is unavailable. Please try again.",
+          );
           return;
         }
-        const tokens = await response.json() as { access_token: string; refresh_token: string };
+        const tokens = (await response.json()) as {
+          access_token: string;
+          refresh_token: string;
+        };
         ({ error } = await authClient.auth.setSession(tokens));
       }
       if (error)
@@ -94,7 +102,10 @@ export default function StaffLogin({
   async function recover() {
     if (pending.current) return;
     if (!email.includes("@") || identityError(email)) {
-      setErrors((current) => ({ ...current, identity: "Enter your account email to recover your password." }));
+      setErrors((current) => ({
+        ...current,
+        identity: "Enter your account email to recover your password.",
+      }));
       identityInput.current?.focus();
       return;
     }
@@ -104,15 +115,21 @@ export default function StaffLogin({
     setMessage("");
     setErrors((current) => ({ ...current, identity: "" }));
     try {
-      const { error } = await authClient.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/staff`,
-      });
+      const { error } = await authClient.auth.resetPasswordForEmail(
+        email.trim(),
+        {
+          redirectTo: `${window.location.origin}/staff`,
+        },
+      );
       setMessage(
         error
           ? "Recovery is unavailable. Contact an administrator."
           : "If this email has an account, recovery instructions will arrive shortly.",
       );
-      if (!error) notifySuccess("Password recovery requested. Check your email if an account exists.");
+      if (!error)
+        notifySuccess(
+          "Password recovery requested. Check your email if an account exists.",
+        );
     } catch {
       setMessage("Recovery is unavailable. Contact an administrator.");
     } finally {
@@ -147,103 +164,173 @@ export default function StaffLogin({
 
   return (
     <SignInLayout staff reviewsEnabled={reviewsEnabled}>
-    <section className="staff-signin-content">
-      <h1>
-        {passwordMode ? "Set your password" : "Welcome back"}
-      </h1>
-      <p className="staff-signin-intro">
-        {passwordMode
-          ? "Choose a secure password for your staff account."
-          : "Sign in to your hotel workspace."}
-      </p>
-      <form
-        noValidate
-        aria-busy={busy}
-        onSubmit={(event) => void (passwordMode ? updatePassword(event) : signIn(event))}
-      >
-        {!passwordMode && (
-          <div className="staff-signin-field" data-invalid={!!errors.identity}>
-            <label htmlFor={`${fieldId}-identity`}>Username or email</label>
+      <section className="staff-signin-content">
+        <h1>{passwordMode ? "Set your password" : "Welcome back"}</h1>
+        <p className="staff-signin-intro">
+          {passwordMode
+            ? "Choose a secure password for your staff account."
+            : "Sign in to your hotel workspace."}
+        </p>
+        <form
+          noValidate
+          aria-busy={busy}
+          onSubmit={(event) =>
+            void (passwordMode ? updatePassword(event) : signIn(event))
+          }
+        >
+          {!passwordMode && (
+            <div
+              className="staff-signin-field"
+              data-invalid={!!errors.identity}
+            >
+              <label htmlFor={`${fieldId}-identity`}>Username or email</label>
+              <div className="staff-signin-input">
+                <StaffIcon name="user" />
+                <input
+                  ref={identityInput}
+                  id={`${fieldId}-identity`}
+                  name="username"
+                  type="text"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  required
+                  disabled={busy}
+                  placeholder="Your staff username or email"
+                  value={email}
+                  aria-invalid={!!errors.identity}
+                  aria-describedby={
+                    errors.identity ? `${fieldId}-identity-error` : undefined
+                  }
+                  onBlur={() =>
+                    setErrors((current) => ({
+                      ...current,
+                      identity: identityError(email),
+                    }))
+                  }
+                  onChange={(event) => {
+                    setEmail(event.target.value);
+                    setErrors((current) => ({ ...current, identity: "" }));
+                  }}
+                />
+              </div>
+              {errors.identity && (
+                <p
+                  id={`${fieldId}-identity-error`}
+                  className="staff-signin-field-error"
+                  role="alert"
+                >
+                  {errors.identity}
+                </p>
+              )}
+            </div>
+          )}
+          <div className="staff-signin-field" data-invalid={!!errors.password}>
+            <div className="staff-signin-label-row">
+              <label htmlFor={`${fieldId}-password`}>
+                {passwordMode ? "New password" : "Password"}
+              </label>
+              {!passwordMode && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="staff-signin-recover"
+                  onClick={() => void recover()}
+                >
+                  Forgot password?
+                </button>
+              )}
+            </div>
             <div className="staff-signin-input">
-              <StaffIcon name="user" />
+              <StaffIcon name="lock" />
               <input
-                ref={identityInput}
-                id={`${fieldId}-identity`}
-                name="username"
-                type="text"
-                autoComplete="username"
-                autoCapitalize="none"
-                spellCheck={false}
+                ref={passwordInput}
+                id={`${fieldId}-password`}
+                name="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete={
+                  passwordMode ? "new-password" : "current-password"
+                }
+                minLength={passwordMode ? 12 : undefined}
                 required
                 disabled={busy}
-                placeholder="Your staff username or email"
-                value={email}
-                aria-invalid={!!errors.identity}
-                aria-describedby={errors.identity ? `${fieldId}-identity-error` : undefined}
-                onBlur={() => setErrors((current) => ({ ...current, identity: identityError(email) }))}
+                placeholder={
+                  passwordMode
+                    ? "At least 12 characters"
+                    : "Enter your password"
+                }
+                value={password}
+                aria-invalid={!!errors.password}
+                aria-describedby={
+                  errors.password ? `${fieldId}-password-error` : undefined
+                }
                 onChange={(event) => {
-                  setEmail(event.target.value);
-                  setErrors((current) => ({ ...current, identity: "" }));
+                  setPassword(event.target.value);
+                  setErrors((current) => ({ ...current, password: "" }));
                 }}
               />
-            </div>
-            {errors.identity && <p id={`${fieldId}-identity-error`} className="staff-signin-field-error" role="alert">{errors.identity}</p>}
-          </div>
-        )}
-        <div className="staff-signin-field" data-invalid={!!errors.password}>
-          <div className="staff-signin-label-row">
-            <label htmlFor={`${fieldId}-password`}>{passwordMode ? "New password" : "Password"}</label>
-            {!passwordMode && (
-              <button type="button" disabled={busy} className="staff-signin-recover" onClick={() => void recover()}>
-                Forgot password?
+              <button
+                type="button"
+                className="staff-signin-eye"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                <StaffIcon name={showPassword ? "eye-off" : "eye"} />
               </button>
+            </div>
+            {errors.password && (
+              <p
+                id={`${fieldId}-password-error`}
+                className="staff-signin-field-error"
+                role="alert"
+              >
+                {errors.password}
+              </p>
             )}
           </div>
-          <div className="staff-signin-input">
-            <StaffIcon name="lock" />
-            <input
-              ref={passwordInput}
-              id={`${fieldId}-password`}
-              name="password"
-              type={showPassword ? "text" : "password"}
-              autoComplete={passwordMode ? "new-password" : "current-password"}
-              minLength={passwordMode ? 12 : undefined}
-              required
-              disabled={busy}
-              placeholder={passwordMode ? "At least 12 characters" : "Enter your password"}
-              value={password}
-              aria-invalid={!!errors.password}
-              aria-describedby={errors.password ? `${fieldId}-password-error` : undefined}
-              onChange={(event) => {
-                setPassword(event.target.value);
-                setErrors((current) => ({ ...current, password: "" }));
-              }}
-            />
-            <button
-              type="button"
-              className="staff-signin-eye"
-              aria-label={showPassword ? "Hide password" : "Show password"}
-              aria-pressed={showPassword}
-              onClick={() => setShowPassword(!showPassword)}
-            ><StaffIcon name={showPassword ? "eye-off" : "eye"} /></button>
-          </div>
-          {errors.password && <p id={`${fieldId}-password-error`} className="staff-signin-field-error" role="alert">{errors.password}</p>}
-        </div>
-        <button type="submit" disabled={busy} className="staff-signin-submit" data-busy={busy}>
-          <span className="staff-signin-submit-label">
-            <span aria-hidden={busy}>{passwordMode ? (passwordMode === "invite" ? "Set password" : "Update password") : "Sign in"}</span>
-            <span aria-hidden={!busy}>{passwordMode ? "Saving password" : recovering ? "Sending recovery" : "Signing in"}</span>
-          </span>
-          <span className="sr-only" role="status">{busy ? (passwordMode ? "Saving password" : recovering ? "Sending recovery" : "Signing in") : ""}</span>
-        </button>
-        <p className="staff-signin-access">Need access? <strong>Contact your administrator.</strong></p>
-      </form>
-      {(message || sessionMessage) && (
-        <p role="status" className="staff-signin-message">
-          {message || sessionMessage}
-        </p>
-      )}
-    </section>
+          <button
+            type="submit"
+            disabled={busy}
+            className="staff-signin-submit"
+            data-busy={busy}
+          >
+            <span className="staff-signin-submit-label">
+              <span aria-hidden={busy}>
+                {passwordMode
+                  ? passwordMode === "invite"
+                    ? "Set password"
+                    : "Update password"
+                  : "Sign in"}
+              </span>
+              <span aria-hidden={!busy}>
+                {passwordMode
+                  ? "Saving password"
+                  : recovering
+                    ? "Sending recovery"
+                    : "Signing in"}
+              </span>
+            </span>
+            <span className="sr-only" role="status">
+              {busy
+                ? passwordMode
+                  ? "Saving password"
+                  : recovering
+                    ? "Sending recovery"
+                    : "Signing in"
+                : ""}
+            </span>
+          </button>
+          <p className="staff-signin-access">
+            Need access? <strong>Contact your administrator.</strong>
+          </p>
+        </form>
+        {(message || sessionMessage) && (
+          <p role="status" className="staff-signin-message">
+            {message || sessionMessage}
+          </p>
+        )}
+      </section>
     </SignInLayout>
   );
 }

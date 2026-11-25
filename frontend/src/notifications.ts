@@ -22,7 +22,10 @@ export function restoreSuccessToast() {
     const saved = sessionStorage.getItem(navigationToastKey);
     sessionStorage.removeItem(navigationToastKey);
     if (!saved) return;
-    const pending = JSON.parse(saved) as { message?: unknown; expiresAt?: unknown };
+    const pending = JSON.parse(saved) as {
+      message?: unknown;
+      expiresAt?: unknown;
+    };
     if (
       typeof pending.message === "string" &&
       typeof pending.expiresAt === "number" &&

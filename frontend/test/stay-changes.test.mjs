@@ -53,13 +53,16 @@ test("X03 synthetic preview separates pending funds, settlement, policy blockers
   render(createElement(StayChangesPreview));
   assert.ok(screen.getByText(/Synthetic preview/));
   screen.getByText("Extend this stay").closest("details").open = true;
-  screen.getByText("Overtime and incident review").closest("details").open = true;
+  screen.getByText("Overtime review").closest("details").open = true;
   assert.ok(screen.getByText("Pending extension funds"));
   assert.ok(screen.getByText("Remaining balance"));
   assert.ok(screen.getByText("Minimum to approve"));
-  fireEvent.change(screen.getByLabelText("Reason for incident or charge action"), {
-    target: { value: "Reviewed synthetic policy" },
-  });
+  fireEvent.change(
+    screen.getByLabelText("Reason for overtime or charge action"),
+    {
+      target: { value: "Reviewed synthetic policy" },
+    },
+  );
   assert.equal(
     screen.getByRole("button", { name: "Post approved policy charge" })
       .disabled,
@@ -91,12 +94,18 @@ test("X03 item drafts survive refresh and failed approval without changing sibli
   for (const card of cards) {
     within(card).getByText("Extend this stay").closest("details").open = true;
   }
-  fireEvent.change(within(cards[0]).getByLabelText("Reason for incident or charge action"), {
-    target: { value: "Item A draft" },
-  });
-  fireEvent.change(within(cards[1]).getByLabelText("Reason for incident or charge action"), {
-    target: { value: "Independent B draft" },
-  });
+  fireEvent.change(
+    within(cards[0]).getByLabelText("Reason for overtime or charge action"),
+    {
+      target: { value: "Item A draft" },
+    },
+  );
+  fireEvent.change(
+    within(cards[1]).getByLabelText("Reason for overtime or charge action"),
+    {
+      target: { value: "Independent B draft" },
+    },
+  );
   fireEvent.click(
     within(cards[0]).getByRole("button", { name: "Request extension quote" }),
   );
@@ -109,11 +118,13 @@ test("X03 item drafts survive refresh and failed approval without changing sibli
   });
   cards = document.querySelectorAll("article");
   assert.equal(
-    within(cards[0]).getByLabelText("Reason for incident or charge action").value,
+    within(cards[0]).getByLabelText("Reason for overtime or charge action")
+      .value,
     "Item A draft",
   );
   assert.equal(
-    within(cards[1]).getByLabelText("Reason for incident or charge action").value,
+    within(cards[1]).getByLabelText("Reason for overtime or charge action")
+      .value,
     "Independent B draft",
   );
   assert.equal(

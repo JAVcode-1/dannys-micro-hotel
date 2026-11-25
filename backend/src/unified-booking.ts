@@ -9,6 +9,7 @@ import { BookingError, quoteBooking } from "./booking-quote.js";
 import { quoteInput, hallSettings } from "./hall-reservations.js";
 import { quoteHall } from "./hall-scheduling.js";
 import { hasControlCharacters } from "./payment-media.js";
+import { hallRefundTransferAmount } from "./hall-payments.js";
 
 type Db = Pick<PoolClient, "query">;
 export function unifiedTotal(rooms: number, hall: number) {
@@ -145,13 +146,14 @@ export async function onlineHallItems(
       `select h.id,q.quote->>'setup' setup,(q.quote->>'attendees')::int attendees,
     q.quote->>'start' "startAt",q.quote->>'end' "endAt",q.total_centavos::float8 "totalCentavos",o.original_centavos::float8 "originalCentavos",
     h.status,o.state,o.proof_deadline_at "proofDeadlineAt",h.actual_start "actualStart",r.online_confirmation_at "confirmationAt",
-    coalesce((select sum(a.amount_centavos) from staytrack.hall_refund_approvals a where a.reservation_id=h.id
-      and not exists(select 1 from staytrack.hall_refund_transfers t where t.approval_id=a.id)),0)::float8 "refundDueCentavos",
-    coalesce((select sum(a.amount_centavos) from staytrack.hall_refund_approvals a join staytrack.hall_refund_transfers t
-      on t.approval_id=a.id where a.reservation_id=h.id),0)::float8 "refundedCentavos"
+    (coalesce((select sum(amount_centavos) from staytrack.hall_refund_approvals where reservation_id=h.id),0)
+      -coalesce(f.amount,0))::float8 "refundDueCentavos",
+    coalesce(f.amount,0)::float8 "refundedCentavos"
     from staytrack.online_hall_items o join staytrack.hall_reservations h on h.id=o.hall_reservation_id
     join staytrack.reservations r on r.id=o.reservation_id
     join lateral(select quote,total_centavos from staytrack.hall_revisions where reservation_id=h.id order by id desc limit 1) q on true
+    left join lateral(select sum(${hallRefundTransferAmount}) amount from staytrack.hall_refund_approvals a
+      join staytrack.hall_refund_transfers t on t.approval_id=a.id where a.reservation_id=h.id) f on true
     where o.reservation_id=$1`,
       [reservationId],
     )

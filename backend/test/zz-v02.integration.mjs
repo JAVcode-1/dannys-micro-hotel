@@ -352,7 +352,7 @@ test("isolated PostgreSQL serializes thirty capacity contenders and replays idem
             [cart[0], cart[0]],
             pool,
           ),
-          /no longer available/,
+          { status: 409, message: /No rooms are available/ },
         );
         assert.equal(
           (

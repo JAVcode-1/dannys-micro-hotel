@@ -5,6 +5,8 @@ import type { CancellationRow } from "@staytrack/shared";
 import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
 import { hotelTime, peso } from "./BookingPlanner";
+import { parsePesoInput } from "./peso-input";
+import { StaffRefundIssue, StaffRefundIssueQueue } from "./RefundIssue";
 const button = "rounded-lg bg-primary px-4 py-2 text-white disabled:opacity-50";
 type PayerForm = {
   name: string;
@@ -13,7 +15,12 @@ type PayerForm = {
   ledger: boolean;
   matched: boolean;
 };
-type TransferForm = { reference: string; time: string; checked: boolean };
+type TransferForm = {
+  amount: string;
+  reference: string;
+  time: string;
+  checked: boolean;
+};
 const emptyPayer: PayerForm = {
   name: "",
   account: "",
@@ -21,7 +28,21 @@ const emptyPayer: PayerForm = {
   ledger: false,
   matched: false,
 };
-const emptyTransfer: TransferForm = { reference: "", time: "", checked: false };
+const emptyTransfer: TransferForm = {
+  amount: "",
+  reference: "",
+  time: "",
+  checked: false,
+};
+function refundAmounts(row: CancellationRow) {
+  const approved = row.refundCentavos ?? 0;
+  const refunded =
+    row.refundedCentavos ?? (row.refundStatus === "recorded" ? approved : 0);
+  return {
+    refunded,
+    remaining: row.remainingRefundCentavos ?? approved - refunded,
+  };
+}
 const demoKey = "staytrack-x01-preview";
 function fixtures(): CancellationRow[] {
   const now = Date.now();
@@ -41,6 +62,8 @@ function fixtures(): CancellationRow[] {
     eligibility: "not_requested",
     approved: null,
     refundCentavos: null,
+    refundedCentavos: 0,
+    remainingRefundCentavos: 0,
     decisionReason: null,
     refundStatus: "not_due",
     paymentId: "Synthetic verified payment",
@@ -50,6 +73,7 @@ function fixtures(): CancellationRow[] {
     verifiedAt: null,
     transferReference: null,
     transferredAt: null,
+    transferHistory: [],
     balanceCentavos: 0,
     refundDueCentavos: 0,
     netChargeCentavos: index < 2 ? 40000 : 20000,
@@ -130,6 +154,7 @@ export default function CancellationDesk({
       const payer = payerForms[row.id] ?? emptyPayer;
       const transfer = transferForms[row.id] ?? emptyTransfer;
       const reason = (reasons[row.id] ?? "").trim();
+      let transferCentavos = 0;
       let body: Record<string, unknown> = { reason };
       let path = `${base}/${row.id}/request`;
       if (action === "approve" || action === "reject") {
@@ -160,13 +185,16 @@ export default function CancellationDesk({
         path = `${base}/${row.id}/refund`;
       }
       if (action === "transfer") {
+        transferCentavos = parsePesoInput(transfer.amount);
+        if (transferCentavos <= 0)
+          throw new Error("Enter the amount actually sent.");
         if (!transfer.reference.trim() || !transfer.time || !transfer.checked)
           throw new Error(
             "Verify the actual manual transfer and enter its reference and time.",
           );
         body = {
           action: "transfer",
-          amountCentavos: row.refundCentavos,
+          amountCentavos: transferCentavos,
           reference: transfer.reference,
           transferredAt: new Date(`${transfer.time}+08:00`).toISOString(),
           transferChecked: true,
@@ -207,6 +235,11 @@ export default function CancellationDesk({
         );
         await load();
       } else {
+        if (
+          action === "transfer" &&
+          transferCentavos > refundAmounts(row).remaining
+        )
+          throw new Error("The transfer exceeds the refund amount still due.");
         const next = rows.map((item) => {
           if (item.id !== row.id) return item;
           if (action === "request")
@@ -223,6 +256,8 @@ export default function CancellationDesk({
               ...item,
               approved: true,
               refundCentavos: item.originalCentavos,
+              refundedCentavos: 0,
+              remainingRefundCentavos: item.originalCentavos,
               decisionReason: reason,
               refundStatus: "due" as const,
               refundDueCentavos: item.originalCentavos,
@@ -240,17 +275,38 @@ export default function CancellationDesk({
               claimedBy: actor,
               verifiedAt: new Date().toISOString(),
             };
+          const { refunded, remaining } = refundAmounts(item);
+          const balance = remaining - transferCentavos;
+          const transferredAt = new Date(
+            `${transfer.time}+08:00`,
+          ).toISOString();
           return {
             ...item,
-            refundStatus: "recorded" as const,
+            refundStatus:
+              balance > 0 ? ("processing" as const) : ("recorded" as const),
+            refundedCentavos: refunded + transferCentavos,
+            remainingRefundCentavos: balance,
             transferReference: transfer.reference,
-            transferredAt: new Date(`${transfer.time}+08:00`).toISOString(),
-            balanceCentavos: 0,
-            refundDueCentavos: 0,
+            transferredAt,
+            transferHistory: [
+              {
+                amountCentavos: transferCentavos,
+                reference: transfer.reference,
+                transferredAt,
+              },
+              ...(item.transferHistory ?? []),
+            ],
+            balanceCentavos: item.balanceCentavos + transferCentavos,
+            refundDueCentavos: item.refundDueCentavos - transferCentavos,
           };
         });
         setRows(next);
       }
+      if (action === "transfer")
+        setTransferForms((current) => ({
+          ...current,
+          [row.id]: emptyTransfer,
+        }));
       setMessage(
         action === "approve"
           ? "Cancellation recorded; manual refund remains outstanding."
@@ -291,6 +347,9 @@ export default function CancellationDesk({
           refund policies remain pending.
         </p>
       </details>
+      {token && !guest && enabled && (
+        <StaffRefundIssueQueue key={token} token={token} />
+      )}
       {token && !enabled && (
         <p>
           Live cancellation and refund writes are closed pending acceptance.
@@ -314,7 +373,9 @@ export default function CancellationDesk({
                 {row.id.slice(0, 8).toUpperCase()}
               </h2>
               <p>
-                Item amount: {peso(row.refundCentavos ?? row.originalCentavos)}.{" "}
+                {confirmation.action === "transfer"
+                  ? `Amount sent: PHP ${transferForms[row.id]?.amount ?? ""}.`
+                  : `Item amount: ${peso(row.refundCentavos ?? row.originalCentavos)}.`}{" "}
                 {confirmation.action === "approve"
                   ? "Only this item will be cancelled and its capacity released. A manual refund remains due."
                   : ""}
@@ -364,6 +425,7 @@ export default function CancellationDesk({
       {rows.map((row) => {
         const payer = payerForms[row.id] ?? emptyPayer;
         const transfer = transferForms[row.id] ?? emptyTransfer;
+        const { refunded, remaining } = refundAmounts(row);
         const setPayer = (value: PayerForm) =>
           setPayerForms({ ...payerForms, [row.id]: value });
         const setTransfer = (value: TransferForm) =>
@@ -409,12 +471,17 @@ export default function CancellationDesk({
               </p>
             )}
             {row.approved && (
-              <p>
-                Item refund {peso(row.refundCentavos ?? 0)} - Reservation refund
-                outstanding {peso(row.refundDueCentavos)} - Total amount{" "}
-                {peso(row.netChargeCentavos)} - Account balance{" "}
-                {peso(row.balanceCentavos)} (negative means credit owed)
-              </p>
+              <>
+                <p>
+                  Item refund {peso(row.refundCentavos ?? 0)} · Refunded{" "}
+                  {peso(refunded)} · Still due {peso(remaining)}
+                </p>
+                <p>
+                  Reservation refund outstanding {peso(row.refundDueCentavos)} -
+                  Total amount {peso(row.netChargeCentavos)} - Account balance{" "}
+                  {peso(row.balanceCentavos)} (negative means credit owed)
+                </p>
+              </>
             )}
             {!token && row.eligibility === "not_requested" && (
               <button
@@ -538,6 +605,17 @@ export default function CancellationDesk({
                 {row.claimedBy === actor && (
                   <>
                     <label className="grid gap-1">
+                      Actual amount sent (PHP)
+                      <input
+                        className="rounded-lg border border-subtle p-2"
+                        inputMode="decimal"
+                        value={transfer.amount}
+                        onChange={(e) =>
+                          setTransfer({ ...transfer, amount: e.target.value })
+                        }
+                      />
+                    </label>
+                    <label className="grid gap-1">
                       Actual transfer reference
                       <input
                         className="rounded-lg border border-subtle p-2"
@@ -574,19 +652,37 @@ export default function CancellationDesk({
                       disabled={!enabled || busy}
                       onClick={() => void submit(row, "transfer")}
                     >
-                      Record completed manual transfer - {row.id}
+                      Record transfer - {row.id}
                     </button>
                   </>
                 )}
               </>
             )}
+            {!guest && Boolean(row.transferHistory?.length) && (
+              <details>
+                <summary>Recorded transfers</summary>
+                <ul>
+                  {row.transferHistory.map((entry) => (
+                    <li key={entry.reference}>
+                      {peso(entry.amountCentavos)} ·{" "}
+                      {hotelTime(entry.transferredAt)} · {entry.reference}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
             {row.refundStatus === "recorded" && (
               <p>
-                Manual refund recorded{" "}
+                Full refund recorded{" "}
                 {row.transferredAt ? hotelTime(row.transferredAt) : ""}
-                {!guest ? " - " + row.transferReference : ""}
               </p>
             )}
+            {!guest &&
+              token &&
+              row.approved &&
+              (row.refundCentavos ?? 0) > 0 && (
+                <StaffRefundIssue token={token} kind="room" itemId={row.id} />
+              )}
           </article>
         );
       })}

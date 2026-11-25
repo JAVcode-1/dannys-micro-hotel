@@ -5,6 +5,7 @@ import type { GuestIdentity } from "./guest-auth.js";
 import { BookingError } from "./booking-quote.js";
 import { claimTransaction } from "./inventory-claims.js";
 import { hasControlCharacters } from "./payment-media.js";
+import { hallRefundTransferAmount } from "./hall-payments.js";
 import {
   onlineHallCancellationEligible,
   parseOnlineHall,
@@ -30,7 +31,7 @@ export async function cancelOnlineHall(
       `select o.*,r.online_confirmation_at,h.actual_start,h.status,h.claim_id,q.total_centavos,
       (coalesce((select sum(amount_centavos) from staytrack.online_payment_allocations where hall_reservation_id=h.id),0)
       +coalesce((select sum(amount_centavos) from staytrack.hall_receipts where reservation_id=h.id),0)
-      -coalesce((select sum(a.amount_centavos) from staytrack.hall_refund_approvals a join staytrack.hall_refund_transfers t on t.approval_id=a.id where a.reservation_id=h.id),0))::text collected
+      -coalesce((select sum(${hallRefundTransferAmount}) from staytrack.hall_refund_approvals a join staytrack.hall_refund_transfers t on t.approval_id=a.id where a.reservation_id=h.id),0))::text collected
     from staytrack.online_hall_items o join staytrack.reservations r on r.id=o.reservation_id
     join staytrack.hall_reservations h on h.id=o.hall_reservation_id
     join lateral(select total_centavos from staytrack.hall_revisions where reservation_id=h.id order by id desc limit 1) q on true
@@ -59,7 +60,9 @@ export async function cancelOnlineHall(
     );
   const approved = (
     await db.query<{ amount: string }>(
-      "select coalesce(sum(a.amount_centavos),0)::text amount from staytrack.hall_refund_approvals a where a.reservation_id=$1 and not exists(select 1 from staytrack.hall_refund_transfers t where t.approval_id=a.id)",
+      `select coalesce(sum(a.amount_centavos-coalesce((select sum(${hallRefundTransferAmount})
+         from staytrack.hall_refund_transfers t where t.approval_id=a.id),0)),0)::text amount
+       from staytrack.hall_refund_approvals a where a.reservation_id=$1`,
       [hallId],
     )
   ).rows[0];

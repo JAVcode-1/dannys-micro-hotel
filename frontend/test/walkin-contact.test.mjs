@@ -81,12 +81,19 @@ test("real walk-in controls disclose policy and submit contact with metadata wit
   fireEvent.change(await screen.findByLabelText("Primary guest name"), {
     target: { value: "Synthetic guest" },
   });
-  fireEvent.change(screen.getByLabelText("Primary contact phone"), {
+  fireEvent.change(screen.getByLabelText("Contact number"), {
     target: { value: "09170000000" },
   });
-  const showPolicies = screen.getByRole("button", { name: "Show booking policies" });
+  const showPolicies = screen.getByRole("button", {
+    name: "Show booking policies",
+  });
   assert.equal(showPolicies.getAttribute("aria-expanded"), "false");
-  assert.equal(globalThis.document.getElementById(showPolicies.getAttribute("aria-controls")).hidden, true);
+  assert.equal(
+    globalThis.document.getElementById(
+      showPolicies.getAttribute("aria-controls"),
+    ).hidden,
+    true,
+  );
   fireEvent.click(showPolicies);
   const hidePolicies = screen.getByRole("button", {
     name: "Hide booking policies",
@@ -118,9 +125,7 @@ test("real walk-in controls disclose policy and submit contact with metadata wit
       .checked,
     true,
   );
-  fireEvent.click(
-    screen.getByRole("button", { name: "Calculate server quote" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Review total" }));
   await waitFor(() =>
     assert.equal(
       screen.getByRole("button", { name: "Create walk-in" }).disabled,

@@ -504,11 +504,18 @@ export async function decidePaymentReview(
           from staytrack.room_bookings b where b.reservation_id=r.id)) from staytrack.reservations r where r.id=$2 returning payload,recipient_email`,
         [review.id, reservationId, input.decision, JSON.stringify(hallItems)],
       );
-      if (input.decision === "confirmed" && await unifiedInstalled(client)) {
-        await client.query(`insert into staytrack.notification_outbox(dedupe_key,recipient,kind,reservation_id,payload)
+      if (input.decision === "confirmed" && (await unifiedInstalled(client))) {
+        await client.query(
+          `insert into staytrack.notification_outbox(dedupe_key,recipient,kind,reservation_id,payload)
           values($1,$2,'reservation_confirmed',$3,$4::jsonb)
           on conflict(dedupe_key) do update set payload=excluded.payload where staytrack.notification_outbox.state='pending'`,
-          [`reservation_confirmed:${reservationId}`, snapshot.rows[0].recipient_email, reservationId, JSON.stringify(snapshot.rows[0].payload)]);
+          [
+            `reservation_confirmed:${reservationId}`,
+            snapshot.rows[0].recipient_email,
+            reservationId,
+            JSON.stringify(snapshot.rows[0].payload),
+          ],
+        );
       }
       return { status: input.decision, version, replayed: false };
     }, pool);

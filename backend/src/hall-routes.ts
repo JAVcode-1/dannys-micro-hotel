@@ -2,18 +2,39 @@ import { unifiedInstalled } from "./unified-booking.js";
 import type { Express, RequestHandler } from "express";
 import type { Pool } from "pg";
 import { BookingError } from "./booking-quote.js";
+import { databasePool } from "./database.js";
 import {
   hallCommand,
   hallCommands,
   hallSettings,
   quoteInput,
+  readHallExtensionQuote,
   type HallCommand,
 } from "./hall-reservations.js";
 import { hallPackagePrice, quoteHall } from "./hall-scheduling.js";
 import { hallReport } from "./hall-reports.js";
+import {
+  hallRefundTransferAmount,
+  hallStartPaymentIssue,
+} from "./hall-payments.js";
+import { readHallStatus } from "./hall-status.js";
+
+export async function readPublicHallStatus(db: Pick<Pool, "query">) {
+  const hall = await readHallStatus(db);
+  return {
+    status: hall.occupied
+      ? "in_use"
+      : hall.outOfServiceId
+        ? "not_ready"
+        : hall.reserved
+          ? "reserved"
+          : hall.ready
+            ? "available"
+            : "not_ready",
+  };
+}
 
 export function registerHall(app: Express, staff: RequestHandler, pool?: Pool) {
-  if (!pool) return;
   const handle =
     (fn: RequestHandler): RequestHandler =>
     async (req, res, next) => {
@@ -31,10 +52,24 @@ export function registerHall(app: Express, staff: RequestHandler, pool?: Pool) {
       }
     };
   app.get(
+    "/guest/hall-status",
+    handle(async (_req, res) => {
+      res.json(await readPublicHallStatus(pool ?? databasePool()));
+    }),
+  );
+  if (!pool) return;
+  app.get(
     "/staff/hall/settings",
     staff,
     handle(async (_req, res) => {
       res.json(await hallSettings(pool));
+    }),
+  );
+  app.post(
+    "/staff/hall/extension-quote",
+    staff,
+    handle(async (req, res) => {
+      res.json(await readHallExtensionQuote(pool, req.body ?? {}));
     }),
   );
   app.post(
@@ -78,13 +113,16 @@ export function registerHall(app: Express, staff: RequestHandler, pool?: Pool) {
       )) preparation_conflict,
       coalesce(q.total_centavos,0)::text total,
       coalesce(o.amount_centavos,0)::text overtime,
+      coalesce(a.amount,0)::text refund_approved,
+      (coalesce(a.amount,0)-coalesce(f.amount,0))::text "refundDue",
       (coalesce(p.amount,0) ${unified ? "+coalesce((select sum(amount_centavos) from staytrack.online_payment_allocations where hall_reservation_id=r.id),0)" : ""})::text collected,coalesce(f.amount,0)::text refunded,
       greatest(0,coalesce(q.total_centavos,0)+coalesce(o.amount_centavos,0)-coalesce(p.amount,0) ${unified ? "-coalesce((select sum(amount_centavos) from staytrack.online_payment_allocations where hall_reservation_id=r.id),0)" : ""}+coalesce(f.amount,0))::text balance
       from staytrack.hall_reservations r cross join staytrack.hall_resource h
       left join staytrack.hall_claims c on c.id=r.claim_id
       left join lateral(select quote,total_centavos from staytrack.hall_revisions where reservation_id=r.id order by id desc limit 1) q on true
       left join lateral(select sum(amount_centavos) amount from staytrack.hall_receipts where reservation_id=r.id) p on true
-      left join lateral(select sum(a.amount_centavos) amount from staytrack.hall_refund_approvals a
+      left join lateral(select sum(amount_centavos) amount from staytrack.hall_refund_approvals where reservation_id=r.id) a on true
+      left join lateral(select sum(${hallRefundTransferAmount}) amount from staytrack.hall_refund_approvals a
         join staytrack.hall_refund_transfers t on t.approval_id=a.id where a.reservation_id=r.id) f on true
       left join staytrack.hall_overtime_charges o on o.reservation_id=r.id
       order by (r.status='in_progress') desc,coalesce(c.event_start,r.created_at) desc,r.id limit 50 offset $1`,
@@ -99,6 +137,16 @@ export function registerHall(app: Express, staff: RequestHandler, pool?: Pool) {
             )
           ).rows;
       for (const row of rows) {
+        if (row.status === "confirmed") {
+          const gross = BigInt(row.collected);
+          row.startPaymentIssue = hallStartPaymentIssue(
+            row.channel === "walk_in" && !row.unifiedReservationId,
+            BigInt(row.total),
+            gross - BigInt(row.refunded),
+            gross - BigInt(row.refund_approved),
+          );
+        }
+        delete row.refund_approved;
         if (row.status === "inquiry" && !row.unifiedReservationId) {
           const { start, minutes } = row.quote_input;
           const price = hallPackagePrice(start, minutes).total;
@@ -107,11 +155,7 @@ export function registerHall(app: Express, staff: RequestHandler, pool?: Pool) {
           row.depositDue = Math.max(0, Math.ceil(price / 2) - net);
         }
       }
-      const { rows: [hall] } = await pool.query<{ ready: boolean; occupied: boolean }>(
-        `select ready, exists (
-          select 1 from staytrack.hall_reservations where status='in_progress'
-        ) as occupied from staytrack.hall_resource where id=1`,
-      );
+      const hall = await readHallStatus(pool);
       res.json({ entries: rows, hall });
     }),
   );
@@ -129,9 +173,18 @@ export function registerHall(app: Express, staff: RequestHandler, pool?: Pool) {
           (select id,actor,method,amount_centavos::text amount,normalized_reference reference,evidence,received_at
            from staytrack.hall_receipts where reservation_id=r.id) p),'[]') receipts,
         coalesce((select json_agg(f order by f.id) from
-          (select a.id,a.amount_centavos::text amount,a.reason,t.method,t.reference,t.transferred_at,t.evidence,
-            (t.approval_id is null and a.amount_centavos>0) pending
-           from staytrack.hall_refund_approvals a left join staytrack.hall_refund_transfers t on t.approval_id=a.id
+          (select a.id,a.amount_centavos::text amount,a.reason,
+            coalesce(p.amount,0)::text as "transferredAmount",
+            (a.amount_centavos-coalesce(p.amount,0))::text as "remainingAmount",
+            a.amount_centavos>coalesce(p.amount,0) pending,coalesce(p.transfers,'[]') transfers
+           from staytrack.hall_refund_approvals a
+           left join lateral (
+             select sum(${hallRefundTransferAmount}) amount,
+               json_agg(json_build_object('id',coalesce(to_jsonb(t)->>'id',a.id::text),
+                 'amount',(${hallRefundTransferAmount})::text,'method',t.method,'reference',t.reference,
+                 'transferred_at',t.transferred_at,'evidence',t.evidence) order by t.transferred_at,t.reference) transfers
+             from staytrack.hall_refund_transfers t where t.approval_id=a.id
+           ) p on true
            where a.reservation_id=r.id) f),'[]') refunds
         from staytrack.hall_reservations r where r.id=$1`,
         [id],

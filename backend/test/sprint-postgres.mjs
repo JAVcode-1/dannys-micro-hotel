@@ -221,6 +221,9 @@ export async function sprintPostgres(t, pool) {
         assert.equal(availability.status, 200);
         const quote = await availability.json();
         assert.equal(quote.available, true);
+        const bookingStatus = await fetch(root + "/guest/booking-status");
+        assert.equal(bookingStatus.status, 200);
+        const { policy } = await bookingStatus.json();
         const body = {
           requestKey: "sprint-http-hold-0001",
           primaryName: "SYNTHETIC HTTP GUEST",
@@ -228,7 +231,7 @@ export async function sprintPostgres(t, pool) {
           expectedTotalCentavos: quote.quote.totalCentavos,
           contact: {
             phone: "09170000000",
-            policyVersion: "booking-v1",
+            policyVersion: policy.version,
             policyAcknowledged: true,
           },
         };

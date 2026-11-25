@@ -15,6 +15,15 @@ Object.defineProperty(globalThis, "navigator", {
   value: dom.window.navigator,
 });
 globalThis.HTMLElement = dom.window.HTMLElement;
+globalThis.ResizeObserver = class {
+  observe() {}
+  disconnect() {}
+};
+dom.window.matchMedia = () => ({
+  matches: false,
+  addEventListener() {},
+  removeEventListener() {},
+});
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const { render, screen, fireEvent, waitFor, cleanup, act } =
   await import("@testing-library/react");
@@ -29,13 +38,18 @@ afterEach(() => {
 function client(initialSession = null) {
   let listener;
   const calls = [];
+  const withUser = (session) =>
+    session && {
+      user: { id: session.access_token },
+      ...session,
+    };
   return {
     calls,
     emit(event, session) {
-      listener?.(event, session);
+      listener?.(event, withUser(session));
     },
     auth: {
-      getSession: async () => ({ data: { session: initialSession } }),
+      getSession: async () => ({ data: { session: withUser(initialSession) } }),
       onAuthStateChange(callback) {
         listener = callback;
         return {
@@ -106,7 +120,7 @@ test("refresh at a protected URL hides sign-in during restoration and membership
     }),
   );
   assert.ok(screen.getByText("Signed in as restored@example.test"));
-  assert.ok(screen.getByRole("heading", { name: /analytics/i }));
+  assert.ok(screen.getByRole("heading", { name: "Analytics", level: 1 }));
   assert.equal(window.location.pathname, "/staff/analytics");
 });
 
@@ -126,10 +140,13 @@ test("protected navigation preserves the staff layout and verifies the same toke
   };
   const app = createElement(App, { staffAuthClient: auth });
   const mounted = render(app);
+  fireEvent.click(await screen.findByRole("button", { name: "Management" }));
   const link = await screen.findByRole("link", { name: "Analytics" });
   const nav = link.closest("section");
   fireEvent.click(link);
-  assert.ok(await screen.findByRole("heading", { name: /analytics/i }));
+  assert.ok(
+    await screen.findByRole("heading", { name: "Analytics", level: 1 }),
+  );
   assert.equal(window.location.pathname, "/staff/analytics");
   assert.equal(
     screen.getByRole("link", { name: "Analytics" }).closest("section"),
@@ -139,16 +156,20 @@ test("protected navigation preserves the staff layout and verifies the same toke
   await act(async () =>
     auth.emit("SIGNED_IN", { access_token: "staff-token" }),
   );
-  assert.ok(screen.getByRole("heading", { name: /analytics/i }));
+  assert.ok(screen.getByRole("heading", { name: "Analytics", level: 1 }));
   fireEvent.click(screen.getByRole("link", { name: "Staff audit" }));
-  assert.ok(await screen.findByRole("heading", { name: /staff audit/i }));
+  assert.ok(
+    await screen.findByRole("heading", { name: "Staff audit", level: 1 }),
+  );
   assert.equal(membershipChecks, 1);
   assert.equal(restores, 1);
 
   mounted.unmount();
   render(app);
-  assert.equal(screen.queryByRole("heading", { name: "Staff sign-in" }), null);
-  assert.ok(await screen.findByRole("heading", { name: /staff audit/i }));
+  assert.equal(screen.queryByRole("heading", { name: "Welcome back" }), null);
+  assert.ok(
+    await screen.findByRole("heading", { name: "Staff audit", level: 1 }),
+  );
   assert.equal(membershipChecks, 2);
   assert.equal(restores, 2);
 });
@@ -157,7 +178,7 @@ test("staff feature routes require both their feature gate and verified staff ac
   for (const path of ["/staff/hall", "/staff/reviews", "/staff/feedback"]) {
     window.history.replaceState(null, "", path);
     const disabled = render(createElement(App, { staffAuthClient: client() }));
-    assert.ok(await screen.findByRole("heading", { name: "Staff sign-in" }));
+    assert.ok(await screen.findByRole("heading", { name: "Welcome back" }));
     disabled.unmount();
 
     const enabled = render(
@@ -167,7 +188,7 @@ test("staff feature routes require both their feature gate and verified staff ac
         hallEnabled: true,
       }),
     );
-    assert.ok(await screen.findByRole("heading", { name: "Staff sign-in" }));
+    assert.ok(await screen.findByRole("heading", { name: "Welcome back" }));
     assert.equal(window.location.pathname, "/staff/sign-in");
     enabled.unmount();
   }
@@ -183,14 +204,20 @@ test("a refreshed token rejected by Express closes the protected page and opens 
     return { ok: true, json: async () => ({ email: "staff@example.test" }) };
   };
   render(createElement(App, { staffAuthClient: auth }));
-  await screen.findByRole("heading", { name: "Analytics" });
+  await screen.findByRole("heading", { name: "Analytics", level: 1 });
   await act(async () =>
     auth.emit("TOKEN_REFRESHED", { access_token: "expired" }),
   );
-  assert.ok(await screen.findByRole("heading", { name: "Staff sign-in" }));
-  assert.match(screen.getByRole("status").textContent, /session expired/);
+  assert.ok(await screen.findByRole("heading", { name: "Welcome back" }));
+  assert.match(
+    screen.getByText(/session expired/).textContent,
+    /session expired/,
+  );
   assert.equal(window.location.pathname, "/staff/sign-in");
-  assert.equal(screen.queryByRole("heading", { name: "Analytics" }), null);
+  assert.equal(
+    screen.queryByRole("heading", { name: "Analytics", level: 1 }),
+    null,
+  );
 });
 
 test("a cached session past its expiry cannot open a protected page", async () => {
@@ -205,8 +232,11 @@ test("a cached session past its expiry cannot open a protected page", async () =
     return { ok: true, json: async () => ({ email: "staff@example.test" }) };
   };
   render(createElement(App, { staffAuthClient: auth }));
-  assert.ok(await screen.findByRole("heading", { name: "Staff sign-in" }));
-  assert.match(screen.getByRole("status").textContent, /session expired/);
+  assert.ok(await screen.findByRole("heading", { name: "Welcome back" }));
+  assert.match(
+    screen.getByText(/session expired/).textContent,
+    /session expired/,
+  );
   assert.equal(screen.queryByRole("heading", { name: "Staff audit" }), null);
   assert.equal(membershipChecks, 0);
 });
@@ -222,17 +252,22 @@ test("logout removes protected content and reauthentication returns to the reque
   fireEvent.click(await screen.findByRole("button", { name: "Sign out" }));
   assert.ok(await screen.findByRole("button", { name: "Sign in" }));
   assert.equal(window.location.pathname, "/staff/sign-in");
-  assert.equal(screen.queryByRole("heading", { name: "Analytics" }), null);
+  assert.equal(
+    screen.queryByRole("heading", { name: "Analytics", level: 1 }),
+    null,
+  );
   assert.equal(screen.queryByText(/Signed in as/), null);
   await act(async () => auth.emit("SIGNED_IN", { access_token: "new-token" }));
-  assert.ok(await screen.findByRole("heading", { name: "Analytics" }));
+  assert.ok(
+    await screen.findByRole("heading", { name: "Analytics", level: 1 }),
+  );
   assert.equal(window.location.pathname, "/staff/analytics");
 });
 
 test("staff signs in with individual credentials and can request recovery", async () => {
   const auth = client();
   render(createElement(App, { staffAuthClient: auth }));
-  fireEvent.change(await screen.findByLabelText("Email"), {
+  fireEvent.change(await screen.findByLabelText("Username or email"), {
     target: { value: "staff@example.test" },
   });
   fireEvent.change(screen.getByLabelText("Password"), {
@@ -255,7 +290,7 @@ test("staff signs in with individual credentials and can request recovery", asyn
     assert.deepEqual(auth.calls[1], ["recover", "staff@example.test"]),
   );
   assert.match(
-    screen.getByRole("status").textContent,
+    screen.getByText(/If this email has an account/).textContent,
     /If this email has an account/,
   );
 });
@@ -265,7 +300,7 @@ test("staff session checks Express; denied membership is never shown as signed i
   globalThis.fetch = async () => ({ ok: false, status: 403 });
   render(createElement(App, { staffAuthClient: auth }));
   await waitFor(() =>
-    assert.match(screen.getByRole("status").textContent, /denied/),
+    assert.match(screen.getByText(/denied/).textContent, /denied/),
   );
   assert.equal(screen.queryByText(/Signed in as/), null);
   assert.equal(window.location.pathname, "/staff/sign-in");
@@ -332,11 +367,11 @@ test("rejected Auth requests leave forms usable and show errors", async () => {
   render(createElement(App, { staffAuthClient: auth }));
   await waitFor(() =>
     assert.match(
-      screen.getByRole("status").textContent,
+      screen.getByText(/restore your session/).textContent,
       /restore your session/,
     ),
   );
-  fireEvent.change(screen.getByLabelText("Email"), {
+  fireEvent.change(screen.getByLabelText("Username or email"), {
     target: { value: "staff@example.test" },
   });
   fireEvent.change(screen.getByLabelText("Password"), {
@@ -345,7 +380,7 @@ test("rejected Auth requests leave forms usable and show errors", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
   await waitFor(() =>
     assert.match(
-      screen.getByRole("status").textContent,
+      screen.getByText(/Sign-in is unavailable/).textContent,
       /Sign-in is unavailable/,
     ),
   );
@@ -358,7 +393,7 @@ test("rejected Auth requests leave forms usable and show errors", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Forgot password?" }));
   await waitFor(() =>
     assert.match(
-      screen.getByRole("status").textContent,
+      screen.getByText(/Recovery is unavailable/).textContent,
       /Recovery is unavailable/,
     ),
   );
@@ -368,7 +403,8 @@ test("rejected Auth requests leave forms usable and show errors", async () => {
 test("switching sessions hides the previous employee until reverified", async () => {
   const auth = client({ access_token: "first" });
   let resolveSecond;
-  globalThis.fetch = async (_url, options) => {
+  globalThis.fetch = async (url, options) => {
+    if (!url.endsWith("/staff/me")) return { ok: false, status: 503 };
     if (options.headers.Authorization === "Bearer first")
       return { ok: true, json: async () => ({ email: "first@example.test" }) };
     return new Promise((resolve) => {
@@ -408,7 +444,10 @@ test("leaving recovery restores sign-in and failed sign-out remains retryable", 
   };
   fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
   await waitFor(() =>
-    assert.match(screen.getByRole("status").textContent, /Sign-out failed/),
+    assert.match(
+      screen.getByText(/Sign-out failed/).textContent,
+      /Sign-out failed/,
+    ),
   );
   assert.ok(screen.getByRole("button", { name: "Sign out" }));
   act(() => auth.emit("PASSWORD_RECOVERY", { access_token: "recovery" }));
@@ -464,9 +503,9 @@ test("invitation callback sets a password without showing inactive staff access"
       { password: "a-long-unique-password" },
     ]),
   );
-  assert.ok(await screen.findByRole("heading", { name: "Staff sign-in" }));
+  assert.ok(await screen.findByRole("heading", { name: "Welcome back" }));
   assert.equal(window.location.pathname, "/staff/sign-in");
-  assert.match(screen.getByRole("status").textContent, /Password set/);
+  assert.match(screen.getByText(/Password set/).textContent, /Password set/);
   assert.equal(screen.queryByText(/Signed in as/), null);
 });
 

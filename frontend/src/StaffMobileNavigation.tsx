@@ -2,6 +2,8 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { Link, useLocation } from "react-router";
 import StaffIcon from "./StaffIcon";
+import StaffNavBadge from "./StaffNavBadge";
+import type { StaffNavCounts } from "./StaffNavBadge";
 
 export type MobileNavGroup = {
   label: string;
@@ -25,10 +27,12 @@ export default function StaffMobileNavigation({
   groups,
   identity,
   onSignOut,
+  counts = {},
 }: {
   groups: MobileNavGroup[];
   identity?: string;
   onSignOut?: () => void;
+  counts?: StaffNavCounts;
 }) {
   const { pathname } = useLocation();
   const [mobile, setMobile] = useState(
@@ -203,6 +207,12 @@ export default function StaffMobileNavigation({
               <span>
                 {group.label === "Booking changes" ? "Changes" : group.label}
               </span>
+              <StaffNavBadge
+                count={group.entries.reduce(
+                  (sum, entry) => sum + (counts[entry.path] ?? 0),
+                  0,
+                )}
+              />
             </button>
           ),
         )}
@@ -235,6 +245,7 @@ export default function StaffMobileNavigation({
               >
                 <StaffIcon name={action.icon} />
                 <span>{shortLabels[action.path] ?? action.label}</span>
+                <StaffNavBadge count={counts[action.path]} path={action.path} />
               </Link>
             ))}
             {overflow && (
@@ -277,7 +288,8 @@ export default function StaffMobileNavigation({
                   onClick={() => close(false)}
                 >
                   <StaffIcon name={entry.icon} />
-                  <span>{entry.label}</span>
+                  <span className="staff-nav-label">{entry.label}</span>
+                  <StaffNavBadge count={counts[entry.path]} path={entry.path} />
                   <StaffIcon name="arrow" />
                 </Link>
               ))}

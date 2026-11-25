@@ -69,8 +69,16 @@ export default function Catalog({
               >
                 <figure className="guest-room-photo">
                   <img
-                    src={code === "double_standard" ? "/hotel/standard-760.webp" : "/hotel/family-760.webp"}
-                    alt={code === "double_standard" ? "Double Standard room at Danny’s Micro Hotel" : "Family Executive room at Danny’s Micro Hotel"}
+                    src={
+                      code === "double_standard"
+                        ? "/hotel/standard-760.webp"
+                        : "/hotel/family-760.webp"
+                    }
+                    alt={
+                      code === "double_standard"
+                        ? "Double Standard room at Danny’s Micro Hotel"
+                        : "Family Executive room at Danny’s Micro Hotel"
+                    }
                     width="760"
                     height="1013"
                     loading="lazy"
@@ -117,9 +125,9 @@ export default function Catalog({
             </p>
             <p className="mt-4">
               Three-hour package: <strong>₱3,000.00</strong> for starts from
-              8:00 AM to before 5:00 PM, or <strong>₱5,000.00</strong> for
-              other start times.
-              Additional full hours: <strong>₱1,000.00 each</strong>.
+              8:00 AM to before 5:00 PM, or <strong>₱5,000.00</strong> for other
+              start times. Additional full hours:{" "}
+              <strong>₱1,000.00 each</strong>.
             </p>
             <div className="mt-5 flex flex-wrap gap-4">
               <a

@@ -61,9 +61,7 @@ export function PaymentPanel({
       file.size === 0 ||
       file.size > 5 * 1024 * 1024
     ) {
-      setMessage(
-        "Choose a PNG or JPEG payment screenshot up to 5 MB.",
-      );
+      setMessage("Choose a PNG or JPEG payment screenshot up to 5 MB.");
       return;
     }
     setBusy(true);

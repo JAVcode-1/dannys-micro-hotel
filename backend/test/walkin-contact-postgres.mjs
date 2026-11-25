@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { URL } from "node:url";
-import { createWalkInBooking } from "../dist/walkins.js";
+import { createWalkInBooking, walkInPolicy } from "../dist/walkins.js";
 
 export async function walkInContactPostgres(t, pool) {
   await t.test(
@@ -36,7 +36,7 @@ export async function walkInContactPostgres(t, pool) {
       const contact = {
         phone: "09170000000",
         email: "synthetic@example.test",
-        policyVersion: "booking-v1",
+        policyVersion: walkInPolicy.version,
         policyAcknowledged: true,
         minorIdStatus: "checked",
       };

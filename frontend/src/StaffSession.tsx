@@ -128,9 +128,15 @@ export function StaffSessionProvider({
               ? expiredMessage
               : "Staff access is unavailable or denied.",
           );
-        const staff = (await response.json()) as { email: string | null; username?: string };
+        const staff = (await response.json()) as {
+          email: string | null;
+          username?: string;
+        };
         if (!controller.signal.aborted) {
-          setVerification({ token, identity: staff.username ?? staff.email ?? "Staff member" });
+          setVerification({
+            token,
+            identity: staff.username ?? staff.email ?? "Staff member",
+          });
           if (signInPending.current) {
             signInPending.current = false;
             notifySuccess("Signed in successfully.");
