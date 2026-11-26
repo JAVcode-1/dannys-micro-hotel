@@ -22,6 +22,126 @@ const { render, screen, fireEvent, cleanup, waitFor } =
 const { default: HallDesk } = await import("../src/HallDesk.tsx");
 const { pendingHallCommand } = await import("../src/hall-command-state.ts");
 
+test("Hall setup time accepts minutes, hours and days and submits minutes", async () => {
+  const original = fetch;
+  const originalConfirm = globalThis.confirm;
+  const originalFormData = globalThis.FormData;
+  let saved;
+  globalThis.confirm = () => true;
+  globalThis.FormData = dom.window.FormData;
+  globalThis.fetch = async (url, options) => {
+    if (String(url).endsWith("/actions/settings")) {
+      saved = JSON.parse(options.body);
+      return Response.json({});
+    }
+    return String(url).includes("reservations?")
+      ? Response.json({ entries: [] })
+      : Response.json({ preparation: saved?.preparation ?? 60 });
+  };
+  try {
+    render(
+      createElement(
+        MemoryRouter,
+        null,
+        createElement(HallDesk, { token: "invalid" }),
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    const amount = await screen.findByLabelText("Setup time amount");
+    const unit = screen.getByLabelText("Setup time unit");
+    const form = screen
+      .getByRole("button", { name: "Save settings" })
+      .closest("form");
+    assert.equal(amount.value, "1");
+    assert.equal(unit.value, "Hours");
+    for (const [selected, invalid] of [
+      ["Minutes", "61"],
+      ["Hours", "25"],
+      ["Days", "0"],
+    ]) {
+      fireEvent.change(unit, { target: { value: selected } });
+      fireEvent.change(amount, { target: { value: invalid } });
+      assert.equal(amount.checkValidity(), false);
+      assert.equal(new dom.window.FormData(form).get("preparation"), null);
+    }
+    for (const [value, selected, minutes] of [
+      ["60", "Minutes", "60"],
+      ["24", "Hours", "1440"],
+      ["3", "Days", "4320"],
+    ]) {
+      fireEvent.change(unit, { target: { value: selected } });
+      fireEvent.change(amount, { target: { value } });
+      assert.equal(new dom.window.FormData(form).get("preparation"), minutes);
+    }
+    fireEvent.submit(form);
+    await waitFor(() => assert.equal(saved?.preparation, 4320));
+  } finally {
+    cleanup();
+    globalThis.fetch = original;
+    globalThis.confirm = originalConfirm;
+    globalThis.FormData = originalFormData;
+  }
+});
+
+test("fully refunded Hall events show no amount due and use separate reconciliation", async () => {
+  const original = fetch;
+  globalThis.fetch = async (url) =>
+    String(url).includes("reservations?")
+      ? Response.json({
+          entries: [
+            {
+              id: "synthetic-cancelled",
+              organizer: "Synthetic cancelled event",
+              channel: "online",
+              status: "cancelled",
+              unifiedReservationId: "synthetic-online-reservation",
+              paymentClosed: true,
+              total: "300000",
+              overtime: "0",
+              collected: "300000",
+              refunded: "300000",
+              refundDue: "0",
+              balance: "0",
+              quote: {
+                start: "2026-11-01T00:00:00Z",
+                end: "2026-11-01T03:00:00Z",
+              },
+            },
+          ],
+        })
+      : Response.json({ noShowGrace: 60, reminder: 15 });
+  try {
+    render(
+      createElement(
+        MemoryRouter,
+        null,
+        createElement(HallDesk, { token: "invalid" }),
+      ),
+    );
+    await screen.findByText(/Fully refunded.*₱0\.00 due/);
+    assert.equal(
+      screen.queryByRole("button", { name: "Collect balance" }),
+      null,
+    );
+    fireEvent.click(screen.getByText("Payment reconciliation"));
+    assert.equal(
+      screen.queryByRole("button", { name: "Record late payment" }),
+      null,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Reconcile late payment" }),
+    );
+    assert.equal(screen.getByLabelText("Late payment note").required, true);
+    assert.equal(
+      screen.getByLabelText(/verified the payment in the hotel/).required,
+      true,
+    );
+  } finally {
+    cleanup();
+    globalThis.fetch = original;
+  }
+});
+
 test("a held Hall slot stays visible after staff mark the hall clean and ready", async () => {
   const original = fetch;
   const originalConfirm = globalThis.confirm;

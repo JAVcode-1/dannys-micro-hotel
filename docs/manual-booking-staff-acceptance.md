@@ -231,7 +231,7 @@ Use this route inventory so no screen is skipped. Housekeeping and maintenance a
 | `/staff/settings/catalog` | Categories/packages/rates/activation; old `/staff/catalog` redirects here |
 | `/staff/settings` | Buffer/warnings/policy, private GCash QR/payee, session sign-out |
 | `/staff/hall` | Only when enabled: Hall schedule/settings/readiness, payments, event actions/refunds |
-| `/staff/analytics` | Revenue, category performance, package popularity, date range, CSV/Excel |
+| `/staff/analytics` | Revenue, category performance, package popularity and date-range filters |
 | `/staff/audit` | Actor/action/date/subject filters, pagination, sensitive masking |
 | `/staff/reviews` | Only when enabled: public replies, reasoned hide/restore |
 | `/staff/feedback` | Only when enabled: private feedback, no public exposure |
@@ -356,8 +356,8 @@ Analytics and reviews require capability/configuration and an agreed calculation
 | ADO03 | Compare B3/B10 allocations to category/package and separate Hall contributions. | Parent payment not multiplied by item count; contributions reconcile to the same basis; Family 3h absent. |
 | ADO04 | Change catalog rate after historical booking and rerun report. | Historical contribution unchanged; category data dynamic rather than hard-coded omissions. |
 | ADO05 | Put isolated financial events just before/after Manila midnight and filter dates. | Correct local-day inclusion using UTC conversion; browser timezone does not move revenue dates. |
-| ADO06 | Export CSV and Excel for current filters; open both and compare rows/totals. | Same authorized filters/calculations; correct peso/numeric/date data; no private proofs/tokens/unneeded contacts. |
-| ADO07 | Use harmless formula-like text such as `=1+1` in an isolated exported text field. | Export neutralizes formula execution; text remains text in spreadsheet app. |
+| ADO06 | Apply date filters in Room Analytics. | On-screen totals match the selected period and contain no private proofs, tokens, or unnecessary contact details. |
+| ADO07 | Open Room Analytics and check the available actions. | Reports are available on screen; CSV and Excel download controls are absent. |
 | ADO08 | As guest/signed out call report/export/audit routes. | Server denies access; protected download URL alone grants no permanent permission. |
 | ADO09 | Filter `/staff/audit` by actor, action, date and subject after known changes. | Correct individual actors/time/subject; pagination works; no password, bearer token, OTP or public proof URL. |
 | ADO10 | Try public rating without stay, with paid-only/cancelled/no-show reservation and as another guest. | Review denied; public browsing alone never grants eligibility. |

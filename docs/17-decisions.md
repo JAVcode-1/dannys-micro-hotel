@@ -4,7 +4,42 @@ status: approved-baseline
 ---
 # 17 — Approved Decisions Register
 
-The Function Hall and refunds checkpoint preserves the existing staff-assisted reschedule request contract. The shared form receives the current schedule revision and booked duration blocks. Staff approval remains a separate action. No new business policy or dependency was introduced by the checkpoint verification fixes.
+## Analytics reporting scope (2026-11-26)
+
+The owner approved on-screen staff Analytics with date-range filtering. The current scope includes Revenue Analytics, Room Category Performance, and Package Popularity, with Function Hall reporting in its existing separate view. CSV and Excel downloads are out of scope. This supersedes the earlier download decision.
+
+## Staff room reactivation (2026-11-26)
+
+Use Booking activation on the inactive room card to re-enable a room with a stored Ready state. Staff enter an audit reason, and the existing activation check requires a current inspection when applicable. If prompted, staff record the physical check through Inspect room and retry activation. The activation request applies to the existing room identifier and category under the server lock.
+
+## Rooms card availability (2026-11-26)
+
+Show Inactive on the card for rooms disabled for booking. Use the green Ready badge when the room is physically ready and the Rooms API reports current availability. A room with a stored Ready state and a temporary block shows Unavailable, with existing booking and turnover details visible. Current inspection and cleaning history remain available on the card.
+
+## Interrupted checkout recovery (2026-11-26)
+
+When the checkout response is missing or unreadable, pause checkout until a fresh stay list confirms its status. Show a recorded departure under Completed stays. If the room is still active and staff retry during the same visit to the page, reuse the original request key and reason.
+
+## Single checkout reminder (2026-11-26)
+
+Staff configure one reminder in minutes before checkout. A blank value turns off the reminder. Existing single alert values take precedence. For settings that only have a legacy list, the reminder uses the earliest time in that list. Saving operational settings stores the single value and clears the legacy list in the existing audited transaction.
+
+## Staff workspace wording (2026-11-26)
+
+Use self-explanatory labels for routine settings and actions. Place payment and room-access guidance beside the relevant controls. Keep information that identifies an exception, explains a fallback, or helps staff recover from an error.
+
+## Operational settings wording (2026-11-26)
+
+The configured checkout reminders are 30, 15, and 5 minutes. The single alert applies when the reminder list is empty. The owner approved saving wording for the existing free cancellation deadline per room or Function Hall item. It ends one hour after staff confirmation or at actual check-in or Hall start, whichever comes first. Rescheduling leaves the original deadline in effect, and staff process eligible GCash refunds manually. This is a display setting for newly confirmed online reservations under the existing cancellation rules.
+
+## Overtime review on the staff desk (2026-11-26)
+
+Staff monitor expired packages in the stay monitor and use Extend this stay when a guest requests more time. The Extensions and charges page no longer offers overtime reviews or decisions. Existing charges and unpaid charge credits remain available in the charge breakdown.
+
+## Staff Rooms and Function Hall design (2026-11-27)
+
+Use the Royal Horizon glass workspace for Rooms and Function Hall, with the existing Double Standard and Hall photographs. The room grid adapts to the content width. The Hall uses a clear active view, a separate readiness panel, and responsive event cards with their existing staff controls.
+
 ## Staff Walk-ins and Payments design (2026-11-26)
 
 Use the shared Royal Horizon glass workspace for both routes. Walk-ins separates booking entry from the selected booking and its ledger. Payments uses a visually distinct review queue, payment summary, and receiving-account reminder. Both layouts stack on phones and continue to use current controls, data sources, and authorization.
@@ -25,10 +60,23 @@ Apply the Royal Horizon glass workspace to the Reservations list and detail rout
 
 The Today presentation follows the supplied light glass dashboard reference. Use the Royal Horizon palette and the existing Family Executive room photo across the full Today workspace. Frosted surfaces carry through the header, sidebar, mobile navigation, and dashboard cards. The existing staff actions and live data sources continue to drive the page.
 
+Use the existing staff dashboard, room board and stay monitor as the sources for Today. The Open work filter hides queues whose known count is zero. Manual refresh keeps the current snapshot visible while requests are pending. Use short CSS feedback for count changes and pointer interactions, with reduced motion supported.
+
+The Function Hall and refunds checkpoint preserves the existing staff-assisted reschedule request contract. The shared form receives the current schedule revision and booked duration blocks. Staff approval remains a separate action. No new business policy or dependency was introduced by the checkpoint verification fixes.
+
+## Staff room cards (2026-11-26)
+
+Use the Rooms page for maintenance, cleaning and readiness checks. Remove the Room setup form for editing identifiers, categories and booking activation. Registration still creates inactive rooms, and the authorized inventory API remains available.
+
+## Online booking contact number (2026-11-25)
+
+Use a Philippine mobile number for new guest bookings. The guest form requires 11 digits starting with `09`, shows `09XX XXX XXXX` in the empty field and displays guidance after a validation error. The API still accepts both the local and `+639XXXXXXXXX` forms, including spaces or hyphens, for compatible clients. Store new contact records in the `+63` form while retaining the submitted format in the existing request hash. The format check applies to room, Hall and combined online reservations.
 
 ## Unconfirmed housekeeping requests (2026-11-25)
 
 If a housekeeping response is lost, prompt staff to refresh the Rooms board and confirm the current state before retrying. Keep the same request key for the action within the current board session. Existing API errors remain visible when the API returns a message.
+
+When the Rooms API requires current inspection for reactivation, show and open the existing inspection form even if the inactive room was labelled Ready. Staff still record physical inspection before saving activation.
 
 ## Partial refunds and guest reports
 
@@ -37,6 +85,8 @@ Record actual verified manual transfer amounts for each refund installment. Cumu
 Each verified online guest can report one short refund per owned item. Staff record one audited resolution visible to that guest. Reports do not alter payment records or move money. Previously incorrect transfer records require reconciliation against the actual GCash ledger. The owner separately approved migration `20261125003200_partial_refunds_and_reports.sql`, which was applied to the pinned D-040 development project.
 
 ## Staff navigation badges
+
+The Rooms badge includes actionable readiness checks and cleaning. Both Reservations and Payments show the count awaiting GCash proof review. The Front desk total counts that queue once. Connected workspaces refresh on authenticated Express event-stream signals, which carry no room or guest data. The existing periodic refresh also covers time-based changes and work handled outside the current API process.
 
 Show positive counts from the authenticated operational dashboard next to their destinations. Collapsed desktop groups and mobile tabs show totals for their visible destinations. Counts refresh on navigation, when the page becomes visible, and every 30 seconds while visible.
 
@@ -52,11 +102,19 @@ The Hall desk checks the authenticated staff member's saved action automatically
 
 The Function Hall report is accessed from Management → Analytics. It remains separate from room analytics and uses its existing Manila date filters, collections, refunds and utilization.
 
-Ready is a staff status. Guests see Check availability for your event date when the hall is ready, and a separate result for the selected time. Staff can create a timed out-of-service block. The existing exclusive Hall schedule protects it from overlapping bookings and preserves existing bookings. When it ends, staff mark the hall ready after preparation.
+Staff controls Hall readiness. Guests see Ready and available now when the Hall is ready and free, Occupied now during an event, Reserved now during a protected booking window, or Temporarily unavailable when the Hall cannot be used. Guests check availability for their selected time separately. Staff can create a timed out-of-service block. The existing exclusive Hall schedule protects it from overlapping bookings and preserves existing bookings. When it ends, staff mark the hall ready after preparation.
+
+In Hall settings, staff can enter 1–60 minutes, 1–24 hours, or a positive whole number of days. The form converts the duration to minutes for scheduling and can retain previously saved custom amounts. The candidate migration lifts the old 1,440-minute constraint while keeping the same storage column and nonnegative bound.
+
+The Function Hall no-show wait is entered in whole minutes, with 60 minutes as the default. Staff may configure waits longer than one day once the candidate database migration is applied. The wait runs from the scheduled start, and marking a no-show remains a staff action.
+
+The two Hall duration drafts are parked in `supabase/migrations/pending-approval/`. Their presence in the active migration list had stopped the shared development API on restart. Promotion and application require separate approval.
 
 On 2026-11-24, the owner approved applying `20261124003100_function_hall_out_of_service.sql` to the pinned D-040 Supabase development project to restore normal development startup. The startup migration check remains required.
 
 Manage refund is the only refund entry on the Function Hall Calendar. It opens pending approvals first, and a new approval moves to the repayment step in place. Staff record completion only after returning the money. The existing approval and completion records remain separate.
+
+Cancelled, no-show and expired Hall bookings have zero collectible balance. Reconcile late payment is a separate staff action for funds already received. It requires verification, the actual receipt time and a note, and preserves the closed booking and existing refund approval rules. Online late payments require a verified GCash reference and use the existing duplicate-reference guard. For a completed event, a refund does not reinstate a collectible balance. Collect only the remaining charges above recorded payments.
 
 Staff use Extend event to check and pay for extra time. Confirmation rechecks the schedule and verified funding. If the slot becomes unavailable after payment is recorded, the system retains the receipt and original schedule for staff follow-up.
 

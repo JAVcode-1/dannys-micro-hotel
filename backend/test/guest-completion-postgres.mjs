@@ -81,7 +81,7 @@ export async function guestPostgres(t, pool) {
             [reservation.id],
           )
         ).rows[0].phone,
-        "09170000000",
+        "+639170000000",
       );
       const replay = await createGuestHold(
         guest,

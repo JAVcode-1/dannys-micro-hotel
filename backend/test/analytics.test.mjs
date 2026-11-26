@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createApp } from "../dist/app.js";
 
-test("analytics report and downloads require active staff and reject invalid Manila ranges", async () => {
+test("analytics report requires active staff and rejects invalid Manila ranges", async () => {
   const app = createApp(
     async () => {},
     async (token) => (token === "staff" ? { id: "staff" } : null),
@@ -12,21 +12,24 @@ test("analytics report and downloads require active staff and reject invalid Man
     await new Promise((resolve) => server.once("listening", resolve));
     const base =
       "http://127.0.0.1:" + server.address().port + "/staff/analytics";
-    for (const path of ["", "/export"]) {
-      for (const [token, status] of [
-        ["", 401],
-        ["guest", 403],
-        ["staff", 400],
-      ]) {
-        const response = await globalThis.fetch(
-          base +
-            path +
-            "?from=2024-01-01&through=2025-01-01&grain=week&format=xlsx",
-          { headers: token ? { Authorization: "Bearer " + token } : {} },
-        );
-        assert.equal(response.status, status);
-        assert.match(response.headers.get("cache-control"), /no-store/);
-      }
+    const query = "?from=2024-01-01&through=2025-01-01&grain=week";
+    for (const [token, status] of [
+      ["", 401],
+      ["guest", 403],
+      ["staff", 400],
+    ]) {
+      const response = await globalThis.fetch(base + query, {
+        headers: token ? { Authorization: "Bearer " + token } : {},
+      });
+      assert.equal(response.status, status);
+      assert.match(response.headers.get("cache-control"), /no-store/);
+    }
+    for (const format of ["csv", "xlsx"]) {
+      const response = await globalThis.fetch(
+        base + "/export" + query + "&format=" + format,
+        { headers: { Authorization: "Bearer staff" } },
+      );
+      assert.equal(response.status, 404);
     }
   } finally {
     await new Promise((resolve) => server.close(resolve));

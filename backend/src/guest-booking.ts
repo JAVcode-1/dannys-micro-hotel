@@ -11,6 +11,7 @@ import {
 } from "./stay-disclosures.js";
 import { createHash } from "node:crypto";
 import type { GuestReservation } from "@staytrack/shared";
+import { normalizePhilippineMobile } from "@staytrack/shared/booking-phone";
 import type { GuestIdentity } from "./guest-auth.js";
 import {
   BookingError,
@@ -23,7 +24,6 @@ import {
 } from "./inventory-claims.js";
 import { databasePool } from "./database.js";
 import { insertBookedItems } from "./booked-items.js";
-import { hasControlCharacters } from "./payment-media.js";
 
 export const bookingPolicy = {
   version: "booking-v2",
@@ -34,17 +34,19 @@ export function parseBookingContact(value: unknown) {
   const contact = value as Record<string, unknown> | null;
   if (
     !contact ||
-    typeof contact.phone !== "string" ||
-    !/^[+()\d -]{7,30}$/.test(contact.phone.trim()) ||
-    (contact.phone.match(/\d/g)?.length ?? 0) < 7 ||
-    hasControlCharacters(contact.phone) ||
     contact.policyVersion !== bookingPolicy.version ||
     contact.policyAcknowledged !== true
   )
+    throw new BookingError("Acknowledge the current booking policy.");
+  if (
+    typeof contact.phone !== "string" ||
+    !normalizePhilippineMobile(contact.phone)
+  )
     throw new BookingError(
-      "Enter a contact number and acknowledge the current booking policy.",
+      "Enter a Philippine mobile number in 09XX XXX XXXX or +63 9XX XXX XXXX format.",
     );
   return {
+    // Keep the submitted format in the request hash so existing keys can be replayed.
     phone: contact.phone.trim(),
     policyVersion: bookingPolicy.version,
     policyAcknowledged: true as const,
@@ -189,7 +191,7 @@ export async function createGuestHold(
        values($1,$2,$3,$4,$5)`,
         [
           id,
-          contact.phone,
+          normalizePhilippineMobile(contact.phone),
           contact.policyVersion,
           bookingPolicy.text,
           guest.id,

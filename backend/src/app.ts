@@ -4,6 +4,7 @@ import { quoteUnified, hallAvailability } from "./unified-booking.js";
 import { registerHall } from "./hall-routes.js";
 import { signInStaffUsername } from "./staff-sign-in.js";
 import { registerReservationWorkspace } from "./reservation-workspace.js";
+import { registerStaffNavEvents } from "./staff-nav-events.js";
 import { registerReviews } from "./review-routes.js";
 import { registerAnalytics } from "./analytics.js";
 import { registerAudit } from "./audit.js";
@@ -696,6 +697,7 @@ export function createApp(
     response.setHeader("Cache-Control", "no-store");
     response.json(result);
   });
+  registerStaffNavEvents(app, catalogStaff);
   registerPaymentRoutes(app, catalogStaff, guestVerifier, paymentOptions);
   registerGuestHall(
     app,

@@ -5,6 +5,17 @@ import { normalizePaymentReference } from "./payment-review.js";
 export const hallRefundTransferAmount =
   "coalesce((to_jsonb(t)->>'amount_centavos')::bigint,a.amount_centavos)";
 
+export function hallPaymentClosed(status: string, onlineState?: string | null) {
+  return (
+    status === "cancelled" || status === "no_show" || onlineState === "expired"
+  );
+}
+
+export function completedHallBalance(total: bigint, collected: bigint) {
+  // A refund does not make a completed booking chargeable again.
+  return total > collected ? total - collected : 0n;
+}
+
 export function hallDepositMet(total: bigint, net: bigint) {
   return net >= (total + 1n) / 2n;
 }

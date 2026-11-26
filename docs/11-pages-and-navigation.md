@@ -51,7 +51,7 @@ Staff detail includes per-room schedules, contextual actions, contact/policy evi
 | `/staff/housekeeping` | Dirty/cleaning/Ready workflow |
 | `/staff/maintenance` | Blocks, reasons, repair progress and impacts |
 | `/staff/incidents` | Smoking/other incident record, charge/waiver reasons |
-| `/staff/reports` | Planned Revenue Analytics, Room Category Performance and Package Popularity only; date filters and staff-authorized CSV/Excel exports |
+| `/staff/reports` | Planned Revenue Analytics, Room Category Performance and Package Popularity only; date filters and staff-only on-screen access |
 | `/staff/settings` | Room catalog, packages, buffer/alerts, QR, policies |
 | `/staff/audit` | Staff activity log with filters |
 | `/staff/reviews` | Moderate flagged public reviews, respond, hide/restore with mandatory policy reason and audit |

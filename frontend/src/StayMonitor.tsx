@@ -59,7 +59,9 @@ export default function StayMonitor({ token }: { token?: string }) {
   useEffect(() => {
     if (!token) sessionStorage.setItem(demoKey, JSON.stringify(items));
   }, [items, token]);
-  const [warnings, setWarnings] = useState<number[]>(token ? [] : [30, 15, 5]);
+  const [reminderMinutes, setReminderMinutes] = useState<number | null>(
+    token ? null : 30,
+  );
   const [anchor, setAnchor] = useState<ClockAnchor>({
     serverMs: Date.now(),
     receivedMs: performance.now(),
@@ -75,6 +77,7 @@ export default function StayMonitor({ token }: { token?: string }) {
   const [message, setMessage] = useState("");
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const keys = useRef(new Map<string, { key: string; reason: string }>());
+  const syncRevision = useRef(0);
   const refresh = useRef<() => Promise<void>>(async () => {});
   const clockNow = serverTime(anchor, tick);
   const hasRunningCountdown = items.some(
@@ -98,6 +101,7 @@ export default function StayMonitor({ token }: { token?: string }) {
       }
       if (inFlight || !active) return;
       inFlight = true;
+      const revision = syncRevision.current;
       try {
         const response = await fetch(`${apiBase}/staff/stays`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -108,9 +112,9 @@ export default function StayMonitor({ token }: { token?: string }) {
         if (!response.ok) throw new Error(data.error);
         const serverMs = Date.parse(data.serverNow);
         if (!Number.isFinite(serverMs)) throw new Error("Invalid server time");
-        if (active) {
+        if (active && revision === syncRevision.current) {
           setItems(data.items);
-          setWarnings(data.warningMinutes);
+          setReminderMinutes(data.warningMinutes?.[0] ?? null);
           setAnchor({
             serverMs,
             receivedMs: performance.now(),
@@ -177,12 +181,29 @@ export default function StayMonitor({ token }: { token?: string }) {
               exceptionReason: reason || null,
             }),
           },
-        );
-        const data = await response.json();
-        if (!response.ok) {
+        ).catch(() => null);
+        const data = await response?.json().catch(() => null);
+        if (
+          response &&
+          !response.ok &&
+          typeof data?.error === "string" &&
+          data.error
+        ) {
           if (response.status >= 400 && response.status < 500)
             keys.current.delete(item.id);
           throw new Error(data.error);
+        }
+        if (
+          !response?.ok ||
+          typeof data?.checked_out_at !== "string" ||
+          !Number.isFinite(Date.parse(data.checked_out_at))
+        ) {
+          // A read started before the interruption cannot reconcile the checkout.
+          syncRevision.current += 1;
+          setSyncState("error");
+          throw new Error(
+            "Checkout could not be confirmed. Synchronize and check the stay status before retrying.",
+          );
         }
         departed = data.checked_out_at;
         notifySuccess("Checkout recorded. Room needs cleaning.");
@@ -278,7 +299,7 @@ export default function StayMonitor({ token }: { token?: string }) {
                   const clock = countdown(
                     Date.parse(item.checkout_at),
                     clockNow,
-                    warnings,
+                    reminderMinutes,
                   );
                   const seconds = Math.ceil(
                     Math.max(0, clock.remainingMs) / 1000,

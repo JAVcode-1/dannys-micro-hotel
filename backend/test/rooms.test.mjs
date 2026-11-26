@@ -12,11 +12,22 @@ test("physical room endpoint denies guests and invalid tokens", async () => {
   try {
     await new Promise((resolve) => server.once("listening", resolve));
     const url = `http://127.0.0.1:${server.address().port}/staff/rooms`;
-    assert.equal((await fetch(url)).status, 401);
-    assert.equal(
-      (await fetch(url, { headers: { Authorization: "Bearer guest" } })).status,
-      403,
-    );
+    for (const [path, method] of [
+      [url, "GET"],
+      [`${url}/1/admin`, "PATCH"],
+      [`${url}/1/inspection`, "POST"],
+    ]) {
+      assert.equal((await fetch(path, { method })).status, 401);
+      assert.equal(
+        (
+          await fetch(path, {
+            method,
+            headers: { Authorization: "Bearer guest" },
+          })
+        ).status,
+        403,
+      );
+    }
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }

@@ -1,6 +1,5 @@
 import React from "react";
 import { apiBase } from "./staff-auth";
-import { notifySuccess } from "./notifications";
 
 type Money = { gross: string; refunds: string; net: string };
 type HallReport = Money & {
@@ -134,9 +133,6 @@ function RoomAnalytics({ token }: { token: string }) {
     report?: Report;
     error?: string;
   }>();
-  const [download, setDownload] = React.useState("");
-  const [busy, setBusy] = React.useState(false);
-  const downloadRequest = React.useRef<AbortController | null>(null);
   const report = state?.query === query ? state.report : undefined;
   const error = state?.query === query ? state.error : undefined;
   React.useEffect(() => {
@@ -161,43 +157,8 @@ function RoomAnalytics({ token }: { token: string }) {
           });
       }
     })();
-    return () => {
-      controller.abort();
-      downloadRequest.current?.abort();
-    };
+    return () => controller.abort();
   }, [query, token]);
-  async function getExport(format: string) {
-    const controller = new AbortController();
-    downloadRequest.current = controller;
-    setBusy(true);
-    setDownload("");
-    try {
-      const response = await fetch(
-        apiBase + "/staff/analytics/export?" + query + "&format=" + format,
-        {
-          headers: { Authorization: "Bearer " + token },
-          signal: controller.signal,
-        },
-      );
-      if (!response.ok) throw new Error((await response.json()).error);
-      const blob = await response.blob();
-      if (controller.signal.aborted) return;
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "staytrack-analytics." + format;
-      link.click();
-      notifySuccess("Analytics export download started.");
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch (cause) {
-      if (!controller.signal.aborted)
-        setDownload(
-          cause instanceof Error ? cause.message : "Download is unavailable.",
-        );
-    } finally {
-      if (!controller.signal.aborted) setBusy(false);
-    }
-  }
   const filters = new URLSearchParams(query);
   return (
     <section aria-label="Room analytics" className="space-y-6">
@@ -209,8 +170,6 @@ function RoomAnalytics({ token }: { token: string }) {
           const next = new URLSearchParams();
           for (const [key, value] of data)
             if (value) next.set(key, String(value));
-          setBusy(false);
-          setDownload("");
           setQuery(next.toString());
         }}
       >
@@ -276,20 +235,6 @@ function RoomAnalytics({ token }: { token: string }) {
         <p role="status">Loading analytics…</p>
       ) : (
         <>
-          <div className="flex flex-wrap gap-3">
-            {["csv", "xlsx"].map((format) => (
-              <button
-                key={format}
-                type="button"
-                disabled={busy}
-                className="min-h-11 rounded border border-subtle px-4 text-primary disabled:opacity-50"
-                onClick={() => void getExport(format)}
-              >
-                Download {format.toUpperCase()}
-              </button>
-            ))}
-          </div>
-          {download && <p role="alert">{download}</p>}
           <dl className="grid gap-3 sm:grid-cols-3">
             {["Gross collections", "Completed refunds", "Net Collections"].map(
               (label, i) => (

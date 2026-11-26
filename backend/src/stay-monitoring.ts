@@ -3,6 +3,7 @@ import type { PoolClient } from "pg";
 import { databasePool } from "./database.js";
 import { claimTransaction } from "./inventory-claims.js";
 import { BookingError } from "./booking-quote.js";
+import { getSettings } from "./operational-settings.js";
 
 // Payments have reservation scope: do not invent a per-room payment allocation.
 async function balance(db: PoolClient, reservationId: string) {
@@ -43,11 +44,7 @@ async function balance(db: PoolClient, reservationId: string) {
 
 export async function monitoredStays(pool = databasePool()) {
   return claimTransaction(async (db) => {
-    const settings = (
-      await db.query(
-        `select checkout_alert_minutes,checkout_warning_minutes from staytrack.operational_settings where id=true`,
-      )
-    ).rows[0];
+    const reminderMinutes = (await getSettings(db))?.checkoutAlertMinutes;
     const x03 = (
       await db.query(
         "select to_regclass('staytrack.stay_item_terms') is not null as installed",
@@ -70,11 +67,7 @@ export async function monitoredStays(pool = databasePool()) {
     return {
       items,
       serverNow: now,
-      warningMinutes:
-        settings?.checkout_warning_minutes ??
-        (settings?.checkout_alert_minutes == null
-          ? []
-          : [settings.checkout_alert_minutes]),
+      warningMinutes: reminderMinutes == null ? [] : [reminderMinutes],
     };
   }, pool);
 }

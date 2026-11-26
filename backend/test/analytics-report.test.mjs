@@ -1,14 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { calculateAnalytics } from "../dist/analytics-report.js";
-import { exportAnalytics } from "../dist/analytics-export.js";
 
 const from = "2026-11-15T16:00:00.000000Z";
 const end = "2026-11-16T16:00:00.000000Z";
 const item = {
   id: "i",
   reservation: "r",
-  category: " =formula",
+  category: "double_standard",
   at: from,
   confirmation: from,
   check_in: null,
@@ -55,14 +54,6 @@ test("reconciles gross, package and additional charges and buckets Manila Monday
     calculateAnalytics(rows, from, end, "day", "missing").packages.length,
     0,
   );
-});
-
-test("generates safe CSV labels and a genuine ZIP workbook", async () => {
-  const report = calculateAnalytics(rows, from, end, "day");
-  const csv = await exportAnalytics(report, "csv");
-  const xlsx = await exportAnalytics(report, "xlsx");
-  assert.match(csv.toString(), /"' =formula"/);
-  assert.equal(xlsx.subarray(0, 4).toString("hex"), "504b0304");
 });
 
 test("preserves missing package history in the known category's allocation weight", () => {

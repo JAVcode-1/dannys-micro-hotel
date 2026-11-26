@@ -5,7 +5,7 @@ import { notifySuccess } from "./notifications";
 import { staffAuth } from "./staff-auth";
 import StaffIcon from "./StaffIcon";
 import StaffMobileNavigation from "./StaffMobileNavigation";
-import StaffNavBadge from "./StaffNavBadge";
+import StaffNavBadge, { staffNavTotal } from "./StaffNavBadge";
 import type { StaffNavCounts } from "./StaffNavBadge";
 import useStaffNavCounts from "./useStaffNavCounts";
 
@@ -58,10 +58,7 @@ function StaffNavGroup({
   counts: StaffNavCounts;
 }) {
   const contentId = useId();
-  const count = entries.reduce(
-    (sum, entry) => sum + (counts[entry.path] ?? 0),
-    0,
-  );
+  const count = staffNavTotal(entries, counts);
 
   if (!entries.length) return null;
   return (
@@ -179,6 +176,8 @@ export default function StaffWorkspaceLayout({
     "/staff/stays",
     "/staff/walkins",
     "/staff/payments",
+    "/staff/rooms",
+    "/staff/hall",
   ].some((pattern) => matchPath(pattern, pathname));
   const title =
     page?.label ??

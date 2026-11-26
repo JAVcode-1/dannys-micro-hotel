@@ -14,6 +14,8 @@ import {
 import { hallPackagePrice, quoteHall } from "./hall-scheduling.js";
 import { hallReport } from "./hall-reports.js";
 import {
+  completedHallBalance,
+  hallPaymentClosed,
   hallRefundTransferAmount,
   hallStartPaymentIssue,
 } from "./hall-payments.js";
@@ -137,12 +139,24 @@ export function registerHall(app: Express, staff: RequestHandler, pool?: Pool) {
             )
           ).rows;
       for (const row of rows) {
+        const gross = BigInt(row.collected);
+        const refunded = BigInt(row.refunded);
+        row.paymentClosed = hallPaymentClosed(row.status, row.onlineState);
+        if (row.paymentClosed) {
+          row.balance = "0";
+          if (gross === refunded && BigInt(row.refundDue) === 0n)
+            row.payment_resolution = false;
+        } else if (row.status === "completed") {
+          row.balance = completedHallBalance(
+            BigInt(row.total) + BigInt(row.overtime),
+            gross,
+          ).toString();
+        }
         if (row.status === "confirmed") {
-          const gross = BigInt(row.collected);
           row.startPaymentIssue = hallStartPaymentIssue(
             row.channel === "walk_in" && !row.unifiedReservationId,
             BigInt(row.total),
-            gross - BigInt(row.refunded),
+            gross - refunded,
             gross - BigInt(row.refund_approved),
           );
         }

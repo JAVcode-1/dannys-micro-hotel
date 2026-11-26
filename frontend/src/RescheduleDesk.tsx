@@ -610,11 +610,13 @@ export default function RescheduleDesk({
   return (
     <section aria-label="Rescheduling" className="mt-6 text-main">
       <h2 className="text-2xl font-bold">Schedule changes</h2>
-      <p className="mt-2 text-sm text-muted">
-        {token
-          ? "Staff approval is required. Your original schedule stays active during review."
-          : "Synthetic preview — no hotel data, payment or capacity writes."}
-      </p>
+      {(!token || guest) && (
+        <p className="mt-2 text-sm text-muted">
+          {token
+            ? "Staff approval is required. Your original schedule stays active during review."
+            : "Synthetic preview — no hotel data, payment or capacity writes."}
+        </p>
+      )}
       {!enabled && (
         <p className="mt-3">Live rescheduling is closed pending acceptance.</p>
       )}

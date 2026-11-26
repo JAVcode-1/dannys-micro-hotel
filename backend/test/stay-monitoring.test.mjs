@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createApp } from "../dist/app.js";
 import { checkout } from "../dist/stay-monitoring.js";
-import { validSettings } from "../dist/operational-settings.js";
+import { getSettings, validSettings } from "../dist/operational-settings.js";
 test("W03 validates room item, key and bounded unpaid reason before database access", async () => {
   const noDb = {
     connect() {
@@ -26,7 +26,7 @@ test("W03 validates room item, key and bounded unpaid reason before database acc
       (error) => error.status === 400,
     );
 });
-test("W03 settings accept bounded multiple warning thresholds and reject malformed values", () => {
+test("W03 settings accept one bounded checkout reminder or no reminder", () => {
   const value = {
     cleaningBufferMinutes: null,
     checkoutAlertMinutes: null,
@@ -34,12 +34,29 @@ test("W03 settings accept bounded multiple warning thresholds and reject malform
     gcashPayeeLabel: null,
     cancellationDisplayText: null,
   };
-  assert.ok(validSettings({ ...value, checkoutWarningMinutes: [30, 15, 5] }));
-  for (const thresholds of [[], [0], [1441], ["5"], [null]])
+  for (const minutes of [null, 1, 15, 30, 1440])
+    assert.ok(validSettings({ ...value, checkoutAlertMinutes: minutes }));
+  for (const minutes of [0, 15.5, 1441, "15", [30, 15]])
     assert.equal(
-      validSettings({ ...value, checkoutWarningMinutes: thresholds }),
+      validSettings({ ...value, checkoutAlertMinutes: minutes }),
       false,
     );
+});
+test("W03 settings prefer the saved single reminder and use the earliest legacy reminder when needed", async () => {
+  for (const [single, legacy, expected] of [
+    [15, [5, 30, 10], 15],
+    [null, [5, 30, 10], 30],
+    [null, null, null],
+  ]) {
+    const settings = await getSettings({
+      query: async () => ({
+        rows: [
+          { checkoutAlertMinutes: single, legacyCheckoutReminders: legacy },
+        ],
+      }),
+    });
+    assert.deepEqual(settings, { checkoutAlertMinutes: expected });
+  }
 });
 test("W03 endpoints require individual active staff; normal registration cannot enable checkout", async () => {
   let active = true;

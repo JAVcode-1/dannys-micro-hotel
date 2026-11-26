@@ -4,7 +4,12 @@ status: in-progress
 ---
 # 14 — Milestones & Work Tracker
 
-## Housekeeping response recovery (2026-11-25)
+## Staff Rooms and Function Hall visual refresh (2026-11-27)
+
+Rooms and Function Hall use the Royal Horizon glass workspace with existing hotel photos. Room cards fit the available width, and the Hall calendar gives readiness and event groups distinct surfaces. Sample-data Edge previews were checked at 1440 px and 390 px. The Rooms sample preserved distinct available and held rooms, and the Hall sample verified Calendar, New booking, and Settings navigation.
+
+The development checkpoint includes the earlier project edits approved for source control. Build, typecheck, lint, and all 239 application tests passed. The staff navigation test now checks the Reservations payment-review count in its accessible name. Hosted acceptance and isolated PostgreSQL checks were not repeated. The two Hall constraints remain pending migration approval. No phase checklist was marked complete.
+
 ## Staff Walk-ins and Payments visual refresh (2026-11-26)
 
 Walk-ins and Payments now use the shared Royal Horizon glass workspace. Verified desktop and phone previews with sample data, including booking selection, policy disclosure, and queue switching. Build, typecheck, lint, 129 backend tests, and 109 frontend tests passed. The existing staff-shell Reservations navigation assertion remains open. Phase 05 and Phase 06 checklist status remains open.
@@ -27,6 +32,89 @@ The glass treatment now spans the entire Today workspace, including the desktop 
 
 The Today dashboard uses Royal Horizon frosted cards, a Manila-time greeting, the existing hotel room photo, and a responsive metric grid. The frontend reuses the current staff identity, links, and dashboard data. Build, typecheck, lint, 129 backend tests, and the three Today tests passed. Edge previews with sample data were checked at 1440 px and 390 px. The full frontend run had two failures. The guest booking test passed in a focused rerun, while the existing staff-shell Reservations navigation assertion still blocks the checkpoint. Checklist status remains open.
 
+## Analytics report downloads removed (2026-11-26)
+
+Removed the CSV/XLSX controls, export route, and workbook dependency. The staff room reports and separate Function Hall report remain available on screen with their existing filters. Build, typecheck, lint, all 129 backend tests, and the two frontend Analytics tests passed. A local browser check with synthetic data verified both reports and their date filters. The full frontend suite passed 109 of 110 tests, with the existing Reservations navigation assertion still failing. Phase 08 acceptance remains open. The change remains in the working tree.
+
+## Staff room reactivation (2026-11-26)
+
+The Room 2 card now has a Booking activation form, verified in the running staff browser with Room 2 still inactive. The existing staff endpoint accepts an activation request for the current room identifier and category. The card opens Inspect room when the API requires a current inspection and keeps the activation reason for the retry. No migration or dependency was added.
+
+Build, typecheck, lint and all ten focused Rooms tests passed. The application suite passed all 130 backend tests and 109 of 110 frontend tests. The pre-existing staff navigation assertion still fails. The disposable PostgreSQL activation assertions passed for unauthorized staff, required inspection, identifier preservation and exact retry. The unrelated guest contact snapshot assertion and its parent suite left that run at 38 of 40 reported tests passing. Phase 08 checklist items remain open and the change remains in the working tree.
+
+## Rooms card availability (2026-11-26)
+
+The Rooms page now shows Inactive for rooms disabled for booking and uses the server's current availability to decide when to show the green Ready badge. Verified in the running staff browser that Room 2 displays Inactive and Unavailable for booking. The change uses existing API data and requires no new dependency or migration.
+
+Build, typecheck, lint and all nine focused Rooms, housekeeping and maintenance tests passed. The full suite passed 130 backend tests and 108 of 109 frontend tests. The existing staff navigation assertion for the Reservations link still fails, so the change remains in the working tree. Phase 08 checklist items remain open for operational acceptance.
+
+## Interrupted checkout recovery (2026-11-26)
+
+With the API unavailable, a local Vite proxy returned HTTP 500 with an empty body. The Stays page now pauses checkout after an unconfirmed response until a fresh stay list loads. The regression tests cover a departure that was saved before the connection dropped and an active stay whose staff retry reuses the original request key. The active-stay test also verifies that an earlier read cannot clear the pause.
+
+Build, typecheck and lint passed. All 130 backend tests passed, including the checkout authorization test. The frontend suite passed 107 of 108 tests, with the pre-existing staff shell Reservations link assertion still failing. The running API returned HTTP 200 on readiness directly and through Vite and HTTP 401 for unauthenticated access to stays. W03 checklist items remain open pending manual browser and hosted acceptance. The fix remains in the working tree.
+
+## Single checkout reminder (2026-11-26)
+
+Operational settings uses one numeric checkout reminder. Stays and checkout uses that same value, with the saved single alert preferred over values in older reminder lists. Build, typecheck, lint, reminder tests and the W03 disposable PostgreSQL regression passed. The full application suite passed 130 backend and 104 frontend tests, with two existing failures in guest hold retry and staff navigation. The selected PostgreSQL suites passed 35 of 37 reported tests. An unrelated guest contact assertion failed and caused its parent suite to fail. Phase acceptance remains open. No development checkpoint was committed or pushed.
+
+## Staff workspace wording (2026-11-26)
+
+Reviewed staff-facing pages and removed repetitive copy from Settings, Today, Reservations, Rooms, Walk-ins and Rescheduling. Payment verification guidance appears with the review controls. Verified the cleaning helper was removed in the staff browser and the saved 15-minute value still displayed. Build, typecheck, lint and the settings regression passed. The full suite passed 129 backend and 104 frontend tests, with failures in guest hold retry and staff navigation. Phase checkboxes remain open. No checkpoint was committed or pushed.
+
+## Operational settings (2026-11-26)
+
+Configured 30-, 15-, and 5-minute checkout reminders and the owner-approved online cancellation wording through the staff settings form. A browser reload confirmed the saved values, the 15-minute cleaning buffer, and the 30-minute single-alert fallback. The form now explains each setting, offers a reminder preset, and validates entries before saving. Build, typecheck, lint, formatting, and the focused settings test passed. The full frontend suite had two failures, including a staff navigation assertion. Phase checkboxes remain open. No development checkpoint was committed or pushed.
+
+## Room extension workflow (2026-11-26)
+
+Removed Overtime review from Extensions and charges. The charge breakdown shows posted charges and supports credits against eligible unpaid amounts. Owner browser testing is pending. Phase checkboxes remain open.
+
+## Rooms page simplification (2026-11-26)
+
+Removed Room setup from staff room cards. Maintenance details, cleaning history and eligible inspections remain available. The owner will test the change manually. Phase checkboxes remain open.
+
+## Staff Today design (2026-11-26)
+
+Today uses the Royal Horizon palette and the existing hotel photograph. The page adds a next-checkout card, manual refresh, linked metrics, an Open work filter and a room-availability strip. Brief count and hover animations respect reduced-motion preferences. Owner browser acceptance is pending.
+
+## Local Rooms API recovery (2026-11-25)
+
+The development API stopped on restart because the two unapproved Hall migrations were in the active migration list. Moved the drafts under `supabase/migrations/pending-approval/` and restarted the existing API watcher. Local readiness through Vite returned HTTP 200. No live room updates or hosted migrations were submitted. Owner browser acceptance remains pending.
+
+## Function Hall no-show wait (2026-11-25)
+
+The API accepts no-show waits longer than one day as whole minutes. The default remains 60 minutes, and staff mark no-shows manually after the chosen wait from the scheduled start. The database change is prepared in `20261125003400_hall_no_show_grace_range.sql` and awaits separate approval for hosted development.
+
+## Room inspection during reactivation (2026-11-25)
+
+If activation of an inactive Ready room requires a current inspection, Room setup opens the inspection form in response to the API's message. Staff can record the physical check and retry activation. Browser acceptance is pending.
+
+## Function Hall setup time units (2026-11-25)
+
+Staff can enter 1–60 whole minutes, 1–24 whole hours, or a positive whole number of days. The Settings form sends minutes through the existing save command and lets staff retain a previously saved duration. Migration `20261125003300_hall_multi_day_setup.sql` removes the database's one-day limit and requires separate approval before hosted development can use it. Owner browser acceptance remains pending.
+
+Frontend and API typechecks passed. The migration is unapplied and database and browser acceptance are pending.
+
+## Closed Function Hall payments (2026-11-25)
+
+The Hall Calendar shows zero collectible balance for cancelled, no-show and expired bookings, with a Fully refunded label when all recorded funds have been returned. The staff API rejects routine collection on those records. Reconcile late payment records verified funds and an audit note while keeping the booking closed. Completed events cap normal collection at the unpaid charges. Browser acceptance and phase gates remain pending.
+
+Eight focused Hall UI tests, the backend build, frontend typecheck and changed-file lint passed. Disposable PostgreSQL verified staff-only access, attestation, retry and duplicate-reference handling, preservation of cancelled and released states, and the completed-event collection cap.
+
+## Guest Function Hall status (2026-11-25)
+
+The public Hall status badge shows Ready and available now, Occupied now, Reserved now, or Temporarily unavailable. The booking planner places it beside the Hall controls and shows availability for the selected time separately. The two focused frontend checks, frontend typecheck and changed-file lint passed. Owner browser acceptance is pending. Phase checkboxes remain open.
+
+## Philippine mobile number for online booking (2026-11-25)
+
+Guest booking uses the same Philippine mobile format check in the planner and Express hold creation. New contact records use `+639XXXXXXXXX`. Both focused API validation tests passed, along with type and changed-file lint checks. Browser acceptance is pending and phase checkboxes remain open.
+
+## Room controls and live staff badges (2026-11-25)
+
+Rooms that need cleaning or a readiness check appear first. Staff see Inspect room only where the room needs it, and Room setup holds number, category and booking activation. Reservation and payment badges use the same submitted-proof queue, counted once in the Front desk total. The existing Express API signals connected staff to refresh counts after relevant changes. Frontend and API typechecks, changed-file lint, and formatting checks passed. The owner requested hands-on testing and deferred automated tests. No phase checklist item was marked complete.
+
+## Housekeeping response recovery (2026-11-25)
 
 The Rooms board now gives a refresh instruction when a disconnect or empty proxy error leaves a housekeeping action unconfirmed. After refreshing, staff can retry an action that is still offered with the original request key. The test reproduced the reported JSON error before the fix. The local Vite proxy returned HTTP 200 for `/api/health`. Browser acceptance on Room 2 remains pending. No Phase 08 checklist item was marked complete.
 

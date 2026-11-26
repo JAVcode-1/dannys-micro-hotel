@@ -2,6 +2,7 @@ import { URL } from "node:url";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { checkout, monitoredStays } from "../dist/stay-monitoring.js";
+import { getSettings, saveSettings } from "../dist/operational-settings.js";
 import { createWalkInBooking, recordWalkInPayment } from "../dist/walkins.js";
 export async function w03Postgres(
   t,
@@ -31,12 +32,22 @@ export async function w03Postgres(
         authenticated: false,
       });
       await pool.query(
-        "update staytrack.operational_settings set checkout_warning_minutes=array[30,15,5]",
+        "update staytrack.operational_settings set checkout_alert_minutes=null, checkout_warning_minutes=array[5,30,15]",
       );
-      assert.deepEqual(
-        (await monitoredStays(pool)).warningMinutes,
-        [30, 15, 5],
+      assert.deepEqual((await monitoredStays(pool)).warningMinutes, [30]);
+      await pool.query(
+        "update staytrack.operational_settings set checkout_alert_minutes=15",
       );
+      assert.deepEqual((await monitoredStays(pool)).warningMinutes, [15]);
+      const settings = await getSettings(pool);
+      assert.ok(
+        await saveSettings(
+          actor,
+          { ...settings, checkoutAlertMinutes: null },
+          pool,
+        ),
+      );
+      assert.deepEqual((await monitoredStays(pool)).warningMinutes, []);
       const schedules = async () =>
         (
           await pool.query(

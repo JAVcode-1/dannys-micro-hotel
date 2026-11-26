@@ -13,11 +13,18 @@ const status: Record<string, string> = {
   cleaning: "bg-amber-100 text-amber-800",
   maintenance: "bg-slate-200 text-slate-700",
   unverified: "bg-slate-200 text-slate-700",
+  "needs inspection": "bg-amber-100 text-amber-800",
 };
 type OperationalRoom = StaffRoom & {
-  physically_ready?: boolean;
   legacy_inspection_eligible?: boolean;
 };
+
+function roomNeedsAttention(room: OperationalRoom) {
+  return (
+    (room.active && room.operational_state === "cleaning") ||
+    room.legacy_inspection_eligible === true
+  );
+}
 
 export default function StaffRooms({ token }: { token: string }) {
   const [rooms, setRooms] = React.useState<OperationalRoom[]>([]);
@@ -123,14 +130,9 @@ export default function StaffRooms({ token }: { token: string }) {
       hour12: true,
     });
   return (
-    <section className="mt-8 border-t border-subtle pt-6">
+    <section className="staff-room-board mt-8 border-t border-subtle pt-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[.2em] text-primary">
-            Operations
-          </p>
-          <h2 className="mt-2 text-2xl font-bold">Rooms</h2>
-        </div>
+        <h2 className="text-2xl font-bold">Rooms</h2>
         <span className="rounded-full bg-selected px-3 py-2 text-sm font-semibold text-primary">
           {rooms.length} rooms on record
         </span>
@@ -176,15 +178,23 @@ export default function StaffRooms({ token }: { token: string }) {
           are pending.
         </p>
       )}
-      <div className="mt-6 grid items-start gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="staff-room-grid mt-6 grid items-start gap-3">
         {[...rooms]
-          .sort((a, b) =>
-            a.code.localeCompare(b.code, "en", {
-              numeric: true,
-              sensitivity: "base",
-            }),
+          .sort(
+            (a, b) =>
+              Number(roomNeedsAttention(b)) - Number(roomNeedsAttention(a)) ||
+              a.code.localeCompare(b.code, "en", {
+                numeric: true,
+                sensitivity: "base",
+              }),
           )
           .map((room) => {
+            const available = room.active && room.available_now;
+            let badge = room.operational_state;
+            if (!room.active) badge = "inactive";
+            else if (room.legacy_inspection_eligible)
+              badge = "needs inspection";
+            else if (badge === "ready" && !available) badge = "unavailable";
             const events = room.housekeeping ?? [];
             const stage = events.at(-1)?.action;
             const action: HousekeepingAction =
@@ -212,24 +222,27 @@ export default function StaffRooms({ token }: { token: string }) {
                     </p>
                   </div>
                   <span
-                    className={`rounded-full px-2 py-1 text-xs font-semibold ${status[room.operational_state] ?? status.unverified}`}
+                    className={`rounded-full px-2 py-1 text-xs font-semibold ${status[badge] ?? status.unverified}`}
                   >
-                    {room.operational_state === "unverified"
-                      ? "Unverified"
-                      : room.operational_state[0].toUpperCase() +
-                        room.operational_state.slice(1)}
+                    {badge.charAt(0).toUpperCase() + badge.slice(1)}
                   </span>
                 </div>
                 <div className="mt-4 space-y-2 text-sm">
-                  <p
-                    className={
-                      room.available_now
-                        ? "font-semibold text-green-800"
-                        : "text-muted"
-                    }
-                  >
-                    {room.available_now ? "Available now" : "Unavailable now"}
-                  </p>
+                  {badge !== "unavailable" && (
+                    <p
+                      className={
+                        available
+                          ? "font-semibold text-green-800"
+                          : "text-muted"
+                      }
+                    >
+                      {!room.active
+                        ? "Unavailable for booking"
+                        : available
+                          ? "Available now"
+                          : "Unavailable now"}
+                    </p>
+                  )}
                   {room.operational_state === "cleaning" && (
                     <p className="font-semibold text-amber-800">
                       {stage === "finish"
@@ -338,17 +351,12 @@ export default function StaffRooms({ token }: { token: string }) {
                   rooms={rooms}
                 />
                 {room.legacy_inspection_eligible !== undefined && (
-                  <RoomAdministration
+                  <RoomReadinessActions
                     key={token + ":" + room.id}
                     room={room}
                     token={token}
                     refresh={load}
                   />
-                )}
-                {!room.active && (
-                  <p className="mt-4 text-xs font-semibold text-muted">
-                    Inactive · unavailable for booking
-                  </p>
                 )}
               </article>
             );
@@ -403,14 +411,14 @@ function RoomRegistration({
             if (!response.ok)
               throw new Error(result.error || "Registration failed.");
             notifySuccess(
-              "Room registered as inactive and Unverified. Inspect it before activation.",
+              "Room registered as inactive and Unverified.",
             );
             retry.current = null;
             setCode("");
             setNote("");
             await refresh();
             setMessage(
-              "Room registered as inactive and Unverified. Inspect it, then activate it for booking.",
+              "Room registered as inactive and Unverified. Inspect it to record its readiness.",
             );
           } catch (error) {
             setMessage(
@@ -426,9 +434,7 @@ function RoomRegistration({
     >
       <h3 className="font-bold">Register a physical room</h3>
       <p className="mt-2 text-sm text-muted">
-        Register the actual 10 Double Standard and 5 Family Executive
-        identifiers. The Function Hall is managed separately. New rooms are not
-        automatically Ready or available.
+        New rooms start inactive and Unverified.
       </p>
       <fieldset
         disabled={busy || disabled}
@@ -481,7 +487,7 @@ function RoomRegistration({
   );
 }
 
-function RoomAdministration({
+function RoomReadinessActions({
   room,
   token,
   refresh,
@@ -490,29 +496,29 @@ function RoomAdministration({
   token: string;
   refresh: () => Promise<void>;
 }) {
-  const [note, setNote] = React.useState("");
-  const [code, setCode] = React.useState(room.code);
-  const [category, setCategory] = React.useState(room.category_code);
-  const [active, setActive] = React.useState(room.active);
+  const [inspectionNote, setInspectionNote] = React.useState("");
+  const [activationNote, setActivationNote] = React.useState("");
+  const [inspectionRequired, setInspectionRequired] = React.useState(false);
   const [checked, setChecked] = React.useState(false);
-  const [busy, setBusy] = React.useState(false);
+  const [pending, setPending] = React.useState<"inspection" | "admin" | null>(
+    null,
+  );
   const [error, setError] = React.useState("");
   const [success, setSuccess] = React.useState("");
-  const retry = React.useRef<{ payload: string; key: string } | null>(null);
-  React.useEffect(() => {
-    setCode(room.code);
-    setCategory(room.category_code);
-    setActive(room.active);
-  }, [room.code, room.category_code, room.active]);
-  async function submit(inspection: boolean) {
-    if (busy) return;
+  const retries = React.useRef<
+    Partial<Record<"inspection" | "admin", { payload: string; key: string }>>
+  >({});
+  async function submit(action: "inspection" | "admin") {
+    if (pending) return;
     setError("");
     setSuccess("");
-    if (!note.trim() || (!inspection && !code.trim())) {
+    const inspection = action === "inspection";
+    const note = (inspection ? inspectionNote : activationNote).trim();
+    if (!note) {
       setError(
         inspection
           ? "Enter an inspection reason before marking the room Ready."
-          : "Enter the confirmed room identifier and an administration reason.",
+          : "Enter a reason to activate the room.",
       );
       return;
     }
@@ -522,66 +528,61 @@ function RoomAdministration({
       );
       return;
     }
-    if (
-      !inspection &&
-      active &&
-      !room.active &&
-      room.operational_state !== "ready"
-    ) {
-      setError(
-        "Inspect and mark the room Ready first, then save with Active for booking selected.",
-      );
-      return;
-    }
     const body = inspection
-      ? { note: note.trim(), checksConfirmed: checked }
-      : { note: note.trim(), code: code.trim(), active, category };
-    const payload = JSON.stringify({ inspection, ...body });
-    setBusy(true);
+      ? { note, checksConfirmed: true }
+      : { note, active: true };
+    const payload = JSON.stringify(body);
+    setPending(action);
     try {
-      if (retry.current?.payload !== payload)
-        retry.current = { payload, key: crypto.randomUUID() };
+      const prior = retries.current[action];
+      const attempt =
+        prior?.payload === payload
+          ? prior
+          : { payload, key: crypto.randomUUID() };
+      retries.current[action] = attempt;
       const response = await fetch(
-        `${apiBase}/staff/rooms/${room.id}/${inspection ? "inspection" : "admin"}`,
+        `${apiBase}/staff/rooms/${room.id}/${action}`,
         {
           method: inspection ? "POST" : "PATCH",
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ ...body, requestKey: retry.current.key }),
+          body: JSON.stringify({ ...body, requestKey: attempt.key }),
         },
-      );
-      if (!response.ok) {
-        const result = await response.json().catch(() => null);
+      ).catch(() => null);
+      if (!response?.ok) {
+        const result = await response?.json().catch(() => null);
+        if (
+          !inspection &&
+          response?.status === 409 &&
+          result?.error === "Inspect and mark the room Ready before activation."
+        ) {
+          setInspectionRequired(true);
+        }
         throw new Error(
-          result?.error || "Room update failed. Please try again.",
+          result?.error ||
+            "The room update could not be confirmed. Refresh the board before retrying.",
         );
       }
-      retry.current = null;
-      setNote("");
-      setChecked(false);
-      notifySuccess(
-        inspection
-          ? "Inspection saved. Room marked Ready."
-          : "Room administration saved.",
-      );
-      setSuccess(
-        inspection
-          ? "Inspection saved. Room marked Ready." +
-              (!room.active
-                ? " Activate it for booking using Save room administration."
-                : "")
-          : "Room administration saved." +
-              (active
-                ? " Active for online and walk-in bookings, subject to availability."
-                : " Room is inactive for booking."),
-      );
+      delete retries.current[action];
+      if (inspection) {
+        setInspectionNote("");
+        setChecked(false);
+        setInspectionRequired(false);
+      } else {
+        setActivationNote("");
+      }
+      const message = inspection
+        ? "Inspection saved. Room marked Ready."
+        : "Room activated for booking.";
+      notifySuccess(message);
+      setSuccess(message);
       try {
         await refresh();
       } catch {
         setError(
-          "The change was saved, but the room board could not refresh. Use Refresh room board to see the latest status.",
+          "The change was saved, but the room board could not refresh. Use Refresh to see the latest status.",
         );
       }
     } catch (error) {
@@ -589,89 +590,69 @@ function RoomAdministration({
         error instanceof Error ? error.message : "Room update unavailable.",
       );
     } finally {
-      setBusy(false);
+      setPending(null);
     }
   }
-  const disabled = busy || !room.housekeeping_enabled;
+  const disabled = pending !== null || !room.housekeeping_enabled;
   return (
-    <details className="mt-4 border-t border-subtle pt-3">
-      <summary className="cursor-pointer font-semibold">
-        Administration and inspection
-      </summary>
-      <p className="mt-2 text-sm">
-        Use owner-confirmed identifiers only. Current inspection can reconcile
-        missing legacy readiness evidence after any protected turnover expires;
-        it does not invent historical cleaning events.
-      </p>
-      {!room.housekeeping_enabled && (
-        <p role="status" className="mt-2 text-sm">
-          Room administration and inspection are currently unavailable.
-        </p>
+    <>
+      {!room.active && room.operational_state === "ready" && (
+        <details className="mt-4 border-t border-subtle pt-3 text-sm">
+          <summary className="min-h-11 cursor-pointer font-semibold text-primary">
+            Booking activation
+          </summary>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void submit("admin");
+            }}
+          >
+            <fieldset
+              disabled={
+                disabled || room.maintenance_now || Boolean(room.turnover_until)
+              }
+            >
+              <label className="grid gap-1">
+                Activation reason
+                <textarea
+                  maxLength={1000}
+                  required
+                  value={activationNote}
+                  onChange={(e) => setActivationNote(e.target.value)}
+                  className="rounded border border-subtle p-2"
+                />
+              </label>
+              <button className="mt-2 min-h-11 rounded-lg bg-primary px-4 font-semibold text-white disabled:opacity-50">
+                Activate for booking
+              </button>
+            </fieldset>
+          </form>
+          {!room.housekeeping_enabled && (
+            <p className="mt-2 text-muted">
+              Booking activation is currently unavailable.
+            </p>
+          )}
+        </details>
       )}
-      {room.active &&
-        room.physically_ready === false &&
-        room.operational_state === "ready" && (
-          <p className="text-sm">
-            Ready label requires current inspection or latest housekeeping
-            evidence before guest access.
-          </p>
-        )}
-      <label className="mt-2 grid gap-1">
-        Confirmed room identifier
-        <input
-          maxLength={80}
-          className="rounded border border-subtle p-2"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          disabled={disabled}
-        />
-      </label>
-      <label className="mt-2 grid gap-1">
-        Room category
-        <select
-          value={category}
-          disabled={disabled || room.active}
-          onChange={(e) => setCategory(e.target.value)}
-          className="rounded border border-subtle p-2"
+      {(room.legacy_inspection_eligible || inspectionRequired) && (
+        <details
+          open={inspectionRequired || undefined}
+          className="mt-4 border-t border-subtle pt-3 text-sm"
         >
-          <option value="double_standard">Double Standard</option>
-          <option value="family_executive">Family Executive</option>
-        </select>
-        <span className="text-xs text-muted">
-          Category corrections require an inactive room without booking or
-          maintenance history.
-        </span>
-      </label>
-      <label className="flex gap-2 py-2">
-        <input
-          type="checkbox"
-          checked={active}
-          onChange={(e) => setActive(e.target.checked)}
-          disabled={disabled}
-        />
-        Active for booking
-      </label>
-      <label className="grid gap-1">
-        Administration or inspection reason
-        <textarea
-          maxLength={1000}
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          className="rounded border border-subtle p-2"
-          disabled={disabled}
-        />
-      </label>
-      <button
-        type="button"
-        className="mt-2 min-h-11 rounded border border-subtle px-3"
-        disabled={disabled}
-        onClick={() => void submit(false)}
-      >
-        Save room administration
-      </button>
-      {room.legacy_inspection_eligible && (
-        <>
-          <label className="flex gap-2 py-2">
+          <summary className="min-h-11 cursor-pointer font-semibold text-primary">
+            Inspect room
+          </summary>
+          <label className="grid gap-1">
+            Inspection note
+            <textarea
+              maxLength={1000}
+              value={inspectionNote}
+              onChange={(e) => setInspectionNote(e.target.value)}
+              className="rounded border border-subtle p-2"
+              disabled={disabled}
+            />
+          </label>
+          <label className="flex min-h-11 items-start gap-2 py-2">
             <input
               type="checkbox"
               checked={checked}
@@ -682,21 +663,25 @@ function RoomAdministration({
           </label>
           <button
             type="button"
-            className="min-h-11 rounded border border-subtle px-3"
+            className="mt-2 min-h-11 rounded-lg bg-primary px-4 font-semibold text-white disabled:opacity-50"
             disabled={disabled}
-            onClick={() => void submit(true)}
+            onClick={() => void submit("inspection")}
           >
             Inspect and mark Ready
           </button>
-        </>
+        </details>
       )}
-      {busy && <p role="status">Saving room changes…</p>}
+      {pending && (
+        <p role="status">
+          {pending === "inspection" ? "Saving inspection…" : "Activating room…"}
+        </p>
+      )}
       {success && (
         <p role="status" className="mt-2 text-green-800">
           {success}
         </p>
       )}
       {error && <p role="alert">{error}</p>}
-    </details>
+    </>
   );
 }

@@ -95,7 +95,7 @@ Build, typecheck, lint, formatting, 90 application tests, and 10 isolated Postgr
 
 ### W03 — Countdown, overdue and checkout
 - [ ] Dashboard computes from persisted server timestamps; reload/reopen no drift.
-- [ ] Configurable warning thresholds (e.g. 30/15/5m) and checkout overdue states.
+- [ ] One configurable reminder before checkout and a separate overdue status.
 - [ ] Timer zero never auto-checks out; staff records real checkout.
 - [ ] Remaining balance must normally be settled; allow documented exception to complete departure.
 - [ ] After checkout mark Needs cleaning, not instantly Ready.

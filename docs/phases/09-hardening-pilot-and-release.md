@@ -7,7 +7,7 @@ status: not-started
 
 ## Final Analytics scope revision - 2026-11-20
 
-Owner-approved Analytics scope is **only Revenue Analytics, Room Category Performance and Package Popularity**, with date-range filtering, staff authorization and CSV/Excel exports; see [[future-analytics-and-reports]]. This supersedes the earlier six-feature proposal and related historical scope statements. Payment & Outstanding Balance Reports, Room Occupancy Analytics, Booking Analytics and Peak Hours & Demand Analytics are excluded as dedicated analytics/dashboard features and must not return under alternate labels. Existing operational availability, check-in/out, payments, balances, manual refunds, booking management and stay-duration monitoring remain unchanged.
+Owner-approved Analytics scope is **only Revenue Analytics, Room Category Performance and Package Popularity**, with date-range filtering and staff-only on-screen access; see [[future-analytics-and-reports]]. This supersedes the earlier six-feature proposal and related historical scope statements. Payment & Outstanding Balance Reports, Room Occupancy Analytics, Booking Analytics and Peak Hours & Demand Analytics are excluded as dedicated analytics/dashboard features and must not return under alternate labels. Existing operational availability, check-in/out, payments, balances, manual refunds, booking management and stay-duration monitoring remain unchanged.
 
 Order: finish remaining core features, implement the three approved Analytics features, implement Function Hall Reservation & Management, then complete integration, testing, acceptance and deployment preparation. Preserve all confirmed [[future-function-hall-requirements|Function Hall requirements]] and pending owner decisions. X01-X03 checkpoints remain implemented; all 14 Supabase migrations remain owner-confirmed synchronized. Existing acceptance gaps stay open, live transactions stay disabled and both future modules remain unimplemented. Documentation only; no next implementation task begins.
 
@@ -20,7 +20,7 @@ Order: finish remaining core features, implement the three approved Analytics fe
 
 Final integration, comprehensive testing, business acceptance, UI/UX refinement and deployment readiness follow remaining approved core StayTrack features, then [[future-analytics-and-reports|Analytics & Reports]], then [[future-function-hall-requirements|Function Hall Reservation & Management]]. Preserve R01-R03 and existing phase IDs. Earlier acceptance/security checks remain required during development; this sequence does not postpone essential safeguards. Both future modules are unimplemented and live transactions remain disabled.
 
-Before final release, demonstrate report reconciliation/export/access correctness, approved hall pricing and capacity/overlap rules, facility-versus-room reporting isolation and owner-approved hall policies. These extend the scope of existing R01/R02/R03 validation; they are not new official task IDs or completed checks.
+Before final release, demonstrate report reconciliation and staff authorization, approved hall pricing and capacity/overlap rules, facility-versus-room reporting isolation and owner-approved hall policies. These extend the scope of existing R01/R02/R03 validation; they are not new official task IDs or completed checks.
 
 ## Task sequence
 

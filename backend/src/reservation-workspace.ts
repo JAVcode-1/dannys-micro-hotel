@@ -5,6 +5,7 @@ import { BookingError } from "./booking-quote.js";
 import { databasePool } from "./database.js";
 import { claimTransaction } from "./inventory-claims.js";
 import { readStayFinancials } from "./stay-finance.js";
+import { roomInspectionNeeded, roomInspectionsInstalled } from "./rooms.js";
 
 export function parseReservationSearch(query: Record<string, unknown>) {
   const q = query.q ?? "";
@@ -206,7 +207,9 @@ export function registerReservationWorkspace(
   app.get("/staff/dashboard", staff, async (_req, res) => {
     res.setHeader("Cache-Control", "no-store");
     try {
-      const result = await (pool ?? databasePool()).query(`select
+      const db = pool ?? databasePool();
+      const inspections = enabled && (await roomInspectionsInstalled(db));
+      const result = await db.query(`select
         (select count(*)::int from staytrack.room_bookings b join staytrack.inventory_claims i on i.id=b.claim_id
           where i.state in ('confirmed','walkin_reserved') and (b.start_at at time zone 'Asia/Manila')::date=(clock_timestamp() at time zone 'Asia/Manila')::date
           and not exists(select 1 from staytrack.room_check_ins ci where ci.room_booking_id=b.id)) as arrivals,
@@ -214,6 +217,8 @@ export function registerReservationWorkspace(
         (select count(*)::int from staytrack.room_check_ins ci where not exists(select 1 from staytrack.room_checkouts co where co.room_booking_id=ci.room_booking_id)) as occupied,
         (select count(*)::int from staytrack.room_check_ins ci left join staytrack.stay_item_terms t on t.room_booking_id=ci.room_booking_id where coalesce(t.effective_checkout_at,ci.checkout_at)<=clock_timestamp() and not exists(select 1 from staytrack.room_checkouts co where co.room_booking_id=ci.room_booking_id)) as overdue,
         (select count(*)::int from staytrack.rooms where active and operational_state='cleaning') as "needsCleaning",
+        (select count(*)::int from staytrack.rooms r where (r.active and r.operational_state='cleaning')
+          ${inspections ? `or ${roomInspectionNeeded}` : ""}) as "roomAttention",
         (select count(*)::int from staytrack.rooms where active and operational_state='maintenance') as maintenance`);
       if (await unifiedInstalled(pool ?? databasePool())) {
         const hall = (

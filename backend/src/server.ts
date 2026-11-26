@@ -3,6 +3,7 @@ import { createHostedDevelopmentApp } from "./hosted-development.js";
 import { runScheduledJobs } from "./notifications.js";
 import { closeDatabase, databasePool } from "./database.js";
 import { configuredMailAdapter } from "./mail.js";
+import { closeStaffNavEvents } from "./staff-nav-events.js";
 
 const app =
   process.env.NODE_ENV === "development"
@@ -48,6 +49,7 @@ const expirationTimer =
 function stop() {
   clearInterval(expirationTimer);
   server.close(() => void closeDatabase());
+  closeStaffNavEvents(app);
 }
 process.on("SIGINT", stop);
 process.on("SIGTERM", stop);

@@ -619,9 +619,38 @@
   gap: clamp(1.5rem, 6vw, 7rem);
   padding-block: clamp(3rem, 6vw, 6rem);
 }
-.landing-hall img {
+.landing-hall-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(0.65rem, 1.4vw, 1.25rem);
+}
+.landing-hall-gallery figure {
+  overflow: hidden;
+  margin: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.9rem;
+  background: var(--surface-card);
+}
+.landing-hall-gallery img,
+.landing-hall-gallery .landing-photo-fallback {
   aspect-ratio: 1.46;
+}
+.landing-hall-gallery img {
   object-fit: cover;
+}
+.landing-hall-gallery .landing-hall-room-photo {
+  object-position: center 66%;
+}
+.landing-hall-gallery figcaption {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.7rem 0.85rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+.landing-hall-gallery figcaption strong {
+  color: var(--text-main);
+  font-size: 1rem;
 }
 .landing-hall p,
 .landing-contact p {
@@ -959,7 +988,12 @@
   .landing-section-head {
     display: grid;
   }
-  .landing-hall img {
+  .landing-hall-gallery {
+    order: 1;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .landing-hall-gallery img,
+  .landing-hall-gallery .landing-photo-fallback {
     aspect-ratio: 1.6;
   }
 }
@@ -994,9 +1028,6 @@
 .landing-photo-fallback {
   display: block;
   background: var(--accent-lavender);
-}
-.landing-hall .landing-photo-fallback {
-  aspect-ratio: 1.46;
 }
 .landing-hero-media .landing-photo-fallback {
   position: absolute;

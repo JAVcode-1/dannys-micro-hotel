@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { Link, useLocation } from "react-router";
 import StaffIcon from "./StaffIcon";
-import StaffNavBadge from "./StaffNavBadge";
+import StaffNavBadge, { staffNavTotal } from "./StaffNavBadge";
 import type { StaffNavCounts } from "./StaffNavBadge";
 
 export type MobileNavGroup = {
@@ -207,12 +207,7 @@ export default function StaffMobileNavigation({
               <span>
                 {group.label === "Booking changes" ? "Changes" : group.label}
               </span>
-              <StaffNavBadge
-                count={group.entries.reduce(
-                  (sum, entry) => sum + (counts[entry.path] ?? 0),
-                  0,
-                )}
-              />
+              <StaffNavBadge count={staffNavTotal(group.entries, counts)} />
             </button>
           ),
         )}

@@ -6,7 +6,9 @@ import { createHash } from "node:crypto";
 import { BookingError } from "./booking-quote.js";
 import { hallDefaults, quoteHall } from "./hall-scheduling.js";
 import {
+  completedHallBalance,
   hallDepositMet,
+  hallPaymentClosed,
   hallRefundTransferAmount,
   hallStartPaymentIssue,
   normalizeHallReceipt,
@@ -32,6 +34,7 @@ export const hallCommands = [
   "inquiry",
   "book_walk_in",
   "receipt",
+  "reconcile_late_payment",
   "confirm",
   "recover_inquiry",
   "reschedule",
@@ -105,7 +108,17 @@ export async function hallSettings(client: Pick<PoolClient, "query">) {
 
 function settingsInput(input: Input) {
   const values = Object.keys(hallDefaults) as (keyof HallSettings)[];
-  const limits = [1439, 1439, 129600, 3650, 1440, 1440, 1440, 1440];
+  const maxStoredMinutes = 2_147_483_647;
+  const limits = [
+    1439,
+    1439,
+    129600,
+    3650,
+    maxStoredMinutes,
+    1440,
+    maxStoredMinutes,
+    1440,
+  ];
   const parsed = values.map((key, i) => integer(input[key], 0, limits[i]));
   if (parsed[1] <= parsed[0]) fail("Closing must follow opening.", 400);
   return parsed;
@@ -456,14 +469,15 @@ async function applyCommand(
   }
   const { r, unified } = await readHallReservation(c, reservation, true);
   if (!r) fail("Reservation unavailable.", 404);
-  const online =
-    unified &&
-    (
-      await c.query(
-        "select 1 from staytrack.online_hall_items where hall_reservation_id=$1",
-        [r.id],
-      )
-    ).rowCount === 1;
+  const onlineState = unified
+    ? (
+        await c.query<{ state: string }>(
+          "select state from staytrack.online_hall_items where hall_reservation_id=$1",
+          [r.id],
+        )
+      ).rows[0]?.state
+    : undefined;
+  const online = onlineState !== undefined;
   let net = BigInt(r.gross) - BigInt(r.refunded);
   const current = r.quote;
   const result: HallResult = {
@@ -487,9 +501,30 @@ async function applyCommand(
   };
   switch (action) {
     case "receipt": {
+      if (hallPaymentClosed(r.status, onlineState))
+        fail("Use Reconcile late payment for a closed booking.");
+      if (r.status === "completed") {
+        const due = completedHallBalance(
+          BigInt(current?.total ?? 0) + BigInt(r.overtime),
+          BigInt(r.gross),
+        );
+        if (!current || BigInt(integer(input.amount, 1)) > due)
+          fail("Record only the outstanding balance for a completed event.");
+      }
       result.receiptId = await recordHallReceipt(c, r.id, actor, input, now);
-      if (r.status === "cancelled" || r.status === "no_show")
-        await flag(c, r.id);
+      return result;
+    }
+    case "reconcile_late_payment": {
+      if (!hallPaymentClosed(r.status, onlineState))
+        fail(
+          "Reconcile late payments only for cancelled, no-show or expired bookings.",
+        );
+      if (online && input.method !== "gcash")
+        fail("Reconcile online bookings using the verified GCash transfer.");
+      str(input.evidence);
+      transactionDate(input.receivedAt, now);
+      result.receiptId = await recordHallReceipt(c, r.id, actor, input, now);
+      await flag(c, r.id);
       return result;
     }
     case "confirm":

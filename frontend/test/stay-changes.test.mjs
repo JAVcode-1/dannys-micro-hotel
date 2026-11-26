@@ -49,31 +49,21 @@ const row = (id) => ({
   charges: [],
   reviews: [],
 });
-test("X03 synthetic preview separates pending funds, settlement, policy blockers and closed activation", () => {
+test("X03 synthetic preview shows extension funding without overtime review", () => {
   render(createElement(StayChangesPreview));
   assert.ok(screen.getByText(/Synthetic preview/));
   screen.getByText("Extend this stay").closest("details").open = true;
-  screen.getByText("Overtime review").closest("details").open = true;
+  assert.equal(screen.queryByText("Overtime review"), null);
+  assert.ok(screen.getByText("Charges and payment breakdown"));
   assert.ok(screen.getByText("Pending extension funds"));
   assert.ok(screen.getByText("Remaining balance"));
   assert.ok(screen.getByText("Minimum to approve"));
-  fireEvent.change(
-    screen.getByLabelText("Reason for overtime or charge action"),
-    {
-      target: { value: "Reviewed synthetic policy" },
-    },
-  );
-  assert.equal(
-    screen.getByRole("button", { name: "Post approved policy charge" })
-      .disabled,
-    true,
-  );
   assert.equal(
     screen.getByRole("button", { name: "Approve funded extension" }).disabled,
     true,
   );
 });
-test("X03 item drafts survive refresh and failed approval without changing sibling schedule", async () => {
+test("X03 extension drafts stay independent after a failed quote and refresh", async () => {
   let posts = 0;
   globalThis.fetch = async (_url, options) =>
     options?.method === "POST"
@@ -94,18 +84,12 @@ test("X03 item drafts survive refresh and failed approval without changing sibli
   for (const card of cards) {
     within(card).getByText("Extend this stay").closest("details").open = true;
   }
-  fireEvent.change(
-    within(cards[0]).getByLabelText("Reason for overtime or charge action"),
-    {
-      target: { value: "Item A draft" },
-    },
-  );
-  fireEvent.change(
-    within(cards[1]).getByLabelText("Reason for overtime or charge action"),
-    {
-      target: { value: "Independent B draft" },
-    },
-  );
+  fireEvent.change(within(cards[0]).getByLabelText("Additional stay length"), {
+    target: { value: "360" },
+  });
+  fireEvent.change(within(cards[1]).getByLabelText("Additional stay length"), {
+    target: { value: "720" },
+  });
   fireEvent.click(
     within(cards[0]).getByRole("button", { name: "Request extension quote" }),
   );
@@ -118,14 +102,12 @@ test("X03 item drafts survive refresh and failed approval without changing sibli
   });
   cards = document.querySelectorAll("article");
   assert.equal(
-    within(cards[0]).getByLabelText("Reason for overtime or charge action")
-      .value,
-    "Item A draft",
+    within(cards[0]).getByLabelText("Additional stay length").value,
+    "360",
   );
   assert.equal(
-    within(cards[1]).getByLabelText("Reason for overtime or charge action")
-      .value,
-    "Independent B draft",
+    within(cards[1]).getByLabelText("Additional stay length").value,
+    "720",
   );
   assert.equal(
     within(cards[1]).getByRole("button", { name: "Request extension quote" })

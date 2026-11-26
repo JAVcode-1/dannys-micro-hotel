@@ -38,6 +38,26 @@ test("booking contact requires disclosed current policy and rejects control char
   ])
     assert.throws(() => parseBookingContact(value));
 });
+test("booking contact requires a Philippine mobile number", () => {
+  const contact = {
+    policyVersion: bookingPolicy.version,
+    policyAcknowledged: true,
+  };
+  for (const phone of ["09170000000", "+63 917-000-0000"])
+    assert.equal(parseBookingContact({ ...contact, phone }).phone, phone);
+  for (const phone of [
+    "0921358975",
+    "091700000000",
+    "08170000000",
+    "+63 0917 000 0000",
+    "+1 202 555 0100",
+    "09170000000\n",
+  ])
+    assert.throws(
+      () => parseBookingContact({ ...contact, phone }),
+      /Philippine mobile number/,
+    );
+});
 test("reservation pagination and detail retain identity and email ownership", async () => {
   let selected;
   const pool = {

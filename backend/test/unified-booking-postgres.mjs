@@ -781,6 +781,86 @@ export async function unifiedBookingPostgres(pool) {
     "select relrowsecurity rls,has_table_privilege('anon',oid,'SELECT,INSERT,UPDATE,DELETE') a,has_table_privilege('authenticated',oid,'SELECT,INSERT,UPDATE,DELETE') b from pg_class where oid in ('staytrack.online_hall_items'::regclass,'staytrack.online_hall_requests'::regclass)",
   );
   assert.ok(rights.rows.every((r) => r.rls && !r.a && !r.b));
+  const latePayment = {
+    id: hallId,
+    amount: 1000,
+    method: "gcash",
+    verified: true,
+    reference: "SYNTHETIC-LATE-HALL",
+    receivedAt: new Date(Date.now() - 1000).toISOString(),
+    evidence: "Synthetic transfer received after cancellation",
+  };
+  await assert.rejects(
+    hallCommand(pool, actor, "unified-late-routine", "receipt", latePayment),
+    { status: 409 },
+  );
+  await assert.rejects(
+    hallCommand(
+      pool,
+      guest.id,
+      "unified-late-guest01",
+      "reconcile_late_payment",
+      latePayment,
+    ),
+    { status: 403 },
+  );
+  await assert.rejects(
+    hallCommand(
+      pool,
+      actor,
+      "unified-late-unverified",
+      "reconcile_late_payment",
+      { ...latePayment, verified: false },
+    ),
+    /verified payment actually received/,
+  );
+  const recordLate = (key) =>
+    hallCommand(pool, actor, key, "reconcile_late_payment", latePayment);
+  const recordedLate = await recordLate("unified-late-hall01");
+  assert.equal(recordedLate.status, "cancelled");
+  assert.ok(recordedLate.receiptId);
+  assert.deepEqual(await recordLate("unified-late-hall01"), recordedLate);
+  await assert.rejects(recordLate("unified-late-hall02"), { code: "23505" });
+  assert.deepEqual(
+    (
+      await pool.query(
+        `select h.status,o.state,h.payment_resolution from staytrack.hall_reservations h
+     join staytrack.online_hall_items o on o.hall_reservation_id=h.id where h.id=$1`,
+        [hallId],
+      )
+    ).rows[0],
+    { status: "cancelled", state: "released", payment_resolution: true },
+  );
+  const completed = await hallCommand(
+    pool,
+    actor,
+    "hall-completed-fixture",
+    "book_walk_in",
+    {
+      ...hall(13),
+      organizer: "Synthetic completed event",
+      method: "cash",
+      amount: 150000,
+      verified: true,
+    },
+  );
+  assert.equal(completed.status, "confirmed");
+  await pool.query(
+    "update staytrack.hall_reservations set status='completed',actual_start=statement_timestamp(),actual_end=statement_timestamp() where id=$1",
+    [completed.id],
+  );
+  const collect = (key, amount) =>
+    hallCommand(pool, actor, key, "receipt", {
+      id: completed.id,
+      method: "cash",
+      verified: true,
+      amount,
+    });
+  await assert.rejects(collect("hall-completed-excess", 150001), {
+    status: 409,
+  });
+  assert.ok((await collect("hall-completed-balance", 150000)).receiptId);
+  await assert.rejects(collect("hall-completed-settled", 1), { status: 409 });
   console.log(
     "Verified mixed/Hall-only holds, rollback, exclusivity race, ownership, full payment, proof protection, atomic confirmation, one receipt, item cancellation/refund, expiry and private access.",
   );

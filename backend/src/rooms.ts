@@ -6,12 +6,31 @@ import { hasControlCharacters } from "./payment-media.js";
 import type { Express, RequestHandler } from "express";
 import { registerPhysicalRoom } from "./room-registration.js";
 
+export async function roomInspectionsInstalled(
+  pool: ReturnType<typeof databasePool>,
+) {
+  return Boolean(
+    (
+      await pool.query(
+        "select to_regclass('staytrack.room_inspections') is not null as installed",
+      )
+    ).rows[0].installed,
+  );
+}
+
+// The Rooms board and its badge use the same predicate. A current checkout
+// takes the normal housekeeping path instead of the imported-room inspection.
+export const roomInspectionNeeded = `(
+  (r.operational_state='unverified'
+    or (r.operational_state='ready' and r.active and not staytrack.room_is_physically_ready(r.id))
+    or (r.operational_state='cleaning' and not exists(
+      select 1 from staytrack.room_checkouts co join staytrack.room_check_ins ci on ci.room_booking_id=co.room_booking_id where ci.room_id=r.id)))
+  and not exists(select 1 from staytrack.room_check_ins s where s.room_id=r.id and not exists(select 1 from staytrack.room_checkouts o where o.room_booking_id=s.room_booking_id))
+  and not exists(select 1 from staytrack.room_blocks b where b.room_id=r.id and tstzrange(b.start_at,b.end_at,'[)') @> statement_timestamp())
+)`;
+
 export async function staffRooms(pool = databasePool(), enabled = false) {
-  const corrections = (
-    await pool.query(
-      "select to_regclass('staytrack.room_inspections') is not null as installed",
-    )
-  ).rows[0].installed;
+  const corrections = await roomInspectionsInstalled(pool);
   const installed = (
     await pool.query(
       "select to_regclass('staytrack.housekeeping_events') is not null as installed",
@@ -43,7 +62,7 @@ export async function staffRooms(pool = databasePool(), enabled = false) {
         : "null as checkout_id,'[]'::json as housekeeping,null as turnover_until,false as maintenance_now,0 as held_now,0 as reserved_now,false as available_now,"
     }
     ${corrections ? "staytrack.room_is_physically_ready(r.id)" : "false"} as physically_ready,
-    ${corrections ? "(r.operational_state in ('unverified','ready','cleaning') and not exists(select 1 from staytrack.room_check_ins s where s.room_id=r.id and not exists(select 1 from staytrack.room_checkouts o where o.room_booking_id=s.room_booking_id)) and not exists(select 1 from staytrack.room_blocks b where b.room_id=r.id and tstzrange(b.start_at,b.end_at,'[)') @> statement_timestamp()))" : "false"} as legacy_inspection_eligible,
+    ${corrections ? roomInspectionNeeded : "false"} as legacy_inspection_eligible,
     ${enabled ? "true" : "false"} as housekeeping_enabled
     from staytrack.rooms r join staytrack.room_categories c on c.id = r.category_id
     ${
@@ -323,13 +342,18 @@ export async function administerRoom(
     note?: unknown;
     requestKey?: unknown;
   } | null;
+  const activationOnly =
+    body?.active === true &&
+    body.code === undefined &&
+    body.category === undefined;
   if (
     !/^[1-9]\d{0,14}$/.test(roomId) ||
     !body ||
-    typeof body.code !== "string" ||
-    !body.code.trim() ||
-    body.code.length > 80 ||
-    hasControlCharacters(body.code) ||
+    (!activationOnly &&
+      (typeof body.code !== "string" ||
+        !body.code.trim() ||
+        body.code.length > 80 ||
+        hasControlCharacters(body.code))) ||
     (body.category !== undefined &&
       !["double_standard", "family_executive"].includes(
         String(body.category),
@@ -384,6 +408,9 @@ export async function administerRoom(
           roomId,
         ])
       ).rows[0];
+      const code = activationOnly
+        ? String(room.code)
+        : String(body.code).trim();
       const prior = (
         await db.query(
           "select * from staytrack.room_administration_events where actor_auth_user_id=$1 and request_key=$2",
@@ -393,7 +420,9 @@ export async function administerRoom(
       if (prior) {
         if (
           String(prior.room_id) !== roomId ||
-          prior.new_code !== String(body.code).trim() ||
+          (activationOnly
+            ? prior.old_code !== prior.new_code
+            : prior.new_code !== code) ||
           prior.new_active !== body.active ||
           String(room.category_id) !== String(target) ||
           prior.note !== String(body.note).trim()
@@ -405,7 +434,7 @@ export async function administerRoom(
         (
           await db.query(
             "select 1 from staytrack.rooms where id<>$1 and lower(btrim(code))=lower($2)",
-            [roomId, String(body.code).trim()],
+            [roomId, code],
           )
         ).rowCount
       )
@@ -475,7 +504,7 @@ export async function administerRoom(
         );
       await db.query(
         "update staytrack.rooms set code=$2,active=$3,category_id=$4 where id=$1",
-        [roomId, String(body.code).trim(), body.active, target],
+        [roomId, code, body.active, target],
       );
       const event = (
         await db.query(
@@ -485,7 +514,7 @@ export async function administerRoom(
             actor,
             body.requestKey,
             room.code,
-            String(body.code).trim(),
+            code,
             room.active,
             body.active,
             String(body.note).trim(),

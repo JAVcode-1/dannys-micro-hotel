@@ -8,6 +8,7 @@ import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { notifySuccess } from "./notifications";
 import type { FormEvent } from "react";
 import type { BookingQuote } from "@staytrack/shared";
+import { normalizePhilippineMobile } from "@staytrack/shared/booking-phone";
 import { apiBase } from "./staff-auth";
 import { useGuestSession } from "./GuestSession";
 
@@ -248,8 +249,9 @@ export default function BookingPlanner({
   const nameMissing = !primaryName.trim();
   const phoneMissing = !phone.trim();
   const phoneInvalid =
-    !/^[+()0-9 -]{7,30}$/.test(phone.trim()) ||
-    (phone.match(/[0-9]/g)?.length ?? 0) < 7;
+    !phone.trimStart().startsWith("09") ||
+    normalizePhilippineMobile(phone) === null;
+  const showPhoneError = contactAttempted && phoneInvalid;
   const [acknowledged, setAcknowledged] = useState(false);
   const [policiesExpanded, setPoliciesExpanded] = useState(false);
   const [availability, setAvailability] = useState<boolean | null>(null);
@@ -631,7 +633,7 @@ export default function BookingPlanner({
                   </button>
                 )}
               </div>
-              {hallEnabled && <PublicHallStatus />}
+              {hallEnabled && !hall && <PublicHallStatus />}
               {items.map((item, index) => (
                 <section
                   key={item.id}
@@ -913,6 +915,11 @@ export default function BookingPlanner({
                       Remove hall
                     </button>
                   </div>
+                  {hallEnabled && (
+                    <div className="mb-5">
+                      <PublicHallStatus />
+                    </div>
+                  )}
                   <p className="mb-5 text-sm text-muted">
                     Choose one setup for the exclusive hall.
                   </p>
@@ -1242,35 +1249,40 @@ export default function BookingPlanner({
                         </span>
                       )}
                     </label>
-                    <label className="block font-medium">
-                      Contact number
+                    <div>
+                      <label
+                        className="block font-medium"
+                        htmlFor="booking-phone"
+                      >
+                        Contact number
+                      </label>
                       <input
                         className={inputClass}
+                        id="booking-phone"
                         required
                         type="tel"
-                        autoComplete="tel"
+                        autoComplete="tel-national"
                         name="phone"
-                        aria-invalid={contactAttempted && phoneInvalid}
+                        placeholder="09XX XXX XXXX"
+                        aria-invalid={showPhoneError}
                         aria-describedby={
-                          contactAttempted && phoneInvalid
-                            ? "booking-phone-error"
-                            : undefined
+                          showPhoneError ? "booking-phone-error" : undefined
                         }
                         maxLength={30}
                         value={phone}
                         onChange={(event) => setPhone(event.target.value)}
                       />
-                      {contactAttempted && phoneInvalid && (
-                        <span
+                      {showPhoneError && (
+                        <p
                           id="booking-phone-error"
-                          className="mt-1 block text-sm text-red-700"
+                          className="mt-1 text-sm text-red-700"
                         >
                           {phoneMissing
-                            ? "Enter a contact number."
-                            : "Enter a valid contact number with at least seven digits."}
-                        </span>
+                            ? "Enter your mobile number."
+                            : "Enter an 11-digit mobile number starting with 09."}
+                        </p>
                       )}
-                    </label>
+                    </div>
                     {policy && (
                       <>
                         <section

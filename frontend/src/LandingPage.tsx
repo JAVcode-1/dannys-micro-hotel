@@ -63,7 +63,7 @@ const photos = {
   },
   hall: {
     name: "hall",
-    alt: "Danny’s Function Hall set up in theater style",
+    alt: "Rows of tables facing the front of Danny’s Function Hall",
     widths: [480, 960],
     width: 960,
     height: 636,
@@ -769,17 +769,43 @@ export default function LandingPage({
           tabIndex={-1}
         >
           <div className="landing-wrap landing-hall-inner">
-            <Photograph
-              photo={photos.hall}
-              sizes="(max-width: 42rem) 91vw, (min-width: 100rem) 735px, 47vw"
-            />
+            <div
+              className="landing-hall-gallery"
+              role="group"
+              aria-label="Function Hall setups"
+            >
+              <figure>
+                <Photograph
+                  photo={photos.hall}
+                  sizes="(max-width: 42rem) 91vw, (min-width: 100rem) 365px, 24vw"
+                />
+                <figcaption>
+                  <strong>Theater Type</strong>
+                  <span>Up to 70 guests</span>
+                </figcaption>
+              </figure>
+              <figure>
+                <img
+                  className="landing-hall-room-photo"
+                  src="/hotel/hall-room-type.jpg"
+                  width={1536}
+                  height={2048}
+                  alt="Rows of chairs facing the presentation area in the Function Hall"
+                  loading="lazy"
+                  decoding="async"
+                />
+                <figcaption>
+                  <strong>Room Type</strong>
+                  <span>Up to 50 guests</span>
+                </figcaption>
+              </figure>
+            </div>
             <div>
               <div className="landing-eyebrow">Meetings &amp; events</div>
               <h2 id="hall-title">Function Hall</h2>
               <p>
                 Bring your group together for a seminar, meeting, or
-                celebration. The hall accommodates up to 70 guests in Theater
-                Type and 50 in Room Type.
+                celebration. Both layouts use the same exclusive Hall.
               </p>
               <p>
                 Three-hour package: ₱3,000.00 for starts from 8:00 AM to before

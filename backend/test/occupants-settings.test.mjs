@@ -69,7 +69,7 @@ test("operational settings and actor audit commit together", async () => {
   const client = {
     async query(sql, params) {
       calls.push([sql, params]);
-      return { rowCount: 1 };
+      return { rowCount: 1, rows: [{ hasLegacyReminders: true }] };
     },
     release() {},
   };
@@ -86,10 +86,11 @@ test("operational settings and actor audit commit together", async () => {
   );
   assert.deepEqual(
     calls.map(([sql]) => sql.trim().split(/\s+/)[0].toLowerCase()),
-    ["begin", "select", "update", "insert", "commit"],
+    ["begin", "select", "update", "update", "insert", "commit"],
   );
   assert.deepEqual(calls[2][1].at(-1), "staff-1");
-  assert.deepEqual(calls[3][1], ["staff-1"]);
+  assert.match(calls[3][0], /set checkout_warning_minutes=null/);
+  assert.deepEqual(calls[4][1], ["staff-1"]);
 });
 
 test("operational settings API denies guest and anonymous callers", async () => {

@@ -6,6 +6,10 @@ status: unified-online-booking-development-review
 
 The Function Hall and refunds checkpoint has passing build, typecheck, lint, formatting, 229 application tests and 40 integration tests on disposable PostgreSQL. The targeted unified-booking PostgreSQL check also passed. Staff-assisted rescheduling now uses the current form props, and test fixtures exercise the current availability, payment and staff sign-in flows. Manual browser acceptance remains pending.
 
+## Staff Rooms and Function Hall visual refresh (2026-11-27)
+
+Both property pages share the Royal Horizon glass workspace. Rooms emphasizes availability, registration, and room details. Function Hall separates readiness, calendar groups, booking, and settings. The development checkpoint includes the earlier application edits and candidate Hall migrations, which remain pending approval.
+
 ## Staff Walk-ins and Payments visual refresh (2026-11-26)
 
 Walk-ins and Payments join the shared Royal Horizon glass workspace. Walk-ins pairs its booking form with the payment ledger, and Payments separates the selectable queue from the manual GCash review. Both keep their existing booking, payment, proof, and verification workflows.
@@ -25,6 +29,78 @@ Today, Reservations, and reservation details share the Royal Horizon glass shell
 ## Staff Today visual refresh (2026-11-26)
 
 Today follows the supplied light glass dashboard reference in the Royal Horizon palette. The existing Family Executive photo blends into the full workspace backdrop. Frosted surfaces cover the Today header, sidebar, mobile navigation, metrics, queues, room readiness, and shortcuts. The work is in the working tree because the full frontend test gate is still open.
+
+## Analytics reporting scope (2026-11-26)
+
+Staff Analytics now displays reports on screen only. The export route, controls, and workbook dependency were removed. Room and Hall reports retain their existing filters and authorization. Phase 08 acceptance remains open.
+
+## Staff room reactivation (2026-11-26)
+
+Inactive rooms with a stored Ready state now expose Booking activation on the card. The staff API keeps the existing room identifier and category and requires the audit reason and inspection evidence. The browser showed the form on Room 2. The inspection and activation sequence passed in synthetic tests. Room 2 remained inactive during verification.
+
+## Rooms card availability (2026-11-26)
+
+The Rooms board uses the existing activity and availability flags for the card badge. The running staff browser showed Room 2 as Inactive and Unavailable for booking. Tests cover an inactive physically ready room, a reserved room and a room available now. This is a display change and Phase 08 acceptance remains open.
+
+## Interrupted checkout recovery (2026-11-26)
+
+The Stays page now handles an empty Vite proxy error or a dropped checkout reply. It pauses checkout until a new stay request succeeds, displays departures already recorded by the server, and keeps the original request key for a staff retry on the same page. Synthetic recovery tests passed. W03 browser and hosted acceptance remain pending.
+
+## Single checkout reminder (2026-11-26)
+
+Settings and the room stay monitor now share one pre-checkout reminder. The existing 30-minute single alert is the effective value for the previously configured staff settings. Clearing the field disables the reminder. Older list-only data resolves to one value on read and is normalized on save. This uses the existing settings schema. Targeted application and disposable PostgreSQL checks passed. Separate frontend and guest-contact integration failures keep the development checkpoint open.
+
+## Staff workspace wording (2026-11-26)
+
+The Settings cleaning buffer uses its field label. The redundant reminder preview and session help are gone. The single-alert fallback, reminder validation and cancellation wording scope remain visible. Other staff pages use shorter copy, and the payment review shows verification guidance where a decision is available. Browser Settings, build, typecheck, lint and the settings regression passed. Two other frontend tests still block a development checkpoint.
+
+## Operational settings (2026-11-26)
+
+The staff settings page now explains room cleaning time, checkout reminder thresholds, the single-alert fallback, and online cancellation wording. It offers a 30/15/5-minute preset and validates custom reminders before submission. The existing audited staff API persisted the reminders and owner-approved cancellation wording, verified on reload. A focused regression test passed. The full frontend suite still has two failures, so the local code has no new development checkpoint.
+
+## Room extension workflow (2026-11-26)
+
+Extensions and charges uses the existing extension and payment flow. Overtime review controls were removed from the page, with charge history and eligible unpaid charge credits in Charges and payment breakdown. The stay monitor still flags expired packages. Owner browser testing is pending.
+
+## Rooms page simplification (2026-11-26)
+
+Staff room cards show maintenance, cleaning history and eligible readiness inspections. The page no longer offers room number, category or activation edits. Existing inactive rooms and new registrations require separate activation through the existing staff API. Owner browser testing is pending.
+
+## Staff Today design (2026-11-26)
+
+The staff Today page now highlights the next checkout, links each metric to its operational queue, and shows availability across the existing 15-room inventory. Staff can refresh the snapshot or show open work only. The view uses Royal Horizon colors and reduced-motion-aware CSS. Owner browser testing is pending.
+
+## Local Rooms API recovery (2026-11-25)
+
+Unapproved Hall migrations `20261125003300` and `20261125003400` are parked in `supabase/migrations/pending-approval/`. The development API restarted and returned readiness HTTP 200 through Vite. Room inspection and activation remain for owner browser verification.
+
+## Function Hall no-show wait (2026-11-25)
+
+The API now allows a Hall no-show wait above 1,440 minutes. Saving that value against hosted development requires separately approving `20261125003400_hall_no_show_grace_range.sql`. Staff continue to mark no-shows manually.
+
+## Room inspection during reactivation (2026-11-25)
+
+Room setup opens Inspect room when the server requires a current inspection during activation. This restores the recovery path for inactive Ready rooms whose board card initially hides the form. Owner browser acceptance is pending.
+
+## Function Hall setup time units (2026-11-25)
+
+Hall Settings offers Minutes (1–60), Hours (1–24), and positive whole Days. The form translates the input to minutes. Saving multiple days against the linked Supabase development database requires separately approving the pending `20261125003300_hall_multi_day_setup.sql` migration. The hosted startup migration check still applies.
+
+## Closed Function Hall payments (2026-11-25)
+
+Past Hall cards separate collectible amounts, refund history and unexpected receipts. A fully returned payment shows Fully refunded and zero due. The verified late-payment action uses the existing Hall receipt and audit records and keeps the event closed. Owner browser acceptance is pending.
+
+## Guest Function Hall status (2026-11-25)
+
+The landing page, Hall information and booking planner show the current Hall status from the existing public API. The planner shows the badge beside the Hall fields and keeps the selected-time availability check separate. The badge refreshes every 30 seconds while visible and when returning to the tab.
+
+## Online booking contact number (2026-11-25)
+
+The guest planner requires an 11-digit Philippine mobile number starting with `09` and shows the format in the empty field. The API accepts the equivalent `+639` format for compatible clients. New contact records store `+63`. Owner browser testing is pending.
+
+## Room controls and live badges (2026-11-25)
+
+Routine Rooms work shows cleaning or inspection first when needed. Room setup holds inventory edits and requires the existing staff authorization and audit reason. Staff navigation fetches existing dashboard counts on live Express signals. Reservations adds a badge when GCash proof is awaiting review. Owner browser testing is pending.
 
 ## Housekeeping response recovery (2026-11-25)
 

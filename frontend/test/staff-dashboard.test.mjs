@@ -349,6 +349,10 @@ test("staff shell preserves outlet context, capability gates and menu controls",
   await screen.findByRole("link", {
     name: /Payments.*2 payment proofs to review/,
   });
+  await screen.findByRole("link", {
+    name: /Reservations.*2 bookings awaiting payment review/,
+  });
+  const reservationsLink = { name: /^Reservations\b/ };
   assert.ok(
     screen.getByRole("link", { name: "Today" }).closest(".staff-nav-group") ===
       null,
@@ -358,7 +362,7 @@ test("staff shell preserves outlet context, capability gates and menu controls",
   fireEvent.click(frontDesk);
   assert.equal(frontDesk.getAttribute("aria-expanded"), "false");
   assert.match(frontDesk.textContent, /6 to check/);
-  assert.equal(screen.queryByRole("link", { name: "Reservations" }), null);
+  assert.equal(screen.queryByRole("link", reservationsLink), null);
   const children = globalThis.document.getElementById(
     frontDesk.getAttribute("aria-controls"),
   );
@@ -369,13 +373,13 @@ test("staff shell preserves outlet context, capability gates and menu controls",
   fireEvent.click(frontDesk);
   assert.equal(frontDesk.getAttribute("aria-expanded"), "true");
   assert.equal(children.hasAttribute("inert"), false);
-  assert.ok(screen.getByRole("link", { name: "Reservations" }));
+  assert.ok(screen.getByRole("link", reservationsLink));
   const property = screen.getByRole("button", { name: "Property" });
   assert.equal(property.getAttribute("aria-expanded"), "false");
   fireEvent.click(property);
   assert.equal(property.getAttribute("aria-expanded"), "true");
   assert.equal(frontDesk.getAttribute("aria-expanded"), "false");
-  assert.equal(screen.queryByRole("link", { name: "Reservations" }), null);
+  assert.equal(screen.queryByRole("link", reservationsLink), null);
   fireEvent.keyDown(property, { key: "ArrowDown" });
   assert.equal(
     globalThis.document.activeElement,
@@ -396,7 +400,7 @@ test("staff shell preserves outlet context, capability gates and menu controls",
     screen.getByRole("button", { name: "Open staff menu" }),
   );
   fireEvent.click(screen.getByRole("button", { name: "Open staff menu" }));
-  fireEvent.click(screen.getByRole("link", { name: "Reservations" }));
+  fireEvent.click(screen.getByRole("link", reservationsLink));
   assert.equal(
     screen
       .getByRole("button", { name: "Open staff menu" })

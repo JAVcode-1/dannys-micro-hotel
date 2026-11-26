@@ -21,6 +21,14 @@ function draftCentavos(value: string) {
     return NaN;
   }
 }
+
+function creditableAmount(charge: StayChangeRow["charges"][number]) {
+  if (charge.kind !== "overtime_debit" && charge.kind !== "smoking_debit") {
+    return 0;
+  }
+  return charge.amountCentavos - charge.paidCentavos - charge.creditedCentavos;
+}
+
 function Item({
   row,
   enabled,
@@ -34,7 +42,8 @@ function Item({
 }) {
   const [rejectReason, setRejectReason] = useState(""),
     [releaseReason, setReleaseReason] = useState(""),
-    [chargeReason, setChargeReason] = useState(""),
+    [creditReason, setCreditReason] = useState(""),
+    [creditAmount, setCreditAmount] = useState(""),
     [blocks, setBlocks] = useState(
       row.category === "family_executive" ? "360" : "180",
     ),
@@ -48,17 +57,11 @@ function Item({
     [receipt, setReceipt] = useState(""),
     [allocationAmount, setAllocationAmount] = useState(""),
     [target, setTarget] = useState(""),
-    [start, setStart] = useState(""),
-    [end, setEnd] = useState(""),
     [confirmedQuoteId, setConfirmedQuoteId] = useState(""),
     [pending, setPending] = useState(false),
     [message, setMessage] = useState("");
   const retry = useRef(new Map<string, { hash: string; key: string }>());
   const canAct = enabled && !pending;
-  const chargeReasonValid = canAct && !!chargeReason.trim();
-  const overtimeReviews = row.reviews.filter(
-    (review) => review.kind === "overtime",
-  );
   async function act(
     path: string,
     body: Record<string, unknown>,
@@ -93,6 +96,12 @@ function Item({
   }
   const cents = draftCentavos(amount);
   const allocationCents = draftCentavos(allocationAmount);
+  const creditCents = draftCentavos(creditAmount);
+  const creditValid =
+    canAct &&
+    !!creditReason.trim() &&
+    Number.isSafeInteger(creditCents) &&
+    creditCents > 0;
   const availableReceipts = row.receipts.filter((r) => r.availableCentavos > 0);
   const selectedReceipt = availableReceipts.find((r) => r.id === receipt);
   const moneyValid = Number.isSafeInteger(cents) && cents > 0;
@@ -217,6 +226,57 @@ function Item({
             <dd>{peso(f.pendingExtensionFundsCentavos)}</dd>
           </div>
         </dl>
+        {row.charges.some((charge) => creditableAmount(charge) > 0) && (
+          <div className="my-3 grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              Credit amount (PHP)
+              <input
+                className={field}
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={creditAmount}
+                onChange={(event) => setCreditAmount(event.target.value)}
+              />
+            </label>
+            <label className="block">
+              Reason for credit
+              <textarea
+                className={field}
+                value={creditReason}
+                onChange={(event) => setCreditReason(event.target.value)}
+                maxLength={1000}
+              />
+            </label>
+          </div>
+        )}
+        {row.charges.map((charge) => {
+          const maxCredit = creditableAmount(charge);
+          return (
+            <section key={charge.id} className="my-3">
+              <p>
+                {charge.kind.replaceAll("_", " ")} |{" "}
+                {peso(charge.amountCentavos)} | Paid {peso(charge.paidCentavos)}{" "}
+                | Credits {peso(charge.creditedCentavos)}
+              </p>
+              {maxCredit > 0 && (
+                <button
+                  className={button}
+                  disabled={!creditValid || creditCents > maxCredit}
+                  onClick={() =>
+                    void act(
+                      `/staff/stay-charges/${charge.id}/credit`,
+                      { amountCentavos: creditCents },
+                      creditReason,
+                    )
+                  }
+                >
+                  Credit unpaid charge
+                </button>
+              )}
+            </section>
+          );
+        })}
       </details>
       <details>
         <summary className="my-3 cursor-pointer font-semibold text-primary">
@@ -672,124 +732,6 @@ function Item({
           )}
         </div>
       </details>
-      <details>
-        <summary className="my-3 cursor-pointer font-semibold">
-          Overtime review
-        </summary>
-        <p>
-          Charges are never automatic. Missing approved rates, rounding,
-          extra-bed treatment or prior disclosure keeps financial posting
-          blocked.
-        </p>
-        <label className="my-3 block">
-          Reason for overtime or charge action
-          <textarea
-            className={field}
-            value={chargeReason}
-            onChange={(e) => setChargeReason(e.target.value)}
-            maxLength={1000}
-          />
-        </label>
-        <ManilaDateTimeInput
-          label="Overtime start (Manila)"
-          value={start}
-          onChange={setStart}
-        />
-        <ManilaDateTimeInput
-          label="Overtime end (Manila)"
-          value={end}
-          onChange={setEnd}
-        />
-        <button
-          className={button + " mt-3"}
-          disabled={!chargeReasonValid || !start || !end}
-          onClick={() =>
-            void act(
-              `/staff/stay-changes/${row.id}/reviews`,
-              {
-                kind: "overtime",
-                startAt: local(start),
-                endAt: local(end),
-              },
-              chargeReason,
-            )
-          }
-        >
-          Record overtime review
-        </button>
-        {overtimeReviews.map((r) => (
-          <section key={r.id} className="my-3 rounded-lg bg-canvas p-3">
-            <p>
-              {r.kind} | {r.reason} |{" "}
-              {r.decided ? "Decision recorded" : "Review only"}
-            </p>
-            {r.blocker && <p>{r.blocker}</p>}
-            {!r.decided && (
-              <div className="flex gap-2">
-                <button
-                  className={button}
-                  disabled={!chargeReasonValid || !!r.blocker}
-                  onClick={() =>
-                    void act(
-                      `/staff/stay-reviews/${r.id}/decision`,
-                      {
-                        action: "charge",
-                      },
-                      chargeReason,
-                    )
-                  }
-                >
-                  Post approved policy charge
-                </button>
-                <button
-                  className={button}
-                  disabled={!chargeReasonValid}
-                  onClick={() =>
-                    void act(
-                      `/staff/stay-reviews/${r.id}/decision`,
-                      {
-                        action: "waive",
-                      },
-                      chargeReason,
-                    )
-                  }
-                >
-                  Record reasoned waiver
-                </button>
-              </div>
-            )}
-          </section>
-        ))}
-        {row.charges.map((c) => (
-          <section key={c.id} className="my-3">
-            <p>
-              {c.kind.replaceAll("_", " ")} | {peso(c.amountCentavos)} | Paid{" "}
-              {peso(c.paidCentavos)} | Credits {peso(c.creditedCentavos)}
-            </p>
-            {["overtime_debit", "smoking_debit"].includes(c.kind) && (
-              <button
-                className={button}
-                disabled={
-                  !chargeReasonValid ||
-                  !moneyValid ||
-                  cents > c.amountCentavos - c.paidCentavos - c.creditedCentavos
-                }
-                onClick={() =>
-                  void act(
-                    `/staff/stay-charges/${c.id}/credit`,
-                    {
-                      amountCentavos: cents,
-                    },
-                    chargeReason,
-                  )
-                }
-              >
-                Credit unpaid charge using amount above
-              </button>
-            )}
-          </section>
-        ))}
-      </details>
       {message && (
         <p role="status" className="mt-3">
           {message}
@@ -970,16 +912,7 @@ export function StayChangesPreview() {
           ],
           allocations: [],
           charges: [],
-          reviews: [
-            {
-              id: "synthetic-review",
-              kind: "overtime",
-              reason: "Synthetic overtime review",
-              blocker: "Owner-approved rate and prior disclosure required",
-              decided: false,
-              durationMs: 30 * 60 * 1000,
-            },
-          ],
+          reviews: [],
         },
       ]}
     />

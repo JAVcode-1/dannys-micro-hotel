@@ -617,6 +617,24 @@ export async function staffOperationalPostgres(t, pool) {
           "insert into staytrack.rooms(category_id,code,operational_state,active) select id,'STAFF-ADMIN-SYNTHETIC','unverified',false from staytrack.room_categories where code='double_standard' returning id::text",
         )
       ).rows[0].id;
+      const activation = {
+        active: true,
+        note: "Synthetic room returning to service",
+        requestKey: "staff-activate-existing-001",
+      };
+      await assert.rejects(
+        administerRoom(
+          "00000000-0000-4000-8000-000000000000",
+          unused,
+          activation,
+          pool,
+        ),
+        { status: 403 },
+      );
+      await assert.rejects(administerRoom(actor, unused, activation, pool), {
+        status: 409,
+        message: "Inspect and mark the room Ready before activation.",
+      });
       await inspectLegacyRoom(
         actor,
         unused,
@@ -626,6 +644,13 @@ export async function staffOperationalPostgres(t, pool) {
           requestKey: "staff-admin-inspection-001",
         },
         pool,
+      );
+      const activated = await administerRoom(actor, unused, activation, pool);
+      assert.equal(activated.new_active, true);
+      assert.equal(activated.new_code, "STAFF-ADMIN-SYNTHETIC");
+      assert.deepEqual(
+        await administerRoom(actor, unused, activation, pool),
+        activated,
       );
       const admin = {
         code: "STAFF-ADMIN-VERIFIED-SYNTHETIC",

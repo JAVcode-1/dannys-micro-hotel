@@ -3,6 +3,7 @@ import { Pool } from "pg";
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { createIsolatedApp } from "./isolated-composition.js";
+import { closeStaffNavEvents } from "./staff-nav-events.js";
 import { assertIsolatedTarget } from "./runtime-config.js";
 import { verifyGuest } from "./guest-auth.js";
 import {
@@ -217,6 +218,7 @@ const timer = setInterval(
 async function stop() {
   clearInterval(timer);
   server.close();
+  closeStaffNavEvents(app);
   await pool.end();
 }
 process.on("SIGINT", () => void stop());

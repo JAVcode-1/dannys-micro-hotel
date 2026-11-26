@@ -1,12 +1,25 @@
 export type StaffNavCounts = Readonly<Record<string, number | undefined>>;
 
 const queueDescriptions: Readonly<Record<string, string>> = {
+  "/staff/reservations": "bookings awaiting payment review",
   "/staff/check-ins": "due for check-in today",
   "/staff/payments": "payment proofs to review",
   "/staff/stays": "stays past checkout",
-  "/staff/rooms": "rooms awaiting cleaning",
+  "/staff/rooms": "rooms needing cleaning or a readiness check",
   "/staff/hall": "confirmed events today",
 };
+
+export function staffNavTotal(
+  entries: readonly { path: string }[],
+  counts: StaffNavCounts,
+) {
+  const hasPayments = entries.some(({ path }) => path === "/staff/payments");
+  return entries.reduce((sum, { path }) => {
+    // Reservations and Payments both point to the same submitted-proof queue.
+    if (hasPayments && path === "/staff/reservations") return sum;
+    return sum + (counts[path] ?? 0);
+  }, 0);
+}
 
 export default function StaffNavBadge({
   count = 0,

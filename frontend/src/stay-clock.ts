@@ -1,11 +1,18 @@
 export type ClockAnchor = { serverMs: number; receivedMs: number };
 export const serverTime = (anchor: ClockAnchor, now = performance.now()) =>
   anchor.serverMs + now - anchor.receivedMs;
-export function countdown(checkout: number, now: number, warnings: number[]) {
+export function countdown(
+  checkout: number,
+  now: number,
+  reminderMinutes: number | null,
+) {
   const remainingMs = checkout - now;
-  const warningMinutes = warnings
-    .filter((m) => remainingMs <= m * 60000)
-    .sort((a, b) => a - b)[0];
+  const warningMinutes =
+    remainingMs > 0 &&
+    reminderMinutes !== null &&
+    remainingMs <= reminderMinutes * 60000
+      ? reminderMinutes
+      : undefined;
   return {
     remainingMs,
     state:
@@ -14,6 +21,6 @@ export function countdown(checkout: number, now: number, warnings: number[]) {
         : warningMinutes === undefined
           ? "active"
           : "warning",
-    warningMinutes: remainingMs <= 0 ? undefined : warningMinutes,
+    warningMinutes,
   };
 }

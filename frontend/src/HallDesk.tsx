@@ -51,6 +51,7 @@ type Row = {
   channel: string;
   status: string;
   ready: boolean;
+  paymentClosed: boolean;
   payment_resolution: boolean;
   total: string;
   overtime: string;
@@ -215,6 +216,7 @@ function Schedule() {
 }
 const hallActionLabels = {
   receipt: "Record payment",
+  reconcile_late_payment: "Reconcile late payment",
   confirm: "Confirm booking",
   start: "Start event",
   complete: "Check out guest",
@@ -246,11 +248,13 @@ type SendHallAction = (
 
 function HallPaymentFields({
   refund = false,
+  latePayment = false,
   gcashOnly = false,
   allowEarlierCashTime = false,
   fixedAmount,
 }: {
   refund?: boolean;
+  latePayment?: boolean;
   gcashOnly?: boolean;
   allowEarlierCashTime?: boolean;
   fixedAmount?: number;
@@ -297,7 +301,7 @@ function HallPaymentFields({
       {method === "gcash" && (
         <Text name="reference" label="GCash transaction reference" />
       )}
-      {method === "cash" && !refund ? (
+      {method === "cash" && !refund && !latePayment ? (
         allowEarlierCashTime && (
           <details>
             <summary className="cursor-pointer text-primary">
@@ -318,7 +322,9 @@ function HallPaymentFields({
             label={
               refund
                 ? "Refund transfer time (Manila)"
-                : "GCash transaction time (Manila)"
+                : method === "cash"
+                  ? "Cash received time (Manila)"
+                  : "GCash transaction time (Manila)"
             }
             value={time}
             onChange={setTime}
@@ -340,13 +346,15 @@ function HallPaymentFields({
           </button>
         </>
       )}
-      {method === "cash" && !refund && !time && (
+      {method === "cash" && !refund && !latePayment && !time && (
         <p className="text-sm text-muted">
           The system records the current Manila time when you save.
         </p>
       )}
       {refund ? (
         <Text name="evidence" label="Refund verification note" />
+      ) : latePayment ? (
+        <Text name="evidence" label="Late payment note" />
       ) : (
         <details>
           <summary className="cursor-pointer text-primary">
@@ -544,6 +552,7 @@ function HallCardActionForm({
   refundFlow?: boolean;
 }) {
   const refund = action === "complete_refund";
+  const latePayment = action === "reconcile_late_payment";
   const refundApprovals = finances?.refunds.filter((entry) => entry.pending);
   return (
     <form
@@ -554,6 +563,12 @@ function HallCardActionForm({
         {refundFlow ? hallActionLabels.manage_refund : hallActionLabels[action]}
       </h4>
       <input type="hidden" name="id" value={row.id} />
+      {latePayment && (
+        <p className="text-sm">
+          Record money the hotel already received for staff follow-up. This
+          action keeps the booking closed.
+        </p>
+      )}
       {refundFlow && (
         <p className="text-sm">
           {refund
@@ -600,10 +615,13 @@ function HallCardActionForm({
           </select>
         </label>
       )}
-      {(action === "receipt" || refund) && (
+      {(action === "receipt" || latePayment || refund) && (
         <HallPaymentFields
           refund={refund}
-          gcashOnly={refund && Boolean(row.unifiedReservationId)}
+          latePayment={latePayment}
+          gcashOnly={
+            (refund || latePayment) && Boolean(row.unifiedReservationId)
+          }
           allowEarlierCashTime={action === "receipt"}
         />
       )}
@@ -675,22 +693,24 @@ function HallCardActions({
   const walkIn = row.channel === "walk_in" && !row.unifiedReservationId;
   const balance = Number(row.balance);
   const showSeparateBalance =
-    balance > 0 && (inProgress || (confirmed && walkIn));
+    !row.paymentClosed && balance > 0 && (inProgress || (confirmed && walkIn));
   const start = row.quote ? Date.parse(row.quote.start) : null;
   const end = row.quote ? Date.parse(row.quote.end) : null;
-  const primary: HallCardAction | undefined = inquiry
-    ? row.depositDue === 0
-      ? "confirm"
-      : "receipt"
-    : inProgress
-      ? "complete"
-      : confirmed && walkIn
-        ? "start"
-        : (confirmed || completed) && balance > 0
-          ? "receipt"
-          : confirmed
-            ? "start"
-            : undefined;
+  const primary: HallCardAction | undefined = row.paymentClosed
+    ? undefined
+    : inquiry
+      ? row.depositDue === 0
+        ? "confirm"
+        : "receipt"
+      : inProgress
+        ? "complete"
+        : confirmed && walkIn
+          ? "start"
+          : (confirmed || completed) && balance > 0
+            ? "receipt"
+            : confirmed
+              ? "start"
+              : undefined;
   let actionBlocker = "";
   if (primary === "start") {
     if (start === null || end === null || now < start || now >= end)
@@ -712,11 +732,6 @@ function HallCardActions({
   }
   if ((confirmed || inProgress) && end !== null && now < end)
     exceptions.push("extend");
-  const latePayment =
-    row.status === "cancelled" ||
-    row.status === "no_show" ||
-    (onlineInquiry && row.onlineState === "expired");
-  if (latePayment) exceptions.push("receipt");
   if (row.status === "no_show" && row.ready && !row.released_at)
     exceptions.push("release");
   if (
@@ -727,7 +742,11 @@ function HallCardActions({
     Number(row.overtime) === 0
   )
     exceptions.push("overtime");
-  if (!onlineInquiry && Number(row.collected) > Number(row.refunded))
+  if (
+    Number(row.collected) > Number(row.refunded) &&
+    (Number(row.refundDue) > 0 ||
+      (!onlineInquiry && (!row.paymentClosed || !row.unifiedReservationId)))
+  )
     exceptions.push("manage_refund");
 
   return (
@@ -840,12 +859,25 @@ function HallCardActions({
                 disabled={disabled}
                 onClick={() => choose(option)}
               >
-                {option === "receipt"
-                  ? "Record late payment"
-                  : hallActionLabels[option]}
+                {hallActionLabels[option]}
               </button>
             ))}
           </div>
+        </details>
+      )}
+      {row.paymentClosed && action !== "reconcile_late_payment" && (
+        <details className="text-sm">
+          <summary className="min-h-11 cursor-pointer font-semibold text-primary">
+            Payment reconciliation
+          </summary>
+          <button
+            type="button"
+            className="min-h-11 rounded border border-subtle px-3 text-primary"
+            disabled={disabled}
+            onClick={() => choose("reconcile_late_payment")}
+          >
+            {hallActionLabels.reconcile_late_payment}
+          </button>
         </details>
       )}
       <details
@@ -897,11 +929,100 @@ function HallCardActions({
 
 const settingsLabels: Record<string, string> = {
   horizon: "How far ahead to book (days)",
-  preparation: "Setup time (minutes)",
+  preparation: "Setup time",
   cleanup: "Cleanup time (minutes)",
   noShowGrace: "Wait before marking no-show (minutes)",
   reminder: "Remind before event ends (minutes)",
 };
+
+const setupTimeUnits = {
+  Minutes: { factor: 1, max: 60, hint: "Enter 1–60 whole minutes." },
+  Hours: { factor: 60, max: 24, hint: "Enter 1–24 whole hours." },
+  Days: {
+    factor: 1440,
+    // The API stores the duration in a PostgreSQL integer column.
+    max: Math.floor(2_147_483_647 / 1440),
+    hint: "Enter a positive whole number of days.",
+  },
+} as const;
+type SetupTimeUnit = keyof typeof setupTimeUnits;
+
+function setupAmount(minutes: number, unit: SetupTimeUnit) {
+  const { factor, max } = setupTimeUnits[unit];
+  const amount = minutes / factor;
+  return Number.isInteger(amount) && amount >= 1 && amount <= max
+    ? String(amount)
+    : "";
+}
+
+function HallSetupTime({ minutes }: { minutes: number }) {
+  const initialUnit =
+    (["Days", "Hours", "Minutes"] as const).find((unit) =>
+      setupAmount(minutes, unit),
+    ) ?? "saved";
+  const [unit, setUnit] = useState<SetupTimeUnit | "saved">(initialUnit);
+  const [amount, setAmount] = useState(
+    initialUnit === "saved"
+      ? String(minutes)
+      : setupAmount(minutes, initialUnit),
+  );
+  const config = unit === "saved" ? undefined : setupTimeUnits[unit];
+  const value = Number(amount);
+  const preparation = config ? value * config.factor : minutes;
+  const valid =
+    !config || (Number.isInteger(value) && value >= 1 && value <= config.max);
+  return (
+    <fieldset className="min-w-0">
+      <legend>{settingsLabels.preparation}</legend>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+        <input
+          aria-label="Setup time amount"
+          aria-describedby="hall-setup-time-limit"
+          className={field}
+          type="number"
+          inputMode="numeric"
+          min={config ? 1 : undefined}
+          max={config?.max}
+          step="1"
+          required
+          readOnly={!config}
+          value={amount}
+          onChange={(event) => setAmount(event.target.value)}
+        />
+        <select
+          aria-label="Setup time unit"
+          className={field}
+          value={unit}
+          onChange={(event) => {
+            const next = event.target.value as SetupTimeUnit | "saved";
+            setUnit(next);
+            setAmount(
+              next === "saved"
+                ? String(minutes)
+                : setupAmount(valid ? preparation : 0, next),
+            );
+          }}
+        >
+          {initialUnit === "saved" && (
+            <option value="saved">Keep saved minutes</option>
+          )}
+          {Object.keys(setupTimeUnits).map((option) => (
+            <option key={option}>{option}</option>
+          ))}
+        </select>
+      </div>
+      <p id="hall-setup-time-limit" className="mt-1 text-sm text-muted">
+        {config?.hint ?? "Choose a unit to change the saved setup time."}
+      </p>
+      <input
+        type="hidden"
+        name="preparation"
+        value={preparation}
+        disabled={!valid}
+      />
+    </fieldset>
+  );
+}
 
 export default function HallDesk({ token }: { token: string }) {
   const [searchParams] = useSearchParams();
@@ -1172,27 +1293,29 @@ export default function HallDesk({ token }: { token: string }) {
               ? "Event extended."
               : path === "actions/receipt"
                 ? "Payment recorded."
-                : path === "actions/confirm"
-                  ? "Booking confirmed."
-                  : refundApproved
-                    ? keepRefundOpen
-                      ? "Refund approved. Record it after returning the money."
-                      : "Refund decision recorded."
-                    : refundRecorded
-                      ? refundRemaining > 0
-                        ? `Transfer recorded. ${pesos(refundRemaining)} still due.`
-                        : "Refund transfer recorded."
-                      : path === "actions/start"
-                        ? "Event started."
-                        : path === "actions/complete"
-                          ? "Checkout recorded. Clean and prepare the hall before marking it ready."
-                          : path === "actions/ready"
-                            ? "Hall readiness saved."
-                            : path === "actions/take_out_of_service"
-                              ? "The hall is out of service for the selected period."
-                              : path === "actions/end_out_of_service"
-                                ? "Out-of-service period ended. Mark the hall ready when it is prepared."
-                                : "Action recorded.",
+                : path === "actions/reconcile_late_payment"
+                  ? "Late payment recorded for staff follow-up."
+                  : path === "actions/confirm"
+                    ? "Booking confirmed."
+                    : refundApproved
+                      ? keepRefundOpen
+                        ? "Refund approved. Record it after returning the money."
+                        : "Refund decision recorded."
+                      : refundRecorded
+                        ? refundRemaining > 0
+                          ? `Transfer recorded. ${pesos(refundRemaining)} still due.`
+                          : "Refund transfer recorded."
+                        : path === "actions/start"
+                          ? "Event started."
+                          : path === "actions/complete"
+                            ? "Checkout recorded. Clean and prepare the hall before marking it ready."
+                            : path === "actions/ready"
+                              ? "Hall readiness saved."
+                              : path === "actions/take_out_of_service"
+                                ? "The hall is out of service for the selected period."
+                                : path === "actions/end_out_of_service"
+                                  ? "Out-of-service period ended. Mark the hall ready when it is prepared."
+                                  : "Action recorded.",
         );
         if (directBooking && result.id) {
           clearQuote();
@@ -1311,7 +1434,7 @@ export default function HallDesk({ token }: { token: string }) {
     return () => controller.abort();
   }, [pending, token]);
   return (
-    <section className="mt-6 space-y-5">
+    <section className="staff-hall-desk mt-6 space-y-5">
       <h2 className="text-2xl font-semibold">Function Hall</h2>
       {pending && (
         <p role="status" className="text-sm">
@@ -1322,7 +1445,7 @@ export default function HallDesk({ token }: { token: string }) {
       )}
       <nav
         aria-label="Function Hall"
-        className="flex flex-wrap gap-4 text-primary"
+        className="staff-hall-tabs flex flex-wrap gap-4 text-primary"
       >
         {[
           ["calendar", "Calendar"],
@@ -1395,19 +1518,26 @@ export default function HallDesk({ token }: { token: string }) {
           key={revision}
           onSubmit={(event) => void send(event, "actions/settings")}
         >
-          {Object.entries(settingsLabels).map(([key, label]) => (
-            <label key={key}>
-              {label}
-              <input
-                className={field}
-                name={key}
-                type="number"
-                min="0"
-                required
-                defaultValue={settings[key]}
+          {Object.entries(settingsLabels).map(([key, label]) =>
+            key === "preparation" ? (
+              <HallSetupTime
+                key={settings.preparation}
+                minutes={settings.preparation}
               />
-            </label>
-          ))}
+            ) : (
+              <label key={key}>
+                {label}
+                <input
+                  className={field}
+                  name={key}
+                  type="number"
+                  min="0"
+                  required
+                  defaultValue={settings[key]}
+                />
+              </label>
+            ),
+          )}
           <button disabled={busy} className={button}>
             Save settings
           </button>
@@ -1510,17 +1640,19 @@ export default function HallDesk({ token }: { token: string }) {
           {["In progress", "Upcoming and inquiries", "Past events"].map(
             (group) => {
               const grouped = entries.filter((row) =>
-                group === "In progress"
-                  ? row.status === "in_progress"
-                  : group === "Upcoming and inquiries"
-                    ? ["inquiry", "confirmed"].includes(row.status)
-                    : !["inquiry", "confirmed", "in_progress"].includes(
-                        row.status,
-                      ),
+                row.paymentClosed
+                  ? group === "Past events"
+                  : group === "In progress"
+                    ? row.status === "in_progress"
+                    : group === "Upcoming and inquiries"
+                      ? ["inquiry", "confirmed"].includes(row.status)
+                      : !["inquiry", "confirmed", "in_progress"].includes(
+                          row.status,
+                        ),
               );
               return (
                 grouped.length > 0 && (
-                  <section key={group} className="space-y-3" aria-label={group}>
+                  <section key={group} className="staff-hall-events" aria-label={group}>
                     <h3 className="text-lg font-semibold">
                       {group}{" "}
                       <span className="text-sm text-muted">
@@ -1541,7 +1673,7 @@ export default function HallDesk({ token }: { token: string }) {
                         row.inquiryPrice ??
                         BigInt(row.total) + BigInt(row.overtime);
                       const balance =
-                        row.inquiryPrice === undefined
+                        row.paymentClosed || row.inquiryPrice === undefined
                           ? row.balance
                           : Math.max(
                               0,
@@ -1549,6 +1681,11 @@ export default function HallDesk({ token }: { token: string }) {
                                 Number(row.collected) +
                                 Number(row.refunded),
                             );
+                      const fullyRefunded =
+                        row.paymentClosed &&
+                        Number(row.collected) > 0 &&
+                        row.collected === row.refunded &&
+                        Number(row.refundDue ?? 0) === 0;
                       const possibleNoShow =
                         row.status === "confirmed" &&
                         start !== null &&
@@ -1663,8 +1800,12 @@ export default function HallDesk({ token }: { token: string }) {
                           </p>
                           <p>
                             Price {pesos(String(price))} · Paid{" "}
-                            {pesos(row.collected)} · Balance {pesos(balance)}
-                            {Number(row.refunded) > 0 && (
+                            {pesos(row.collected)}
+                            {fullyRefunded && <> · Fully refunded</>}
+                            {row.paymentClosed
+                              ? ` · ${pesos(balance)} due`
+                              : ` · Balance ${pesos(balance)}`}
+                            {!fullyRefunded && Number(row.refunded) > 0 && (
                               <> · Refunded {pesos(row.refunded)}</>
                             )}
                             {Number(row.refundDue) > 0 && (

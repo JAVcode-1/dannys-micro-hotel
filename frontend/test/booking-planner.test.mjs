@@ -13,6 +13,7 @@ Object.defineProperty(globalThis, "navigator", {
   value: dom.window.navigator,
 });
 globalThis.HTMLElement = dom.window.HTMLElement;
+globalThis.HTMLInputElement = dom.window.HTMLInputElement;
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const { render, screen, fireEvent, waitFor, cleanup, within } =
   await import("@testing-library/react");
@@ -145,7 +146,7 @@ test("verified guest submits reviewed server price, contact, acknowledgement and
     target: { value: "2027-01-01" },
   });
   fireEvent.click(
-    screen.getByRole("button", { name: "Check availability & price" }),
+    await screen.findByRole("button", { name: "Check availability & price" }),
   );
   await waitFor(() =>
     assert.ok(screen.getByText("₱200.00", { selector: "p.text-3xl" })),
@@ -168,15 +169,26 @@ test("verified guest submits reviewed server price, contact, acknowledgement and
   fireEvent.change(screen.getByLabelText("Primary guest name"), {
     target: { value: "Synthetic Guest" },
   });
-  fireEvent.change(screen.getByLabelText("Contact number"), {
-    target: { value: "09170000000" },
-  });
+  const phone = screen.getByLabelText("Contact number");
   fireEvent.click(
     screen.getByLabelText("I have read and acknowledge the booking policies."),
   );
   const submit = screen.getByRole("button", {
     name: "Continue to GCash payment",
   });
+  for (const value of ["0921358975", "+639170000000", "08170000000"]) {
+    fireEvent.change(phone, { target: { value } });
+    fireEvent.submit(submit.closest("form"));
+    assert.equal(holds.length, 0);
+    assert.equal(phone.getAttribute("aria-invalid"), "true", value);
+  }
+  assert.equal(phone.getAttribute("placeholder"), "09XX XXX XXXX");
+  assert.equal(
+    phone.getAttribute("aria-describedby"),
+    "booking-phone-error",
+  );
+  fireEvent.change(phone, { target: { value: "09170000000" } });
+  assert.equal(phone.hasAttribute("aria-describedby"), false);
   fireEvent.submit(submit.closest("form"));
   await waitFor(() => assert.equal(holds.length, 1));
   await waitFor(() => assert.equal(submit.disabled, false));
@@ -465,6 +477,10 @@ test("Hall-only quote sends independent schedule and renders combined authoritat
   };
   try {
     render(createElement(BookingPlanner, { hallEnabled: true }));
+    const hallBooking = within(
+      screen.getByRole("region", { name: "Function Hall booking" }),
+    );
+    await hallBooking.findByText("Ready and available now");
     fireEvent.change(screen.getByLabelText("Event date"), {
       target: { value: "2027-03-01" },
     });
@@ -474,6 +490,7 @@ test("Hall-only quote sends independent schedule and renders combined authoritat
     await waitFor(() =>
       assert.ok(screen.getByText("₱3,000.00", { selector: "p.text-3xl" })),
     );
+    assert.ok(hallBooking.getByText("Available for your selected time"));
     assert.deepEqual(payload.items, []);
     assert.equal(payload.hall.start, "2027-03-01T08:00");
     assert.equal(payload.hall.setup, "theater");
