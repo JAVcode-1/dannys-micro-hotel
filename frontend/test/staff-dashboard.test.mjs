@@ -408,19 +408,16 @@ test("staff shell preserves outlet context, capability gates and menu controls",
     "false",
   );
   assert.ok(screen.getByRole("heading", { name: "Reservations", level: 1 }));
-  const location = screen.getByRole("navigation", {
-    name: "Workspace location",
-  });
-  assert.match(location.textContent, /Workspace.*Reservations/);
+  const header = screen.getByRole("banner");
   assert.equal(
-    screen
-      .getByRole("link", { name: "Search reservations" })
-      .getAttribute("href"),
-    "/staff/reservations",
+    header.querySelector(".staff-header-label").textContent,
+    "Front desk",
   );
   assert.equal(
-    screen.getByRole("link", { name: "Today's work" }).getAttribute("href"),
-    "/staff",
+    screen
+      .getByRole("link", { name: "New walk-in" })
+      .getAttribute("href"),
+    "/staff/walkins",
   );
   fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
   await waitFor(() =>

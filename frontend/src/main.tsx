@@ -12,6 +12,7 @@ import "./guest-booking.css";
 import "./sign-in.css";
 import "./landing.css";
 import "./staff-workspace.css";
+import "./theme.css";
 
 const navigation = performance.getEntriesByType("navigation")[0] as
   PerformanceNavigationTiming | undefined;

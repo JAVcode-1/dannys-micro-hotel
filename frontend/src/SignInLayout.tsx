@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { PublishedReviewPage } from "@staytrack/shared";
 import { apiBase } from "./staff-auth";
 import StaffIcon from "./StaffIcon";
+import ThemeToggle from "./ThemeToggle";
 
 export default function SignInLayout({
   children,
@@ -35,9 +36,12 @@ export default function SignInLayout({
     return (
       <div className="staff-signin-shell">
         <div className="staff-signin-form-panel">
-          <a className="signin-back" href="/">
-            ← Back to the hotel
-          </a>
+          <div className="staff-signin-toolbar">
+            <a className="signin-back" href="/">
+              ← Back to the hotel
+            </a>
+            <ThemeToggle />
+          </div>
           <div className="staff-signin-form-wrap">
             <a href="/" className="staff-signin-mobile-brand">
               <img

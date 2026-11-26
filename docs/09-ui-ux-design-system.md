@@ -149,7 +149,7 @@ Do not implement two competing hard-coded copies of these colors. Put tokens in 
 - Store time as server instants and render in **12-hour AM/PM** (Asia/Manila). Room countdown must derive from persisted timestamps after tab refresh.
 - Display price in Philippine pesos with correct package availability. Money calculated in backend; client estimates are never authoritative.
 - Distinguish booking/financial states from physical room readiness. `Ready`, `Occupied`, `Cleaning`, `Maintenance` are physical operational statuses.
-- **Dark mode is deferred** for v1 unless approved separately. Establish a fully accessible light theme first.
+- The guest and staff headers offer a shared light/dark preference. Light is the default. The dark palette uses the same semantic color roles and retains the Royal Horizon action colors.
 - Do not treat conceptual AI-generated mockups as accurate price tables, actual room-number maps or real guest records.
 
 ## 7. Phase-by-phase UI design delivery

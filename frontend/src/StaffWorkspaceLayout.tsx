@@ -8,6 +8,7 @@ import StaffMobileNavigation from "./StaffMobileNavigation";
 import StaffNavBadge, { staffNavTotal } from "./StaffNavBadge";
 import type { StaffNavCounts } from "./StaffNavBadge";
 import useStaffNavCounts from "./useStaffNavCounts";
+import ThemeToggle from "./ThemeToggle";
 
 export type StaffPageDefinition = {
   path: string;
@@ -474,21 +475,9 @@ export default function StaffWorkspaceLayout({
             </span>
           </div>
           <div className="staff-header-context">
-            <nav
-              className="staff-eyebrow staff-workspace-path"
-              aria-label="Workspace location"
-            >
-              <Link to="/staff">
-                <StaffIcon name="home" />
-                Danny’s Micro Hotel
-              </Link>
-              <StaffIcon name="chevron" />
-              <span>Workspace</span>
-              <StaffIcon name="chevron" />
-              <span aria-current="page" title={title}>
-                {title}
-              </span>
-            </nav>
+            <p className="staff-eyebrow staff-header-label">
+              {routeGroup?.[0] ?? "Staff workspace"}
+            </p>
             <div className="staff-header-heading">
               <span className="staff-header-page-icon">
                 <StaffIcon name={pageIcon} />
@@ -497,23 +486,6 @@ export default function StaffWorkspaceLayout({
             </div>
           </div>
           <div className="staff-topbar-actions">
-            <Link
-              to="/staff/reservations"
-              className="staff-header-search"
-              aria-label="Search reservations"
-            >
-              <StaffIcon name="search" />
-              <span>Search reservations</span>
-            </Link>
-            <Link
-              to="/staff"
-              className="staff-header-work"
-              aria-label="Today's work"
-              title="Today's work"
-            >
-              <StaffIcon name="bell" />
-              {staffNavTotal(pages, counts) > 0 && <span aria-hidden="true" />}
-            </Link>
             <div className="staff-date">
               <StaffIcon name="reservations" />
               <time
@@ -534,24 +506,12 @@ export default function StaffWorkspaceLayout({
               </time>
               <span>Asia/Manila</span>
             </div>
-            {pages.some(({ path }) => path === "/staff/settings") && (
-              <Link
-                to="/staff/settings"
-                className="staff-header-profile"
-                aria-label="Staff settings"
-                title={`Signed in as ${identity}`}
-              >
-                <span className="staff-avatar" aria-hidden="true">
-                  {identity.slice(0, 1).toUpperCase()}
-                </span>
-                <StaffIcon name="chevron" />
-              </Link>
-            )}
             <Link to="/staff/walkins" className="staff-primary-action">
               <StaffIcon name="plus" />
               New walk-in
             </Link>
           </div>
+          <ThemeToggle />
         </header>
         <div
           ref={content}

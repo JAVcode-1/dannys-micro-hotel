@@ -1,6 +1,10 @@
 import TimePartInput, { manilaClock } from "./TimePartInput";
 import { parsePesoInput } from "./peso-input";
 import { useEffect, useRef, useState } from "react";
+import StaffLoadingSkeleton, {
+  SkeletonBlock,
+  SkeletonField,
+} from "./StaffLoadingSkeleton";
 import type { FormEvent } from "react";
 import type {
   BookingItemInput,
@@ -823,6 +827,7 @@ export default function WalkInDesk({
   const [booking, setBooking] = useState<WalkInBooking | null>(null);
   const [list, setList] = useState<{ id: string; primaryName: string }[]>([]);
   const [enabled, setEnabled] = useState(preview);
+  const [loading, setLoading] = useState(!preview);
   const [message, setMessage] = useState("");
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -850,6 +855,7 @@ export default function WalkInDesk({
   useEffect(() => {
     if (preview) return;
     const controller = new AbortController();
+    setLoading(true);
     setBooking(null);
     setEnabled(false);
     void Promise.all([
@@ -884,6 +890,9 @@ export default function WalkInDesk({
           setMessage(error.message);
           setList([]);
         }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
   }, [token, preview, page]);
@@ -1022,7 +1031,7 @@ export default function WalkInDesk({
           payment or real money.
         </p>
       )}
-      {!preview && !enabled && (
+      {!preview && !loading && !enabled && (
         <p role="status" className="mb-4 text-sm text-muted">
           Walk-in transactions are currently unavailable.
         </p>
@@ -1052,7 +1061,7 @@ export default function WalkInDesk({
           >
             Next
           </button>
-          {list.length > 0 && (
+          {!loading && list.length > 0 && (
             <div className="staff-walk-in-bookings">
               {list.map((row) => (
                 <button
@@ -1072,6 +1081,37 @@ export default function WalkInDesk({
             </div>
           )}
         </nav>
+      )}
+      {loading && (
+        <StaffLoadingSkeleton label="Loading walk-in desk…">
+          {rates.length ? (
+            <div className="mb-4 flex flex-wrap gap-2">
+              <SkeletonBlock className="h-11 w-28" />
+              <SkeletonBlock className="h-11 w-32" />
+            </div>
+          ) : (
+            <div className="staff-walk-in-layout grid items-start gap-6 lg:grid-cols-2">
+              <div className="staff-walk-in-panel space-y-4 rounded-xl border border-subtle bg-white p-5">
+                <SkeletonBlock className="h-5 w-36" />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <SkeletonField />
+                  <SkeletonField />
+                </div>
+                <div className="space-y-3 rounded-lg border border-subtle p-4">
+                  <SkeletonBlock className="h-4 w-24" />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <SkeletonField />
+                    <SkeletonField />
+                  </div>
+                </div>
+                <SkeletonBlock className="h-11 w-44" />
+              </div>
+              <div className="staff-walk-in-panel staff-walk-in-empty rounded-xl border border-subtle bg-white p-5">
+                <SkeletonBlock className="h-5 w-52" />
+              </div>
+            </div>
+          )}
+        </StaffLoadingSkeleton>
       )}
       <div className="staff-walk-in-layout grid items-start gap-6 lg:grid-cols-2">
         {rates.length > 0 && (
@@ -1093,7 +1133,7 @@ export default function WalkInDesk({
             preview={preview}
             onPayment={payment}
           />
-        ) : (
+        ) : loading ? null : (
           <div className="staff-walk-in-panel staff-walk-in-empty rounded-xl border border-subtle bg-white p-5">
             <h2 className="font-bold">
               <StaffIcon name="reservations" /> Select or create a walk-in

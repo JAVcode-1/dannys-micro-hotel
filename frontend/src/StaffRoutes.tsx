@@ -14,9 +14,14 @@ import CheckInDesk from "./CheckInDesk";
 import HallDesk from "./HallDesk";
 import OperationalSettings from "./OperationalSettings";
 import RescheduleDesk from "./RescheduleDesk";
+import SignInLayout from "./SignInLayout";
 import StaffAnalytics from "./StaffAnalytics";
 import StaffAuditDesk from "./StaffAuditDesk";
 import StaffCatalog from "./StaffCatalog";
+import StaffLoadingSkeleton, {
+  SkeletonBlock,
+  SkeletonField,
+} from "./StaffLoadingSkeleton";
 import StaffLogin from "./StaffLogin";
 import StaffPaymentReviews from "./StaffPaymentReviews";
 import StaffReviewDesk from "./StaffReviewDesk";
@@ -198,12 +203,30 @@ function StaffRouteGuard({
       />
     );
 
-  if (access.status === "loading" || cleanInviteUrl)
+  if (access.status === "loading" || cleanInviteUrl) {
+    if (isSignIn) {
+      return (
+        <SignInLayout staff>
+          <StaffLoadingSkeleton label="Verifying staff session…">
+            <div className="space-y-5">
+              <div className="space-y-3">
+                <SkeletonBlock className="h-8 w-48" />
+                <SkeletonBlock className="h-4 w-64" />
+              </div>
+              <SkeletonField />
+              <SkeletonField />
+              <SkeletonBlock className="h-11 w-full" />
+            </div>
+          </StaffLoadingSkeleton>
+        </SignInLayout>
+      );
+    }
     return (
-      <p className="text-muted" role="status">
-        Verifying staff session…
-      </p>
+      <StaffLoadingSkeleton label="Verifying staff session…">
+        <SkeletonBlock className="h-4 w-40" />
+      </StaffLoadingSkeleton>
     );
+  }
 
   if (access.status === "unauthenticated") {
     if (!isSignIn)

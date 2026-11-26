@@ -1,5 +1,6 @@
 import RoomMaintenancePanel from "./RoomMaintenancePanel";
 import React from "react";
+import StaffLoadingSkeleton, { SkeletonBlock } from "./StaffLoadingSkeleton";
 import { notifySuccess } from "./notifications";
 import { apiBase } from "./staff-auth";
 import type {
@@ -133,9 +134,11 @@ export default function StaffRooms({ token }: { token: string }) {
     <section className="staff-room-board mt-8 border-t border-subtle pt-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h2 className="text-2xl font-bold">Rooms</h2>
-        <span className="rounded-full bg-selected px-3 py-2 text-sm font-semibold text-primary">
-          {rooms.length} rooms on record
-        </span>
+        {!loading && (
+          <span className="rounded-full bg-selected px-3 py-2 text-sm font-semibold text-primary">
+            {rooms.length} rooms on record
+          </span>
+        )}
         <button
           type="button"
           className="min-h-11 rounded-lg border border-subtle px-4 text-sm font-semibold disabled:opacity-50"
@@ -163,9 +166,33 @@ export default function StaffRooms({ token }: { token: string }) {
         />
       </details>
       {loading && (
-        <p role="status" className="mt-6 text-muted">
-          Loading room board…
-        </p>
+        <StaffLoadingSkeleton label="Loading room board…">
+          <div className="staff-room-grid mt-6 grid items-start gap-3">
+            {["w-16", "w-20", "w-14", "w-24"].map((roomWidth) => (
+              <article
+                key={roomWidth}
+                className="space-y-4 rounded-xl border border-subtle bg-white/80 p-4"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="space-y-2">
+                    <SkeletonBlock className={`h-5 ${roomWidth}`} />
+                    <SkeletonBlock className="h-3 w-28" />
+                  </div>
+                  <SkeletonBlock className="h-6 w-20" />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <SkeletonBlock className="h-6 w-24" />
+                  <SkeletonBlock className="h-6 w-16" />
+                </div>
+                <div className="space-y-2 border-t border-subtle pt-3">
+                  <SkeletonBlock className="h-3 w-36" />
+                  <SkeletonBlock className="h-3 w-28" />
+                </div>
+                <SkeletonBlock className="h-11 w-full" />
+              </article>
+            ))}
+          </div>
+        </StaffLoadingSkeleton>
       )}
       {error && (
         <p role="alert" className="mt-6 text-red-700">

@@ -3,6 +3,11 @@
 :root {
   --brand-primary: #2443b6;
   --brand-primary-hover: #1b3595;
+  --accent-text: var(--brand-primary);
+  --ink: #17213d;
+  --on-primary: #ffffff;
+  --on-primary-muted: #eaf1ff;
+  --on-primary-accent: #eee9fa;
   --accent-booking: #f97316;
   --accent-lavender: #eee9fa;
   --surface-canvas: #fafafd;
@@ -26,11 +31,14 @@
 }
 
 html {
+  color-scheme: light;
+  background-color: var(--surface-canvas);
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
 }
 body {
   margin: 0;
+  color: var(--text-main);
   font-family: "Segoe UI", sans-serif;
 }
 html:has(.staff-workspace) {

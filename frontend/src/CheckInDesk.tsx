@@ -3,6 +3,7 @@ import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
 import { readableLabel } from "./presentation";
 import StaffIcon from "./StaffIcon";
+import StaffLoadingSkeleton, { SkeletonBlock } from "./StaffLoadingSkeleton";
 
 type Item = {
   id: string;
@@ -77,10 +78,14 @@ export default function CheckInDesk({ token }: { token?: string }) {
   const [enabled, setEnabled] = useState(!token);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [listStatus, setListStatus] = useState<"loading" | "ready" | "error">(
+    token ? "loading" : "ready",
+  );
   const [keys] = useState(() => new Map<string, string>());
   useEffect(() => {
     if (!token) return;
     let active = true;
+    setListStatus("loading");
     void fetch(`${apiBase}/staff/check-ins`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -90,10 +95,14 @@ export default function CheckInDesk({ token }: { token?: string }) {
         if (active) {
           setItems(data.items);
           setEnabled(data.enabled);
+          setListStatus("ready");
         }
       })
       .catch(() => {
-        if (active) setMessage("Unable to load check-in desk.");
+        if (active) {
+          setListStatus("error");
+          setMessage("Unable to load check-in desk.");
+        }
       });
     return () => {
       active = false;
@@ -200,6 +209,21 @@ export default function CheckInDesk({ token }: { token?: string }) {
       setBusy(false);
     }
   }
+  const groups =
+    listStatus === "ready"
+      ? [
+          {
+            label: "Arriving guests",
+            icon: "arrivals",
+            items: items.filter((item) => !item.checked_in_at),
+          },
+          {
+            label: "Checked in",
+            icon: "stays",
+            items: items.filter((item) => item.checked_in_at),
+          },
+        ]
+      : [];
   return (
     <section className="staff-check-in mx-auto flex max-w-4xl flex-col gap-4 rounded-2xl border border-subtle bg-white p-6">
       <h1 className="text-2xl font-semibold text-primary">Check-in</h1>
@@ -209,20 +233,36 @@ export default function CheckInDesk({ token }: { token?: string }) {
           fixtures can be selected.
         </p>
       )}
-      {token && !enabled && <p>Live check-in is closed pending acceptance.</p>}
+      {token && !enabled && listStatus !== "loading" && (
+        <p>Live check-in is closed pending acceptance.</p>
+      )}
       {message && <p role="alert">{message}</p>}
-      {[
-        {
-          label: "Arriving guests",
-          icon: "arrivals",
-          items: items.filter((item) => !item.checked_in_at),
-        },
-        {
-          label: "Checked in",
-          icon: "stays",
-          items: items.filter((item) => item.checked_in_at),
-        },
-      ].map((group) => (
+      {listStatus === "loading" && (
+        <StaffLoadingSkeleton label="Loading check-ins…">
+          <div className="grid gap-4 min-[72rem]:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)]">
+            {["arriving", "checked-in"].map((group) => (
+              <div key={group} className="staff-check-in-group">
+                <SkeletonBlock className="h-5 w-32" />
+                <article className="staff-check-in-card space-y-3 rounded-lg border border-subtle p-4">
+                  <SkeletonBlock className="h-5 w-36" />
+                  <SkeletonBlock className="h-3 w-24" />
+                  <div className="staff-check-in-schedule">
+                    <SkeletonBlock className="h-8 w-full" />
+                    <SkeletonBlock className="h-8 w-full" />
+                  </div>
+                  {group === "arriving" && (
+                    <div className="flex flex-wrap gap-3 border-t border-subtle pt-3">
+                      <SkeletonBlock className="h-11 min-w-32 flex-1" />
+                      <SkeletonBlock className="h-11 w-24" />
+                    </div>
+                  )}
+                </article>
+              </div>
+            ))}
+          </div>
+        </StaffLoadingSkeleton>
+      )}
+      {groups.map((group) => (
         <section
           key={group.label}
           className="staff-check-in-group"

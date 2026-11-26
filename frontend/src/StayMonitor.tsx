@@ -3,6 +3,7 @@ import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
 import { bookingReference, readableLabel } from "./presentation";
 import StaffIcon from "./StaffIcon";
+import StaffLoadingSkeleton, { SkeletonBlock } from "./StaffLoadingSkeleton";
 import { countdown, serverTime, type ClockAnchor } from "./stay-clock";
 type Item = {
   id: string;
@@ -248,7 +249,50 @@ export default function StayMonitor({ token }: { token?: string }) {
       )}
       {message && <p role="status">{message}</p>}
       {syncState === "loading" && (
-        <p role="status">Loading stays and synchronizing server time…</p>
+        <StaffLoadingSkeleton label="Loading stays and synchronizing server time…">
+          <div className="space-y-5">
+            <section className="space-y-3">
+              <SkeletonBlock className="h-5 w-32" />
+              <div className="staff-stays-list" data-kind="active">
+                {["w-32", "w-40"].map((nameWidth) => (
+                  <article
+                    key={nameWidth}
+                    className="staff-stay-card rounded-xl border border-subtle p-4"
+                  >
+                    <div className="space-y-2">
+                      <SkeletonBlock className={`h-4 ${nameWidth}`} />
+                      <SkeletonBlock className="h-3 w-24" />
+                    </div>
+                    <div className="staff-stay-schedule">
+                      <SkeletonBlock className="h-8 w-full" />
+                      <SkeletonBlock className="h-8 w-full" />
+                    </div>
+                    <div className="staff-stay-clock rounded-xl p-3">
+                      <SkeletonBlock className="h-6 w-36" />
+                    </div>
+                    <div className="staff-stay-actions">
+                      <SkeletonBlock className="h-11 w-28" />
+                      <SkeletonBlock className="h-4 w-24" />
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+            <section className="space-y-3">
+              <SkeletonBlock className="h-5 w-40" />
+              <div className="staff-stays-list" data-kind="completed">
+                <article className="staff-stay-card">
+                  <SkeletonBlock className="h-4 w-32" />
+                  <div className="staff-stay-schedule">
+                    <SkeletonBlock className="h-3 w-28" />
+                    <SkeletonBlock className="h-3 w-24" />
+                  </div>
+                  <SkeletonBlock className="h-4 w-28" />
+                </article>
+              </div>
+            </section>
+          </div>
+        </StaffLoadingSkeleton>
       )}
       {syncState === "error" && (
         <div className="space-y-3">

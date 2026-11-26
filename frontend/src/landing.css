@@ -121,14 +121,14 @@
 }
 .landing-button-orange {
   background: var(--accent-booking);
-  color: var(--text-main);
+  color: var(--ink);
 }
 .landing-button-blue {
   background: var(--brand-primary);
-  color: var(--surface-card);
+  color: var(--on-primary);
 }
 .landing-button-line {
-  color: var(--brand-primary);
+  color: var(--accent-text);
   border-color: var(--border-subtle);
   background: var(--surface-card);
 }
@@ -215,7 +215,7 @@
   align-items: center;
   gap: 0.7rem;
   width: auto;
-  color: var(--brand-primary);
+  color: var(--accent-text);
   text-decoration: none;
 }
 .landing-site-head .landing-brand img {
@@ -274,7 +274,7 @@
     opacity 150ms var(--ease);
 }
 .landing-nav a:is([aria-current], :focus-visible) {
-  color: var(--brand-primary);
+  color: var(--accent-text);
 }
 .landing-nav a:is([aria-current], :focus-visible)::after {
   opacity: 1;
@@ -310,7 +310,7 @@
   width: min(100%, 100rem);
   margin: auto;
   margin-block-start: clamp(1rem, 2vw, 1.75rem);
-  color: var(--surface-card);
+  color: var(--on-primary);
 }
 .landing-hero-copy {
   display: flex;
@@ -324,7 +324,7 @@
   display: flex;
   align-items: center;
   gap: 0.7rem;
-  color: var(--surface-selected);
+  color: var(--on-primary-muted);
 }
 .landing-hero-copy .landing-eyebrow::before {
   content: "";
@@ -339,11 +339,11 @@
   line-height: 1.075;
 }
 .landing h1 em {
-  color: var(--accent-lavender);
+  color: var(--on-primary-accent);
   font-weight: inherit;
 }
 .landing-hero-copy p {
-  color: var(--surface-selected);
+  color: var(--on-primary-muted);
   max-width: 32ch;
   font-size: clamp(1.0625rem, 1.35vw, 1.25rem);
   line-height: 1.65;
@@ -382,7 +382,7 @@
   position: absolute;
   bottom: 1.2rem;
   right: 1.2rem;
-  background: var(--text-main);
+  background: var(--ink);
   padding: 0.55rem 0.85rem;
   font-size: 0.75rem;
   letter-spacing: 0.05em;
@@ -438,7 +438,7 @@
   margin-bottom: 1rem;
   border-radius: 0.75rem;
   background: var(--surface-selected);
-  color: var(--brand-primary);
+  color: var(--accent-text);
   font-size: 0.8125rem;
   font-weight: 650;
 }
@@ -480,7 +480,7 @@
 .landing-intro .landing-eyebrow,
 .landing-card .landing-eyebrow,
 .landing-hall .landing-eyebrow {
-  color: var(--brand-primary);
+  color: var(--accent-text);
 }
 .landing-section-head h2,
 .landing-hall h2 {
@@ -538,7 +538,7 @@
   width: 2.25rem;
   height: 2.25rem;
   background: var(--surface-selected);
-  color: var(--brand-primary);
+  color: var(--accent-text);
   border: 0;
   font-size: 1rem;
   border-radius: 50%;
@@ -552,7 +552,7 @@
 .landing-occupancy {
   display: block;
   margin-bottom: 0.7rem;
-  color: var(--brand-primary);
+  color: var(--accent-text);
   font-size: 0.875rem;
   font-weight: 650;
 }
@@ -560,7 +560,7 @@
   color: var(--text-muted);
 }
 .landing-card-body .landing-occupancy {
-  color: var(--brand-primary);
+  color: var(--accent-text);
 }
 .landing-card-footer {
   display: flex;
@@ -667,7 +667,7 @@
 }
 .landing-contact {
   background: var(--brand-primary);
-  color: var(--surface-card);
+  color: var(--on-primary);
 }
 .landing-contact-inner {
   display: grid;
@@ -680,7 +680,7 @@
   margin-top: 0.6rem;
 }
 .landing-contact p {
-  color: var(--surface-selected);
+  color: var(--on-primary-muted);
   margin-bottom: 0;
 }
 .landing address {
@@ -701,7 +701,7 @@
   border-bottom: 1px solid var(--surface-selected);
 }
 .landing-contact-row span:first-child {
-  color: var(--accent-lavender);
+  color: var(--on-primary-accent);
   font-size: 0.82rem;
 }
 .landing-footer-inner {
@@ -738,7 +738,7 @@
 }
 @media (hover: hover) and (pointer: fine) {
   .landing-nav a:hover {
-    color: var(--brand-primary);
+    color: var(--accent-text);
   }
   .landing-nav a:hover::after {
     opacity: 1;
@@ -746,7 +746,7 @@
   }
   .landing-footer-links a:hover {
     text-decoration: underline;
-    color: var(--brand-primary);
+    color: var(--accent-text);
   }
   .landing :is(button, .landing-button, .landing-text-link):hover {
     opacity: 0.85;
@@ -830,9 +830,6 @@
   }
 }
 @media (max-width: 42rem) {
-  .landing-site-head[data-scrolled]::before {
-    opacity: 1;
-  }
   .landing-arrow {
     width: 2.75rem;
     height: 2.75rem;
@@ -845,12 +842,14 @@
     row-gap: 0.35rem;
   }
   .landing-site-head[data-scrolled] .landing-head-inner {
-    width: min(100%, 100rem);
-    min-height: 3.5rem;
-    padding-inline: var(--gutter);
-    transform: none;
-    border-radius: 0;
-    box-shadow: none;
+    width: min(calc(100% - 1.5rem), 20rem);
+    padding-inline: 0.625rem;
+  }
+  .landing-site-head[data-scrolled] .landing-brand-wordmark {
+    display: none;
+  }
+  .landing-site-head[data-scrolled] .landing-head-actions :is(.landing-button, .theme-toggle) {
+    border-radius: 999px;
   }
   .landing-site-head .landing-brand img {
     width: 2.75rem;
@@ -881,7 +880,7 @@
     padding: 0;
     border: 0;
     border-radius: 0;
-    color: var(--brand-primary);
+    color: var(--accent-text);
     background: transparent;
   }
   .landing-menu-icon {
@@ -1051,7 +1050,7 @@
 }
 .landing-reviews .landing-text-link {
   margin-top: 0.7rem;
-  color: var(--brand-primary);
+  color: var(--accent-text);
 }
 .landing-card-footer .landing-button {
   max-width: 100%;

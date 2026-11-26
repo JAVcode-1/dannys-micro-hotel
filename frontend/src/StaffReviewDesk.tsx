@@ -1,5 +1,6 @@
 import { readableLabel } from "./presentation";
 import { useEffect, useState } from "react";
+import StaffLoadingSkeleton, { SkeletonBlock } from "./StaffLoadingSkeleton";
 import type { FormEvent } from "react";
 import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
@@ -167,7 +168,30 @@ export default function StaffReviewDesk({
       {message && <p role="status">{message}</p>}
       {contact && <p>Consented follow-up address: {contact}</p>}
       {!entries ? (
-        !message && <p role="status">Loading…</p>
+        !message && (
+          <StaffLoadingSkeleton
+            label={feedback ? "Loading private feedback…" : "Loading reviews…"}
+          >
+            <div className="space-y-4">
+              {["w-4/5", "w-3/5"].map((messageWidth) => (
+                <article
+                  key={messageWidth}
+                  className="space-y-3 rounded-xl border border-subtle bg-white/80 p-4"
+                >
+                  <div className="flex flex-wrap items-center gap-3">
+                    <SkeletonBlock
+                      className={feedback ? "h-5 w-24" : "h-5 w-32"}
+                    />
+                    {!feedback && <SkeletonBlock className="h-4 w-20" />}
+                  </div>
+                  <SkeletonBlock className={`h-3 ${messageWidth}`} />
+                  <SkeletonBlock className="h-3 w-1/2" />
+                  <SkeletonBlock className="h-9 w-32" />
+                </article>
+              ))}
+            </div>
+          </StaffLoadingSkeleton>
+        )
       ) : !entries.length ? (
         <p className="staff-empty">No records on this page.</p>
       ) : (

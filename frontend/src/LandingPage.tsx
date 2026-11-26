@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import PublicHallStatus from "./PublicHallStatus";
 import { hotelContact } from "./hotel-contact";
 import { apiBase } from "./staff-auth";
+import ThemeToggle from "./ThemeToggle";
 
 type CatalogPackage = {
   code: string;
@@ -376,6 +377,7 @@ function Header() {
           <a className="landing-button landing-button-orange" href="/book">
             Book a room <span aria-hidden="true">↗</span>
           </a>
+          <ThemeToggle />
         </div>
       </div>
     </header>

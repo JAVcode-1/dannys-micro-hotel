@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { notifySuccess } from "./notifications";
 import { apiBase } from "./staff-auth";
+import StaffLoadingSkeleton, { SkeletonBlock } from "./StaffLoadingSkeleton";
 
 export default function PaymentQrSettings({ token }: { token: string }) {
   const [label, setLabel] = useState("");
@@ -9,9 +10,11 @@ export default function PaymentQrSettings({ token }: { token: string }) {
   const [qr, setQr] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [refresh, setRefresh] = useState(0);
   useEffect(() => {
     setQr(null);
+    setLoading(true);
     const controller = new AbortController();
     void fetch(`${apiBase}/staff/payment-qr`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -31,6 +34,9 @@ export default function PaymentQrSettings({ token }: { token: string }) {
           setMessage(
             "The payment QR is unavailable. Contact your administrator.",
           );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
   }, [token, refresh]);
@@ -81,6 +87,13 @@ export default function PaymentQrSettings({ token }: { token: string }) {
         Upload the hotel-approved QR and verify its recipient. Saving an image
         does not open guest payments.
       </p>
+      {loading && (
+        <StaffLoadingSkeleton label="Loading payment QR…" className="mt-4">
+          <div className="w-fit max-w-full rounded-xl border border-subtle bg-white p-2">
+            <SkeletonBlock className="aspect-square w-40" />
+          </div>
+        </StaffLoadingSkeleton>
+      )}
       {qr && (
         <img
           src={qr}

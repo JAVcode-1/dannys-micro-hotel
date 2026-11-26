@@ -4,6 +4,22 @@ status: in-progress
 ---
 # 14 — Milestones & Work Tracker
 
+## Light and dark themes (2026-11-27)
+
+Guest and staff screens use a shared theme preference with local storage, an expanding View Transition, a CSS color-fade fallback, and an immediate switch for reduced motion. Browser acceptance is pending owner testing. No checklist items were closed.
+
+The frontend checkpoint also includes the page-specific staff skeletons, simplified staff header, Rooms background photo, synchronized zoom for both staff sign-in panels, and the compact landing header on scroll. Root build, typecheck, lint, and all 240 application tests passed (129 backend and 111 frontend). Vite reported its existing bundle-size warning. Browser, hosted, and full quality-gate acceptance remain pending.
+
+## Staff page skeleton (2026-11-27)
+
+Staff pages use responsive Royal Horizon skeletons shaped like their loaded content, including reservation rows, room cards, payment panels, report charts, audit rows, and settings forms. The skeletons keep accessible loading labels and give way to the existing results, empty states, or errors. Browser acceptance is pending owner testing. No checklist items were closed.
+
+## Staff header simplification (2026-11-27)
+
+The desktop header shows the current navigation group, page icon and title, Manila date, and Royal Blue New walk-in action. Reservations search, Today, and Settings are accessible from the sidebar. The existing layout and theme provide the implementation.
+
+The header assertion passed in the frontend suite. Browser acceptance remains open.
+
 ## Staff navigation, header, and Analytics chart readability (2026-11-27)
 
 The desktop staff shell uses the owner's reference for the sidebar sections, hotel branding, breadcrumbs, current-page icon, and orange New walk-in action. The search, bell, and avatar reuse Reservations, Today, and Settings destinations. The two horizontal Analytics charts have thicker bars, labeled scales, and a note for a single reported row. The checkpoint uses existing routes, report data, and dependencies.

@@ -4,6 +4,10 @@ import { apiBase } from "./staff-auth";
 import PaymentQrSettings from "./PaymentQrSettings";
 import { notifySuccess } from "./notifications";
 import StaffIcon from "./StaffIcon";
+import StaffLoadingSkeleton, {
+  SkeletonBlock,
+  SkeletonField,
+} from "./StaffLoadingSkeleton";
 
 type Settings = {
   cleaningBufferMinutes: number | null;
@@ -167,11 +171,30 @@ export default function OperationalSettings({ token }: { token: string }) {
             )}
           </form>
         )}
-        {!value && (
-          <p role="status" className="staff-management-card">
-            {message || "Loading operational settings…"}
-          </p>
-        )}
+        {!value &&
+          (message ? (
+            <p role="status" className="staff-management-card">
+              {message}
+            </p>
+          ) : (
+            <StaffLoadingSkeleton
+              label="Loading operational settings…"
+              className="staff-management-card"
+            >
+              <div className="space-y-4">
+                <SkeletonBlock className="h-5 w-48" />
+                <div className="staff-management-fields">
+                  <SkeletonField />
+                  <SkeletonField />
+                </div>
+                <div className="space-y-2 border-t border-subtle pt-4">
+                  <SkeletonBlock className="h-3 w-44" />
+                  <SkeletonBlock className="h-24 w-full" />
+                </div>
+                <SkeletonBlock className="h-11 w-36" />
+              </div>
+            </StaffLoadingSkeleton>
+          ))}
         <PaymentQrSettings token={token} />
       </div>
       <section className="staff-management-card">

@@ -4,6 +4,18 @@ status: approved-baseline
 ---
 # 17 — Approved Decisions Register
 
+## Light and dark themes (2026-11-27)
+
+Keep Royal Horizon light as the default and restore the selected theme before rendering. Reveal the new theme from the toggle in either direction with a one-second circular View Transition. Use a color fade where the API is unavailable and apply the theme immediately for reduced motion. Ignore repeated activations until the current transition settles.
+
+## Staff page skeleton (2026-11-27)
+
+Show a skeleton that follows the content layout of each pending staff page for the duration of its data request. Reuse the page's grid and panel styles where applicable. Keep loading labels available to screen readers. The placeholder pulse respects reduced-motion settings. Use the existing staff page transition for navigation.
+
+## Staff header simplification (2026-11-27)
+
+Use the current navigation group above the page title in the staff header. Keep the page icon, Manila date, and New walk-in action, using the standard Royal Blue staff button. Reservations search, Today, and Settings belong in their existing workspace destinations.
+
 ## Staff workspace header and navigation (2026-11-27)
 
 Apply the owner reference to the shared desktop staff shell. Use labeled sidebar sections, the existing hotel logo with lavender and blue accents, breadcrumbs, and an icon for the current page. The orange New walk-in action uses Midnight Navy text. Header shortcuts lead to Reservations search, Today, and Settings. The sidebar accordion, selection movement, and mobile navigation keep their established behavior.

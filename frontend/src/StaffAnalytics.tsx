@@ -1,4 +1,5 @@
 import React from "react";
+import StaffLoadingSkeleton, { SkeletonBlock } from "./StaffLoadingSkeleton";
 import { apiBase } from "./staff-auth";
 import {
   CategoryCollectionsChart,
@@ -36,6 +37,77 @@ const money = (row: Money) => [
   pesos(row.refunds),
   pesos(row.net),
 ];
+
+function AnalyticsSkeleton({ hall = false }: { hall?: boolean }) {
+  return (
+    <StaffLoadingSkeleton
+      label={hall ? "Loading Function Hall report…" : "Loading analytics…"}
+    >
+      <div className="space-y-4">
+        <div className="staff-management-totals">
+          {["w-28", "w-32", "w-24"].map((labelWidth) => (
+            <div key={labelWidth} className="staff-management-card space-y-2">
+              <SkeletonBlock className={`h-3 ${labelWidth}`} />
+              <SkeletonBlock className="h-6 w-24" />
+            </div>
+          ))}
+        </div>
+        {hall && (
+          <div className="staff-management-card">
+            <SkeletonBlock className="h-4 w-3/4" />
+          </div>
+        )}
+        <div className="staff-management-card space-y-3">
+          <SkeletonBlock className="h-5 w-40" />
+          <SkeletonBlock className="h-3 w-56" />
+          <div className="staff-chart-scroll">
+            <div className="flex gap-2 px-2 sm:px-4">
+              {["h-12", "h-20", "h-14", "h-24", "h-16", "h-28"].map((height) => (
+                <div
+                  key={height}
+                  className="flex min-w-0 flex-1 flex-col items-center gap-2"
+                >
+                  <div className="flex h-32 w-full items-end justify-center border-b border-subtle">
+                    <SkeletonBlock className={`${height} w-[min(60%,3rem)]`} />
+                  </div>
+                  <SkeletonBlock className="h-3 w-3/4" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        {!hall && (
+          <>
+            <div className="staff-management-card space-y-4">
+              <SkeletonBlock className="h-5 w-48" />
+              <div className="grid grid-cols-[minmax(3rem,9rem)_1fr] items-center gap-3">
+                <SkeletonBlock className="h-3 w-24" />
+                <SkeletonBlock className="h-6 w-4/5" />
+                <SkeletonBlock className="h-3 w-28" />
+                <SkeletonBlock className="h-6 w-1/2" />
+              </div>
+            </div>
+            <div className="staff-management-card space-y-4">
+              <SkeletonBlock className="h-5 w-40" />
+              {["w-full", "w-3/4", "w-1/2"].map((barWidth) => (
+                <div
+                  key={barWidth}
+                  className="grid grid-cols-[minmax(3rem,9rem)_1fr] items-center gap-3"
+                >
+                  <SkeletonBlock className="h-3 w-20" />
+                  <div className={`flex gap-1 ${barWidth}`}>
+                    <SkeletonBlock className="h-5 w-3/4" />
+                    <SkeletonBlock className="h-5 w-1/4" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </StaffLoadingSkeleton>
+  );
+}
 
 function ReportPanel({
   title,
@@ -241,7 +313,7 @@ function RoomAnalytics({ token }: { token: string }) {
       {error ? (
         <p role="alert">{error}</p>
       ) : !report ? (
-        <p role="status">Loading analytics…</p>
+        <AnalyticsSkeleton />
       ) : (
         <>
           <dl className="staff-management-totals">
@@ -404,7 +476,7 @@ function HallAnalytics({ token }: { token: string }) {
       </form>
       {error && <p role="alert">{error}</p>}
       {filters && !error && !report && (
-        <p role="status">Loading Function Hall report…</p>
+        <AnalyticsSkeleton hall />
       )}
       {report && (
         <>

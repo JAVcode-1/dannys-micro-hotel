@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import StaffIcon from "./StaffIcon";
+import StaffLoadingSkeleton, { SkeletonBlock } from "./StaffLoadingSkeleton";
 import { bookingReference, readableLabel } from "./presentation";
 import type { StayFinancials } from "@staytrack/shared";
 import { apiBase } from "./staff-auth";
@@ -165,7 +166,36 @@ export default function StaffReservations({ token }: { token: string }) {
         </button>
       </form>
       {error && <p role="alert">{error}</p>}
-      {!data && !error && <p role="status">Loading reservations…</p>}
+      {!data && !error && (
+        <StaffLoadingSkeleton
+          label="Loading reservations…"
+          className="staff-reservation-list"
+        >
+          <ul>
+            {["w-28", "w-36", "w-24"].map((nameWidth) => (
+              <li key={nameWidth} className="staff-reservation-row">
+                <div className="staff-reservation-guest">
+                  <span className="size-10 shrink-0 rounded-full bg-subtle" />
+                  <div className="min-w-0 space-y-2">
+                    <SkeletonBlock className={`h-4 ${nameWidth}`} />
+                    <SkeletonBlock className="h-3 w-16" />
+                  </div>
+                </div>
+                <div className="staff-reservation-summary space-y-2">
+                  <SkeletonBlock className="h-3 w-40" />
+                  <SkeletonBlock className="h-6 w-24" />
+                </div>
+                <div className="staff-reservation-amount">
+                  <SkeletonBlock className="ml-auto h-4 w-16" />
+                </div>
+                <div className="staff-reservation-open">
+                  <SkeletonBlock className="h-6 w-16" />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </StaffLoadingSkeleton>
+      )}
       {data && (
         <>
           <ul className="staff-reservation-list">
@@ -275,7 +305,36 @@ export function StaffReservationDetail({ token }: { token: string }) {
     return () => c.abort();
   }, [token, id]);
   if (error) return <p role="alert">{error}</p>;
-  if (!data) return <p role="status">Loading reservation…</p>;
+  if (!data) {
+    return (
+      <div className="staff-reservation-detail mt-6 min-w-0">
+        <StaffLoadingSkeleton label="Loading reservation…">
+          <div className="space-y-4">
+            <SkeletonBlock className="h-4 w-28" />
+            <div className="staff-reservation-identity space-y-3 rounded-xl border border-subtle bg-white/80">
+              <SkeletonBlock className="h-7 w-52" />
+              <SkeletonBlock className="h-4 w-40" />
+              <SkeletonBlock className="h-3 w-56" />
+            </div>
+            <SkeletonBlock className="mt-6 h-5 w-40" />
+            <div className="staff-financial-summary grid grid-cols-2 gap-2">
+              {["w-20", "w-16", "w-24", "w-14"].map((labelWidth) => (
+                <div key={labelWidth} className="space-y-2 bg-white/80">
+                  <SkeletonBlock className={`h-3 ${labelWidth}`} />
+                  <SkeletonBlock className="h-6 w-20" />
+                </div>
+              ))}
+            </div>
+            <div className="space-y-3 rounded-xl border border-subtle bg-white/80 p-5">
+              <SkeletonBlock className="h-5 w-36" />
+              <SkeletonBlock className="h-4 w-56" />
+              <SkeletonBlock className="h-9 w-32" />
+            </div>
+          </div>
+        </StaffLoadingSkeleton>
+      </div>
+    );
+  }
   return (
     <section className="staff-reservation-detail mt-6 min-w-0 [overflow-wrap:anywhere]">
       <Link
@@ -708,6 +767,7 @@ export function StaffDashboard({
     };
   }, [token]);
   const value = (key: string) => counts?.[key]?.toLocaleString("en-PH") ?? "—";
+  const summaryLoading = !counts && !message;
   const hour = Number(
     new Intl.DateTimeFormat("en-PH", {
       hour: "numeric",
@@ -746,15 +806,15 @@ export function StaffDashboard({
             {message}
           </p>
         )}
-        {!counts && !message && (
-          <p role="status" className="staff-loading">
+        {summaryLoading && (
+          <span role="status" className="sr-only">
             Loading operational summary…
-          </p>
+          </span>
         )}
         <dl
           aria-label="Current operational queues"
           className="staff-metrics"
-          aria-busy={!counts && !message}
+          aria-busy={summaryLoading}
         >
           {[
             ["arrivals", "Arrivals today", "arrivals", "Expected room check-ins"],
@@ -796,7 +856,13 @@ export function StaffDashboard({
                   <StaffIcon name={icon} />
                 </span>
               </dt>
-              <dd>{value(key)}</dd>
+              <dd>
+                {summaryLoading ? (
+                  <SkeletonBlock className="my-2 h-7 w-12 motion-safe:animate-pulse" />
+                ) : (
+                  value(key)
+                )}
+              </dd>
             </div>
           ))}
           <div className="staff-metric" data-metric="checkouts">
@@ -806,7 +872,13 @@ export function StaffDashboard({
                 <StaffIcon name="clock" />
               </span>
             </dt>
-            <dd>{upcomingCheckouts?.count ?? "—"}</dd>
+            <dd>
+              {summaryLoading && !upcomingCheckouts ? (
+                <SkeletonBlock className="my-2 h-7 w-12 motion-safe:animate-pulse" />
+              ) : (
+                (upcomingCheckouts?.count ?? "—")
+              )}
+            </dd>
             {upcomingCheckouts?.next && (
               <dd className="staff-metric-next">
                 Next: {time(upcomingCheckouts.next)}

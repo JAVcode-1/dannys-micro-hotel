@@ -6,6 +6,18 @@ status: unified-online-booking-development-review
 
 The Function Hall and refunds checkpoint has passing build, typecheck, lint, formatting, 229 application tests and 40 integration tests on disposable PostgreSQL. The targeted unified-booking PostgreSQL check also passed. Staff-assisted rescheduling now uses the current form props, and test fixtures exercise the current availability, payment and staff sign-in flows. Manual browser acceptance remains pending.
 
+## Light and dark themes (2026-11-27)
+
+The landing, guest, staff sign-in, and staff workspace share a browser-local theme preference and the same circular transition. Browser verification is pending owner testing.
+
+## Staff page skeleton (2026-11-27)
+
+Staff loading states use shared skeleton shapes arranged to match each page's rows, cards, charts, or forms until its request settles. Browser verification is pending owner testing.
+
+## Staff header simplification (2026-11-27)
+
+The staff header now pairs the current group and page title with the Manila date and Royal Blue New walk-in action. The automated header assertion passed. Browser verification is pending owner testing.
+
 ## Staff workspace header and navigation (2026-11-27)
 
 The shared Royal Horizon staff shell has labeled sidebar sections, a page breadcrumb and icon, the orange New walk-in action, and shortcuts to existing staff destinations. The original navigation motion still controls the accordion and mobile menu. The two horizontal Analytics charts use explicit scales and describe when the selected dates produce one row.

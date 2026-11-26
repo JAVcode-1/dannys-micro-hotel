@@ -21,8 +21,8 @@
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--brand-primary);
   border-radius: 0.5rem;
-  background: white;
-  color: var(--brand-primary);
+  background: var(--surface-card);
+  color: var(--accent-text);
   font-size: 0.75rem;
   font-weight: 600;
 }
@@ -43,7 +43,7 @@
   width: 2rem;
   height: 2rem;
   border-radius: 0.5rem;
-  color: var(--brand-primary);
+  color: var(--accent-text);
   background: var(--surface-selected);
 }
 .staff-policy-icon svg {
@@ -72,8 +72,8 @@
   padding: 0.6rem 0.8rem;
   border: 1px solid var(--brand-primary);
   border-radius: 0.5rem;
-  color: var(--brand-primary);
-  background: white;
+  color: var(--accent-text);
+  background: var(--surface-card);
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
@@ -131,8 +131,8 @@
   left: 1rem;
   z-index: 50;
   padding: 0.8rem 1rem;
-  background: white;
-  color: var(--brand-primary);
+  background: var(--surface-card);
+  color: var(--accent-text);
 }
 .staff-skip:focus {
   top: 1rem;
@@ -346,7 +346,7 @@
   height: 1.1rem;
 }
 .staff-nav-link.is-active {
-  color: var(--brand-primary);
+  color: var(--accent-text);
   font-weight: 600;
   background: var(--surface-selected);
   border-radius: 0.5rem;
@@ -383,7 +383,7 @@
   flex-shrink: 0;
   background: var(--accent-lavender);
   border-radius: 50%;
-  color: var(--brand-primary);
+  color: var(--accent-text);
   font-weight: 650;
 }
 .staff-account > div {
@@ -412,7 +412,7 @@
   border: 1px solid var(--border-subtle);
   border-radius: 0.5rem;
   cursor: pointer;
-  background: white;
+  background: var(--surface-card);
   color: var(--text-muted);
 }
 .staff-menu-button {
@@ -429,7 +429,7 @@
   min-height: 6rem;
   padding: 1rem var(--staff-page-space);
   border-bottom: 1px solid var(--border-subtle);
-  background: white;
+  background: var(--surface-card);
 }
 .staff-eyebrow {
   font-size: 0.63rem;
@@ -477,7 +477,7 @@
   min-height: 2.75rem;
   padding: 0.65rem 1rem;
   border-radius: 0.5rem;
-  color: var(--surface-card);
+  color: var(--on-primary);
   background: var(--brand-primary);
   font-weight: 650;
   white-space: nowrap;
@@ -503,7 +503,7 @@
   min-height: 44px;
   padding-block: 0.65rem;
   cursor: pointer;
-  color: var(--brand-primary);
+  color: var(--accent-text);
 }
 .staff-content details[open] > summary {
   margin-bottom: 0.75rem;
@@ -563,10 +563,6 @@
   border-radius: 0.4rem;
   margin-bottom: 1rem;
 }
-.staff-loading {
-  color: var(--text-muted);
-  margin-bottom: 1rem;
-}
 .staff-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -575,7 +571,7 @@
 }
 .staff-metric {
   padding: 1.1rem 1.25rem;
-  background: white;
+  background: var(--surface-card);
   border: 1px solid var(--border-subtle);
   border-radius: 0.7rem;
 }
@@ -596,7 +592,7 @@
   width: 2rem;
   height: 2rem;
   border-radius: 0.5rem;
-  color: var(--brand-primary);
+  color: var(--accent-text);
   background: var(--surface-selected);
 }
 .staff-metric-icon svg {
@@ -621,7 +617,7 @@
   gap: 1.5rem;
 }
 .staff-panel {
-  background: white;
+  background: var(--surface-card);
   border: 1px solid var(--border-subtle);
   border-radius: 0.7rem;
   min-width: 0;
@@ -691,8 +687,8 @@
   color: var(--text-muted);
 }
 .staff-shell .is-urgent {
-  color: #a32929;
-  background: #fff0ef;
+  color: var(--error-text, #a32929);
+  background: var(--error-surface, #fff0ef);
 }
 .staff-panel-footnote {
   padding: 0.9rem 1.4rem;
@@ -778,7 +774,7 @@
   border: 1px solid var(--border-subtle);
   border-radius: 0.45rem;
   margin: 0 1.4rem;
-  color: var(--brand-primary);
+  color: var(--accent-text);
   font-size: 0.75rem;
   font-weight: 650;
 }
@@ -812,12 +808,12 @@
   border: 1px solid var(--border-subtle);
   border-radius: 0.6rem;
   padding: 1rem;
-  background: white;
+  background: var(--surface-card);
   color: var(--text-main);
   min-width: 0;
 }
 .staff-shortcuts a > svg:first-child {
-  color: var(--brand-primary);
+  color: var(--accent-text);
 }
 .staff-shortcuts a > svg:last-child {
   width: 1rem;
@@ -839,7 +835,7 @@
 }
 @media (hover: hover) and (pointer: fine) {
   .staff-nav-group-toggle:hover {
-    color: var(--brand-primary);
+    color: var(--accent-text);
     background: var(--surface-canvas);
   }
   .staff-nav-link:hover {
@@ -848,7 +844,7 @@
   }
   .staff-nav-link.is-active:hover {
     background: var(--surface-selected);
-    color: var(--brand-primary);
+    color: var(--accent-text);
   }
   .staff-primary-action:hover {
     opacity: 0.85;
@@ -859,7 +855,7 @@
     background: var(--surface-selected);
   }
   .staff-account button:hover {
-    color: var(--brand-primary);
+    color: var(--accent-text);
     background: var(--surface-selected);
   }
 }
@@ -1101,7 +1097,7 @@
     position: fixed;
     inset: 0;
     border: 0;
-    background: rgb(255 255 255 / 72%);
+    background: color-mix(in srgb, var(--surface-card) 72%, transparent);
     opacity: 0;
     pointer-events: none;
     transition: opacity 180ms ease-out;
@@ -1116,7 +1112,7 @@
     position: relative;
     min-height: 76px;
     padding: 0.45rem 0.25rem calc(0.45rem + env(safe-area-inset-bottom));
-    background: white;
+    background: var(--surface-card);
     border: 1px solid var(--border-subtle);
     border-radius: 1.6rem 1.6rem 0 0;
     box-shadow: 0 -4px 24px rgb(23 33 61 / 6%);
@@ -1168,7 +1164,7 @@
   }
   .staff-bottom-tab[aria-current="page"],
   .staff-bottom-tab[aria-expanded="true"] {
-    color: var(--brand-primary);
+    color: var(--accent-text);
   }
   .staff-bottom-tab:disabled {
     opacity: 0.45;
@@ -1181,7 +1177,7 @@
     padding-bottom: 0.2rem;
     font-size: 0.67rem;
     font-weight: 650;
-    color: var(--brand-primary);
+    color: var(--accent-text);
   }
   .staff-bottom-today {
     box-sizing: content-box;
@@ -1196,7 +1192,7 @@
     border: 7px solid var(--surface-canvas);
     border-radius: 50%;
     background: linear-gradient(145deg, var(--accent-booking), #ffad63);
-    color: var(--text-main);
+    color: var(--ink);
     box-shadow: 0 8px 18px rgb(249 115 22 / 20%);
     cursor: pointer;
   }
@@ -1229,8 +1225,8 @@
     height: 58px;
     border-radius: 50%;
     border: 1px solid var(--border-subtle);
-    background: white;
-    color: var(--brand-primary);
+    background: var(--surface-card);
+    color: var(--accent-text);
     box-shadow: 0 3px 10px rgb(23 33 61 / 10%);
     font-size: 0.59rem;
     font-weight: 650;
@@ -1276,7 +1272,7 @@
     bottom: 58px;
     left: 0;
     transform: translateX(-50%);
-    background: white;
+    background: var(--surface-card);
     border: 1px solid var(--border-subtle);
     border-radius: 1rem;
     padding: 0.75rem;
@@ -1296,7 +1292,7 @@
     padding: 0.5rem 0.75rem;
     border-radius: 0.5rem;
     background: var(--surface-selected);
-    color: var(--brand-primary);
+    color: var(--accent-text);
     font-weight: 600;
   }
   .staff-mobile-options > a {
@@ -1309,7 +1305,7 @@
     font-size: 0.85rem;
   }
   .staff-mobile-options > a[aria-current="page"] {
-    color: var(--brand-primary);
+    color: var(--accent-text);
     background: var(--surface-selected);
   }
   .staff-mobile-account {
@@ -1412,7 +1408,7 @@
 }
 .staff-content :where(button[aria-pressed="true"]) {
   background: var(--surface-selected);
-  color: var(--brand-primary);
+  color: var(--accent-text);
   border-color: var(--brand-primary);
 }
 .staff-content :where(button):disabled {
@@ -1430,7 +1426,7 @@
   font-size: 0.8125rem;
 }
 .staff-content :where(summary)::marker {
-  color: var(--brand-primary);
+  color: var(--accent-text);
 }
 .staff-content :where(details[open]) > summary {
   margin-bottom: 0.5rem;
@@ -1474,7 +1470,7 @@
   color: #912018;
   overflow-wrap: anywhere;
 }
-.staff-content :where(p[role="status"], .staff-empty, .staff-loading) {
+.staff-content :where(p[role="status"], .staff-empty) {
   padding: 0.875rem 1rem;
   border: 1px solid var(--border-subtle);
   border-radius: 0.625rem;
@@ -1506,7 +1502,7 @@
   padding: 0.25rem 0.625rem;
   border-radius: 0.375rem;
   background: var(--surface-selected);
-  color: var(--brand-primary);
+  color: var(--accent-text);
   font-size: 0.75rem;
   font-weight: 600;
   line-height: 1.5;
@@ -1517,8 +1513,8 @@
     [data-state="checked_in"],
     [data-state="in_house"]
   ) {
-  background: #edf8f2;
-  color: #176447;
+  background: var(--success-surface, #edf8f2);
+  color: var(--success-text, #176447);
 }
 .staff-content
   .staff-status:is(
@@ -1526,8 +1522,8 @@
     [data-state="pending_review"],
     [data-state="awaiting_payment"]
   ) {
-  background: #fff5e5;
-  color: #85500c;
+  background: var(--warning-surface, #fff5e5);
+  color: var(--warning-text, #85500c);
 }
 .staff-content
   .staff-status:is(
@@ -1652,7 +1648,7 @@
   flex-shrink: 0;
   border-radius: 0.75rem;
   background: var(--accent-lavender);
-  color: var(--brand-primary);
+  color: var(--accent-text);
 }
 .staff-reservation-name {
   font-weight: 650;
@@ -1681,7 +1677,7 @@
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--border-subtle);
   border-radius: 0.625rem;
-  color: var(--brand-primary);
+  color: var(--accent-text);
   font-size: 0.8125rem;
   font-weight: 600;
 }
@@ -1706,7 +1702,7 @@
     background: var(--surface-selected);
   }
   .staff-reservation-name:hover {
-    color: var(--brand-primary);
+    color: var(--accent-text);
     text-decoration: underline;
     text-underline-offset: 3px;
   }
@@ -1800,7 +1796,7 @@
     background:
       radial-gradient(ellipse at 72% -54%, rgb(36 67 182 / 31%) 49%, transparent 49.5%),
       radial-gradient(ellipse at 83% -31%, rgb(36 67 182 / 16%) 55%, transparent 55.5%),
-      linear-gradient(90deg, var(--surface-selected) 28%, rgb(234 241 255 / 89%) 44%, rgb(234 241 255 / 17%) 92%),
+      linear-gradient(90deg, var(--surface-selected) 28%, color-mix(in srgb, var(--surface-selected) 89%, transparent) 44%, color-mix(in srgb, var(--surface-selected) var(--glass-photo-clear, 17%), transparent) 92%),
       var(--glass-photo) right 64% / 72% auto no-repeat;
     mask-image: linear-gradient(black 40%, transparent);
     pointer-events: none;
@@ -1821,7 +1817,7 @@
     padding: .35rem .75rem;
     border: 1px solid var(--glass-edge);
     border-radius: .75rem;
-    background: rgb(255 255 255 / 65%);
+    background: color-mix(in srgb, var(--surface-card) 65%, transparent);
   }
 
   .staff-shell[data-glass-workspace] :is(
@@ -1836,7 +1832,7 @@
 
   .staff-shell[data-glass-workspace] .staff-nav-link.is-active .staff-nav-badge {
     background: var(--surface-selected);
-    color: var(--brand-primary);
+    color: var(--accent-text);
   }
 
   .staff-shell[data-glass-workspace] .staff-account {
@@ -1845,7 +1841,7 @@
     padding: .5rem;
     border: 1px solid var(--glass-edge);
     border-radius: .9rem;
-    background: rgb(255 255 255 / 67%);
+    background: color-mix(in srgb, var(--surface-card) 67%, transparent);
     box-shadow: var(--glass-shadow);
   }
 }
@@ -1854,7 +1850,7 @@
   .staff-shell[data-glass-workspace]::before {
     height: 38rem;
     background:
-      linear-gradient(130deg, var(--surface-selected) 20%, rgb(234 241 255 / 73%) 62%, rgb(234 241 255 / 34%)),
+      linear-gradient(130deg, var(--surface-selected) 20%, color-mix(in srgb, var(--surface-selected) 73%, transparent) 62%, color-mix(in srgb, var(--surface-selected) var(--glass-photo-clear, 34%), transparent)),
       var(--glass-photo) right center / cover no-repeat;
   }
 }
@@ -1884,7 +1880,7 @@
 }
 
 .staff-dashboard-intro h2 span {
-  color: var(--brand-primary);
+  color: var(--accent-text);
 }
 
 .staff-dashboard .staff-dashboard-intro > div > p:last-child {
@@ -1980,7 +1976,7 @@
 
 .staff-dashboard .staff-metric-icon.is-urgent {
   --tile-light: #bf5a57;
-  --tile-dark: #a32929;
+  --tile-dark: var(--error-text, #a32929);
 }
 
 .staff-dashboard .staff-metric-icon svg {
@@ -2009,7 +2005,7 @@
 
 .staff-dashboard :is(.staff-panel h3, .staff-shortcuts h3) svg {
   flex-shrink: 0;
-  color: var(--brand-primary);
+  color: var(--accent-text);
 }
 
 .staff-dashboard .staff-attention nav {
@@ -2024,7 +2020,7 @@
   padding: .45rem .65rem;
   border: 1px solid var(--glass-edge);
   border-radius: .8rem;
-  background: rgb(255 255 255 / 51%);
+  background: color-mix(in srgb, var(--surface-card) 51%, transparent);
 }
 
 .staff-dashboard .staff-queue-copy strong {
@@ -2037,7 +2033,7 @@
 
 .staff-dashboard .staff-queue-count {
   flex-shrink: 0;
-  color: var(--brand-primary);
+  color: var(--accent-text);
   background: var(--surface-selected);
 }
 
@@ -2050,7 +2046,7 @@
   font-size: 2.95rem;
   font-weight: 700;
   line-height: 1;
-  color: var(--brand-primary);
+  color: var(--accent-text);
 }
 
 .staff-dashboard .staff-category-line {
@@ -2175,7 +2171,7 @@
     width: 1.2rem;
     height: 1.2rem;
     transform: translateY(-50%);
-    color: var(--brand-primary);
+    color: var(--accent-text);
     pointer-events: none;
   }
 
@@ -2200,7 +2196,7 @@
   }
 
   .staff-reservation-open {
-    background: rgb(255 255 255 / 72%);
+    background: color-mix(in srgb, var(--surface-card) 72%, transparent);
   }
 
   .staff-reservation-identity,
@@ -2214,7 +2210,7 @@
     min-height: var(--staff-control-height);
     gap: .5rem;
     margin-bottom: .75rem;
-    color: var(--brand-primary);
+    color: var(--accent-text);
     font-weight: 650;
   }
 
@@ -2225,7 +2221,7 @@
   }
 
   .staff-reservation-detail .staff-financial-summary dd {
-    color: var(--brand-primary);
+    color: var(--accent-text);
   }
 
   .staff-reservation-detail .staff-financial-summary {
@@ -2236,7 +2232,7 @@
 @media (hover: hover) {
   .staff-reservation-row:hover,
   .staff-reservation-row:focus-within {
-    background: rgb(255 255 255 / 48%);
+    background: color-mix(in srgb, var(--surface-card) 48%, transparent);
   }
 
   .staff-reservation-back:hover {
@@ -2300,14 +2296,14 @@
 }
 
 .staff-check-in-group-heading svg {
-  color: var(--brand-primary);
+  color: var(--accent-text);
 }
 
 .staff-check-in-count {
   padding: .1rem .45rem;
   border-radius: 999px;
   background: var(--surface-selected);
-  color: var(--brand-primary);
+  color: var(--accent-text);
   font-size: .8rem;
   font-variant-numeric: tabular-nums;
 }
@@ -2347,7 +2343,7 @@
 }
 
 .staff-check-in-late {
-  color: #85500c;
+  color: var(--warning-text, #85500c);
   font-weight: 600;
 }
 
@@ -2365,7 +2361,7 @@
 .staff-check-in-review button {
   background: var(--surface-card);
   border: 1px solid var(--border-subtle);
-  color: var(--brand-primary);
+  color: var(--accent-text);
 }
 
 .staff-check-in-review-help,
@@ -2401,8 +2397,8 @@
 .staff-check-in-occupied {
   padding: .65rem .8rem;
   border-radius: .75rem;
-  background: #edf8f2;
-  color: #176447;
+  background: var(--success-surface, #edf8f2);
+  color: var(--success-text, #176447);
 }
 
 @media (min-width: 72rem) {
@@ -2439,14 +2435,14 @@
 }
 
 .staff-stays-heading svg {
-  color: var(--brand-primary);
+  color: var(--accent-text);
 }
 
 .staff-stays-count {
   padding: .1rem .45rem;
   border-radius: 999px;
   background: var(--surface-selected);
-  color: var(--brand-primary);
+  color: var(--accent-text);
   font-size: .8rem;
   font-variant-numeric: tabular-nums;
 }
@@ -2526,8 +2522,8 @@
 .staff-stay-checkout-status {
   padding: .2rem .6rem;
   border-radius: 999px;
-  background: #edf8f2;
-  color: #176447;
+  background: var(--success-surface, #edf8f2);
+  color: var(--success-text, #176447);
   font-size: .75rem;
   font-weight: 650;
 }
@@ -2535,18 +2531,18 @@
 .staff-stay-clock {
   margin: 0;
   background: var(--surface-selected);
-  color: var(--brand-primary);
+  color: var(--accent-text);
   font-size: 1.05rem;
 }
 
 .staff-stay-clock[data-clock="warning"] {
-  background: #fff5e5;
-  color: #85500c;
+  background: var(--warning-surface, #fff5e5);
+  color: var(--warning-text, #85500c);
 }
 
 .staff-stay-clock[data-clock="overdue"] {
-  background: #fff0ef;
-  color: #a32929;
+  background: var(--error-surface, #fff0ef);
+  color: var(--error-text, #a32929);
 }
 
 .staff-stay-clock-duration {
@@ -2666,7 +2662,7 @@
 }
 
 .staff-content .staff-walk-in-panel legend {
-  color: var(--brand-primary);
+  color: var(--accent-text);
   font-size: .9rem;
 }
 
@@ -2680,7 +2676,7 @@
 .staff-walk-in-empty svg,
 .staff-payment-verification-note svg {
   flex-shrink: 0;
-  color: var(--brand-primary);
+  color: var(--accent-text);
 }
 
 .staff-content :is(.staff-walk-in-panel, .staff-payment-panel) button.bg-primary:not(:disabled),
@@ -2707,7 +2703,7 @@
   min-width: 0;
   margin: 0;
   padding: .75rem;
-  background: rgb(255 255 255 / 56%);
+  background: color-mix(in srgb, var(--surface-card) 56%, transparent);
   overflow-wrap: anywhere;
 }
 
@@ -2727,12 +2723,12 @@
   padding: .7rem .85rem;
   border: 1px solid var(--glass-edge);
   border-radius: .8rem;
-  background: rgb(234 241 255 / 66%);
+  background: color-mix(in srgb, var(--surface-selected) 66%, transparent);
   font-variant-numeric: tabular-nums;
 }
 
 .staff-content .staff-payment-summary > div:first-child dd {
-  color: var(--brand-primary);
+  color: var(--accent-text);
 }
 
 .staff-content .staff-payment-verification-note {
@@ -2771,7 +2767,7 @@
 /* Rooms and Function Hall */
 @media screen {
   .staff-shell[data-glass-workspace]:has(.staff-room-board) {
-    --glass-photo: url("/hotel/standard-blue-760.webp");
+    --glass-photo: url("/hotel/double-bed.jpg");
   }
 
   .staff-shell[data-glass-workspace]:has(.staff-hall-desk) {
@@ -2816,7 +2812,7 @@
   }
 
   .staff-room-grid > article h3 {
-    color: var(--brand-primary);
+    color: var(--accent-text);
     font-size: 1.2rem;
   }
 
@@ -2850,12 +2846,12 @@
     padding: .12rem .48rem;
     border-radius: 999px;
     background: var(--surface-selected);
-    color: var(--brand-primary);
+    color: var(--accent-text);
     font-variant-numeric: tabular-nums;
   }
 
   .staff-content .staff-hall-desk > [aria-label="Hall status"] > p:first-child {
-    color: var(--brand-primary);
+    color: var(--accent-text);
     font-size: 1.1rem;
   }
 
@@ -2914,7 +2910,7 @@
   }
 
   .staff-content .staff-change-empty svg {
-    color: var(--brand-primary);
+    color: var(--accent-text);
   }
 
   .staff-content .staff-change-desk .staff-change-summary {
@@ -2933,7 +2929,7 @@
 
   .staff-content .staff-change-summary dd,
   .staff-content .staff-change-refund-amount {
-    color: var(--brand-primary);
+    color: var(--accent-text);
     font-weight: 650;
   }
 
@@ -2947,7 +2943,7 @@
   .staff-content > .staff-change-desk > button {
     border-color: var(--border-subtle);
     background: var(--surface-card);
-    color: var(--brand-primary);
+    color: var(--accent-text);
   }
 
   .staff-content .staff-change-pages button:disabled {
@@ -3058,7 +3054,7 @@
 
   .staff-management-totals > div:last-child {
     background: var(--surface-selected);
-    color: var(--brand-primary);
+    color: var(--accent-text);
   }
 
   .staff-content .staff-management-table thead th {
@@ -3069,7 +3065,7 @@
   .staff-content .staff-management-table td > details > summary {
     align-content: center;
     padding-block: 0;
-    color: var(--brand-primary);
+    color: var(--accent-text);
   }
 
   .staff-content .staff-management-table :is(th, td) {
@@ -3089,12 +3085,12 @@
 
   .staff-management-state[data-active="true"] {
     background: var(--surface-selected);
-    color: var(--brand-primary);
+    color: var(--accent-text);
   }
 
   .staff-content .staff-settings-payment input::file-selector-button {
     margin-inline-end: .7rem;
-    color: var(--brand-primary);
+    color: var(--accent-text);
     font-weight: 600;
     cursor: pointer;
   }
@@ -3142,7 +3138,7 @@
   padding: .65rem .45rem;
   border: 1px solid var(--border-subtle);
   border-radius: .8rem;
-  background: rgb(255 255 255 / 55%);
+  background: color-mix(in srgb, var(--surface-card) 55%, transparent);
 }
 
 .staff-chart-periods {
@@ -3284,7 +3280,7 @@
 
 .staff-analytics-data > summary {
   width: fit-content;
-  color: var(--brand-primary);
+  color: var(--accent-text);
   font-weight: 650;
 }
 
@@ -3292,7 +3288,7 @@
   padding: .85rem 1rem .65rem;
   border: 1px solid var(--border-subtle);
   border-radius: .8rem;
-  background: rgb(255 255 255 / 55%);
+  background: color-mix(in srgb, var(--surface-card) 55%, transparent);
 }
 
 .staff-chart-breakdown .staff-chart-track {
@@ -3396,7 +3392,7 @@
 
   .staff-nav-group[data-open="true"] > .staff-nav-group-toggle > svg,
   .staff-nav-group[data-open="true"] > .staff-nav-group-toggle > .staff-nav-chevron {
-    color: var(--brand-primary);
+    color: var(--accent-text);
   }
 
   .staff-shell .staff-topbar,
@@ -3413,47 +3409,13 @@
     min-width: 0;
   }
 
-  .staff-topbar .staff-workspace-path {
-    display: flex;
-    align-items: center;
-    gap: .48rem;
-    min-width: 0;
-    margin-bottom: .45rem;
-    white-space: nowrap;
-  }
-
-  .staff-topbar .staff-workspace-path > span {
-    padding: 0;
-    color: var(--text-muted);
-  }
-
-  .staff-topbar .staff-workspace-path > span[aria-current="page"] {
-    overflow: hidden;
-    color: var(--text-main);
-    text-overflow: ellipsis;
-  }
-
-  .staff-workspace-path > a,
-  .staff-header-heading {
-    display: flex;
-    align-items: center;
-    gap: .55rem;
-  }
-
-  .staff-workspace-path > a > svg {
-    width: .95rem;
-    height: .95rem;
-    color: var(--brand-primary);
-  }
-
-  .staff-workspace-path > svg,
-  .staff-header-profile > svg {
-    width: .8rem;
-    height: .8rem;
-    color: var(--text-muted);
+  .staff-topbar .staff-header-label {
+    margin-bottom: .35rem;
   }
 
   .staff-header-heading {
+    display: flex;
+    align-items: center;
     gap: .75rem;
   }
 
@@ -3465,62 +3427,19 @@
     place-items: center;
     border-radius: .68rem;
     background: var(--glass-action, var(--brand-primary));
-    color: var(--surface-card);
+    color: var(--on-primary);
     box-shadow: 0 4px 10px rgb(36 67 182 / 20%);
   }
 
   .staff-header-heading .staff-page-title {
     margin: 0;
-    font-size: clamp(1.35rem, 2.1vw, 1.9rem);
+    font-size: clamp(1.35rem, 2vw, 1.65rem);
     line-height: 1.12;
     overflow-wrap: anywhere;
   }
 
   .staff-topbar-actions {
     gap: clamp(.5rem, 1vw, 1rem);
-  }
-
-  .staff-header-search,
-  .staff-header-work,
-  .staff-header-profile {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: .55rem;
-    min-height: 2.75rem;
-    text-decoration: none;
-  }
-
-  .staff-header-search {
-    justify-content: flex-start;
-    min-width: clamp(9rem, 15vw, 16.5rem);
-    padding-inline: .7rem;
-    border: 1px solid var(--border-subtle);
-    border-radius: .72rem;
-    background: var(--surface-card);
-    font-size: .82rem;
-    color: var(--text-muted);
-  }
-
-  .staff-header-work {
-    position: relative;
-    width: 2.75rem;
-    color: var(--text-main);
-  }
-
-  .staff-header-work > span {
-    position: absolute;
-    top: .5rem;
-    right: .63rem;
-    width: .57rem;
-    height: .57rem;
-    border: 2px solid var(--surface-canvas);
-    border-radius: 50%;
-    background: var(--accent-booking);
-  }
-
-  .staff-header-profile {
-    gap: .2rem;
   }
 
   .staff-topbar .staff-date,
@@ -3538,7 +3457,7 @@
 
   .staff-topbar .staff-date > svg {
     grid-row: span 2;
-    color: var(--brand-primary);
+    color: var(--accent-text);
   }
 
   .staff-topbar .staff-date > time {
@@ -3549,41 +3468,7 @@
     margin: 0;
   }
 
-  .staff-topbar .staff-primary-action,
-  .staff-shell[data-glass-workspace] .staff-topbar .staff-primary-action {
-    background: var(--accent-booking);
-    color: var(--text-main);
+  .staff-topbar .staff-primary-action {
     border-radius: .7rem;
-    box-shadow: 0 4px 10px color-mix(in srgb, var(--accent-booking) 30%, transparent);
-  }
-}
-
-@media screen and (min-width: 64rem) and (max-width: 79.99rem) {
-  .staff-header-search {
-    justify-content: center;
-    min-width: 2.75rem;
-    padding-inline: 0;
-  }
-
-  .staff-header-search > span {
-    display: none;
-  }
-
-  .staff-workspace-path > svg:last-of-type,
-  .staff-workspace-path > [aria-current="page"] {
-    display: none;
-  }
-}
-
-@media screen and (min-width: 64rem) and (hover: hover) and (pointer: fine) {
-  .staff-header-search:hover,
-  .staff-header-profile:hover,
-  .staff-header-work:hover,
-  .staff-workspace-path > a:hover {
-    color: var(--brand-primary);
-  }
-
-  .staff-header-search:hover {
-    border-color: var(--brand-primary);
   }
 }

@@ -10,6 +10,7 @@ import { parsePesoInput } from "./peso-input";
 import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
 import StaffIcon from "./StaffIcon";
+import StaffLoadingSkeleton, { SkeletonBlock } from "./StaffLoadingSkeleton";
 
 const money = (value: number) =>
   new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(
@@ -542,13 +543,13 @@ export default function StaffPaymentReviews({ token }: { token: string }) {
   const [reviews, setReviews] = useState<StaffPaymentReview[]>([]);
   const [selected, setSelected] = useState("");
   const [enabled, setEnabled] = useState(false);
-  const [message, setMessage] = useState("Loading review queue…");
+  const [message, setMessage] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   useEffect(() => {
     const controller = new AbortController();
-    setMessage("Loading review queue…");
+    setMessage(null);
     setReviews([]);
     setEnabled(false);
     void fetch(`${apiBase}/staff/payment-reviews?page=${page}`, {
@@ -645,6 +646,42 @@ export default function StaffPaymentReviews({ token }: { token: string }) {
           Next page
         </button>
       </nav>
+      {message === null && (
+        <StaffLoadingSkeleton label="Loading review queue…">
+          <div className="staff-payment-layout grid gap-5">
+            <div className="staff-payment-queue space-y-2">
+              {["w-24", "w-32", "w-28"].map((nameWidth) => (
+                <div
+                  key={nameWidth}
+                  className="space-y-2 rounded-lg border border-subtle bg-white/80 p-3"
+                >
+                  <SkeletonBlock className={`h-4 ${nameWidth}`} />
+                  <SkeletonBlock className="h-3 w-20" />
+                </div>
+              ))}
+            </div>
+            <div className="staff-payment-panel min-w-0 space-y-4 rounded-xl border border-subtle bg-white p-5 sm:p-7">
+              <SkeletonBlock className="h-5 w-40" />
+              <SkeletonBlock className="h-4 w-56" />
+              <div className="staff-payment-summary grid gap-4 sm:grid-cols-2">
+                {["w-20", "w-24", "w-16", "w-28"].map((labelWidth) => (
+                  <div
+                    key={labelWidth}
+                    className="space-y-2 rounded-lg border border-subtle p-3"
+                  >
+                    <SkeletonBlock className={`h-3 ${labelWidth}`} />
+                    <SkeletonBlock className="h-5 w-20" />
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-3 border-t border-subtle pt-4">
+                <SkeletonBlock className="h-4 w-36" />
+                <SkeletonBlock className="h-11 w-44" />
+              </div>
+            </div>
+          </div>
+        </StaffLoadingSkeleton>
+      )}
       {current && (
         <div className="staff-payment-layout grid gap-5">
           <nav aria-label="Payment review queue" className="staff-payment-queue space-y-2">

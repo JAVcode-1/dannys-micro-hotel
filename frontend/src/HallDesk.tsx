@@ -5,6 +5,10 @@ import type { FormEvent } from "react";
 import ManilaDateTimeInput from "./ManilaDateTimeInput";
 import PublicHallStatus from "./PublicHallStatus";
 import { StaffRefundIssue } from "./RefundIssue";
+import StaffLoadingSkeleton, {
+  SkeletonBlock,
+  SkeletonField,
+} from "./StaffLoadingSkeleton";
 import TimePartInput from "./TimePartInput";
 import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
@@ -810,9 +814,9 @@ function HallCardActions({
               </button>
             </>
           ) : (
-            <p role="status" className="text-sm">
-              Checking refund status…
-            </p>
+            <StaffLoadingSkeleton label="Checking refund status…">
+              <SkeletonBlock className="h-4 w-40" />
+            </StaffLoadingSkeleton>
           )}
           <button
             type="button"
@@ -892,7 +896,16 @@ function HallCardActions({
           Payment and refund history
         </summary>
         {!finances ? (
-          <p>Loading payment history…</p>
+          financeLoadFailed ? (
+            <p role="alert">Payment and refund history is unavailable.</p>
+          ) : (
+            <StaffLoadingSkeleton label="Loading payment history…">
+              <div className="space-y-3">
+                <SkeletonBlock className="h-3 w-64" />
+                <SkeletonBlock className="h-3 w-52" />
+              </div>
+            </StaffLoadingSkeleton>
+          )
         ) : (
           <>
             {finances.receipts.length === 0 && <p>No verified payments.</p>}
@@ -1047,6 +1060,7 @@ export default function HallDesk({ token }: { token: string }) {
   const [selected, setSelected] = useState(searchParams.get("item") ?? "");
   const [finances, setFinances] = useState<Record<string, Finances>>({});
   const [failedFinancesId, setFailedFinancesId] = useState<string>();
+  const [calendarLoading, setCalendarLoading] = useState(true);
   useEffect(() => {
     setEntries([]);
     setHall(undefined);
@@ -1090,6 +1104,7 @@ export default function HallDesk({ token }: { token: string }) {
   useEffect(() => {
     const controller = new AbortController();
     const headers = { Authorization: "Bearer " + token };
+    setCalendarLoading(true);
     void Promise.all(
       ["reservations?page=" + page, "settings"].map(async (path) => {
         const response = await fetch(apiBase + "/staff/hall/" + path, {
@@ -1110,6 +1125,9 @@ export default function HallDesk({ token }: { token: string }) {
       .catch(() => {
         if (!controller.signal.aborted)
           setMessage("Function Hall is unavailable.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setCalendarLoading(false);
       });
     return () => controller.abort();
   }, [token, revision, page]);
@@ -1471,6 +1489,53 @@ export default function HallDesk({ token }: { token: string }) {
           {message}
         </p>
       )}
+      {calendarLoading && !settings && tab !== "new" && (
+        <StaffLoadingSkeleton
+          label={
+            tab === "calendar"
+              ? "Loading Hall calendar…"
+              : "Loading Hall settings…"
+          }
+        >
+          {tab === "calendar" ? (
+            <div className="space-y-5">
+              <div className="space-y-3 rounded-xl border border-subtle bg-white/80 p-4">
+                <SkeletonBlock className="h-5 w-44" />
+                <SkeletonBlock className="h-3 w-64" />
+                <div className="flex flex-wrap gap-3">
+                  <SkeletonBlock className="h-11 w-32" />
+                  <SkeletonBlock className="h-11 w-40" />
+                </div>
+              </div>
+              <div className="staff-hall-events">
+                <h3>
+                  <SkeletonBlock className="h-5 w-44" />
+                </h3>
+                {["w-36", "w-44"].map((nameWidth) => (
+                  <article
+                    key={nameWidth}
+                    className="space-y-3 rounded-xl border border-subtle p-4"
+                  >
+                    <SkeletonBlock className={`h-5 ${nameWidth}`} />
+                    <SkeletonBlock className="h-4 w-48" />
+                    <SkeletonBlock className="h-3 w-36" />
+                    <SkeletonBlock className="h-10 w-32" />
+                  </article>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4 rounded-xl border border-subtle bg-white/80 p-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {Object.keys(settingsLabels).map((setting) => (
+                  <SkeletonField key={setting} />
+                ))}
+              </div>
+              <SkeletonBlock className="h-11 w-32" />
+            </div>
+          )}
+        </StaffLoadingSkeleton>
+      )}
       {tab === "new" && (
         <form
           className="space-y-3"
@@ -1633,7 +1698,6 @@ export default function HallDesk({ token }: { token: string }) {
                 ))}
             </section>
           )}
-          {!settings && !message && <p role="status">Loading calendar…</p>}
           {settings && entries.length === 0 && (
             <p className="staff-empty">No reservations on this page.</p>
           )}

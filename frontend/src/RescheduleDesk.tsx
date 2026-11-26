@@ -12,6 +12,7 @@ import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
 import { hotelTime, peso } from "./BookingPlanner";
 import StaffIcon from "./StaffIcon";
+import StaffLoadingSkeleton, { SkeletonBlock } from "./StaffLoadingSkeleton";
 const field =
   "mt-1 min-h-11 w-full rounded-lg border border-subtle bg-white p-2 text-base";
 const button =
@@ -590,11 +591,13 @@ export default function RescheduleDesk({
   const [message, setMessage] = useState("");
   const [refresh, setRefresh] = useState(0);
   const [loaded, setLoaded] = useState(!token);
+  const loading = token && !guest && !loaded && !message;
   useEffect(() => {
     if (!token) return;
     let active = true;
     setLoaded(false);
     setEnabled(false);
+    setMessage("");
     void api(`/${guest ? "guest" : "staff"}/reschedules?page=${page}`, token)
       .then((data) => {
         if (active) {
@@ -624,7 +627,7 @@ export default function RescheduleDesk({
             : "Synthetic preview — no hotel data, payment or capacity writes."}
         </p>
       )}
-      {!enabled && (
+      {!enabled && !loading && (
         <p className="mt-3">Live rescheduling is closed pending acceptance.</p>
       )}
       {message && <p role="alert">{message}</p>}
@@ -641,9 +644,28 @@ export default function RescheduleDesk({
             No schedule change requests on this page.
           </p>
         ) : (
-          <p className="staff-change-empty" role="status">
-            Loading schedule change requests…
-          </p>
+          <StaffLoadingSkeleton
+            label="Loading schedule change requests…"
+            className="mt-4"
+          >
+            <article className="space-y-4 rounded-xl border border-subtle bg-white p-5">
+              <SkeletonBlock className="h-5 w-48" />
+              <SkeletonBlock className="h-3 w-28" />
+              <div className="grid gap-3 sm:grid-cols-2">
+                {["current", "requested"].map((schedule) => (
+                  <div
+                    key={schedule}
+                    className="space-y-2 rounded-lg border border-subtle bg-canvas p-3"
+                  >
+                    <SkeletonBlock className="h-3 w-28" />
+                    <SkeletonBlock className="h-4 w-48" />
+                  </div>
+                ))}
+              </div>
+              <SkeletonBlock className="h-3 w-4/5" />
+              <SkeletonBlock className="h-10 w-44" />
+            </article>
+          </StaffLoadingSkeleton>
         )
       )}
       {rows.map((row) =>

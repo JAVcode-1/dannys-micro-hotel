@@ -1,6 +1,7 @@
 import ManilaDateTimeInput from "./ManilaDateTimeInput";
 import { parsePesoInput } from "./peso-input";
 import { useEffect, useRef, useState } from "react";
+import StaffLoadingSkeleton, { SkeletonBlock } from "./StaffLoadingSkeleton";
 import type { StayChangeRow } from "@staytrack/shared";
 import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
@@ -818,17 +819,15 @@ export default function StayChangesDesk({
   return (
     <section className="staff-change-desk mx-auto max-w-6xl">
       <h1 className="text-2xl font-bold">Extensions and charges</h1>
-      <p className="my-3" role="status">
-        {previewRows
-          ? "Synthetic preview | no hotel data or transactions."
-          : loading
-            ? "Loading current stays…"
-            : message && !rows.length
-              ? null
-              : enabled
-                ? "Staff approval and verified funds required."
-                : "Live stay changes are closed pending acceptance."}
-      </p>
+      {!loading && (previewRows || !message || rows.length > 0) && (
+        <p className="my-3" role="status">
+          {previewRows
+            ? "Synthetic preview | no hotel data or transactions."
+            : enabled
+              ? "Staff approval and verified funds required."
+              : "Live stay changes are closed pending acceptance."}
+        </p>
+      )}
       <button
         className={button}
         disabled={loading}
@@ -837,6 +836,33 @@ export default function StayChangesDesk({
         Refresh current stays
       </button>
       {message && <p role="alert">{message}</p>}
+      {loading && (
+        <StaffLoadingSkeleton label="Loading current stays…" className="mt-5">
+          {rows.length ? (
+            <SkeletonBlock className="h-4 w-40" />
+          ) : (
+            <div className="staff-change-records grid gap-6">
+              <article className="space-y-4 rounded-2xl border border-subtle bg-white p-5">
+                <SkeletonBlock className="h-6 w-52" />
+                <SkeletonBlock className="h-4 w-56" />
+                <div className="staff-change-summary grid gap-3 sm:grid-cols-3">
+                  {["w-24", "w-20", "w-28"].map((labelWidth) => (
+                    <div
+                      key={labelWidth}
+                      className="space-y-2 rounded-lg border border-subtle bg-canvas p-3"
+                    >
+                      <SkeletonBlock className={`h-3 ${labelWidth}`} />
+                      <SkeletonBlock className="h-5 w-20" />
+                    </div>
+                  ))}
+                </div>
+                <SkeletonBlock className="h-10 w-52" />
+                <SkeletonBlock className="h-10 w-40" />
+              </article>
+            </div>
+          )}
+        </StaffLoadingSkeleton>
+      )}
       <div className="staff-change-records mt-5 grid gap-6">
         {rows.map((row) => (
           <Item

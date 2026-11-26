@@ -1,5 +1,6 @@
 import { readableLabel } from "./presentation";
 import React from "react";
+import StaffLoadingSkeleton, { SkeletonBlock } from "./StaffLoadingSkeleton";
 import type { StaffAuditPage } from "@staytrack/shared";
 import { apiBase } from "./staff-auth";
 
@@ -125,7 +126,35 @@ export default function StaffAuditDesk({ token }: { token: string }) {
           </div>
         </form>
       </details>
-      {loading && <p role="status">Loading audit activity…</p>}
+      {loading && (
+        <StaffLoadingSkeleton
+          label="Loading audit activity…"
+          className="staff-management-card"
+        >
+          <table className="w-full table-fixed">
+            <thead className="bg-selected">
+              <tr>
+                {["w-20", "w-14", "w-16", "w-24"].map((headingWidth) => (
+                  <th key={headingWidth} className="p-3">
+                    <SkeletonBlock className={`h-3 ${headingWidth}`} />
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {["w-5/6", "w-3/4", "w-2/3"].map((rowWidth) => (
+                <tr key={rowWidth} className="border-t border-subtle">
+                  {["time", "action", "actor", "subject"].map((column) => (
+                    <td key={column} className="px-3 py-4">
+                      <SkeletonBlock className={`h-4 ${rowWidth}`} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </StaffLoadingSkeleton>
+      )}
       {error && (
         <p role="alert" className="text-red-700">
           {error}

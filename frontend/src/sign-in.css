@@ -1,38 +1,45 @@
 /* Staff sign-in is isolated from the shared guest sign-in presentation. */
 .staff-workspace:has(.staff-signin-shell) {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
   padding: 0;
   background: var(--surface-card);
 }
 .staff-signin-shell {
   display: grid;
   grid-template-columns: minmax(0, 46fr) minmax(0, 54fr);
-  min-height: 100dvh;
+  container-type: inline-size;
+  width: min(100%, 120rem);
+  min-height: min(100dvh, 62rem);
   background: var(--surface-card);
   color: var(--text-main);
   --signin-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --staff-signin-text: 1rem;
+  --staff-signin-control-height: 3.25rem;
 }
 .staff-signin-form-panel {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding: 24px clamp(24px, 4vw, 64px);
+  padding: 24px clamp(24px, 4cqi, 64px);
 }
 .staff-signin-form-wrap {
   width: 100%;
-  max-width: 360px;
+  max-width: 22.5rem;
   margin: auto;
   padding-block: 56px;
 }
 .staff-signin-eyebrow {
   margin-bottom: 24px;
-  color: var(--brand-primary);
-  font-size: 10px;
+  color: var(--accent-text);
+  font-size: calc(var(--staff-signin-text) * 0.625);
   font-weight: 700;
   letter-spacing: 0.14em;
 }
 .staff-signin-content h1 {
   font-family: Bahnschrift, "Segoe UI", sans-serif;
-  font-size: clamp(32px, 3vw, 40px);
+  font-size: clamp(2rem, 3cqi, 2.5rem);
   font-weight: 600;
   line-height: 1.15;
   letter-spacing: -0.045em;
@@ -40,7 +47,7 @@
 .staff-signin-intro {
   margin-top: 12px;
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: calc(var(--staff-signin-text) * 0.875);
   line-height: 1.7;
 }
 .staff-signin-content form {
@@ -50,7 +57,7 @@
   margin-top: 24px;
 }
 .staff-signin-field label {
-  font-size: 13px;
+  font-size: calc(var(--staff-signin-text) * 0.8125);
   font-weight: 600;
 }
 .staff-signin-label-row {
@@ -63,7 +70,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 52px;
+  min-height: var(--staff-signin-control-height);
   margin-top: 8px;
   padding-left: 16px;
   border: 1px solid var(--border-subtle);
@@ -79,18 +86,18 @@
 .staff-signin-input input {
   width: 100%;
   min-width: 0;
-  min-height: 50px;
+  min-height: calc(var(--staff-signin-control-height) - 2px);
   padding: 12px 12px 12px 0;
   border: 0;
   outline: none;
   background: transparent;
   color: var(--text-main);
-  font-size: 16px;
+  font-size: var(--staff-signin-text);
 }
 .staff-signin-input input::placeholder {
   color: var(--text-muted);
   opacity: 0.8;
-  font-size: 14px;
+  font-size: calc(var(--staff-signin-text) * 0.875);
 }
 .staff-signin-input:focus-within {
   border-color: var(--brand-primary);
@@ -122,29 +129,29 @@
   padding: 4px 0;
   border: 0;
   background: transparent;
-  color: var(--brand-primary);
-  font-size: 12px;
+  color: var(--accent-text);
+  font-size: calc(var(--staff-signin-text) * 0.75);
   font-weight: 600;
   cursor: pointer;
 }
 .staff-signin-field-error {
   margin-top: 8px;
-  color: #b42318;
-  font-size: 12px;
+  color: var(--error-text, #b42318);
+  font-size: calc(var(--staff-signin-text) * 0.75);
   line-height: 1.6;
 }
 .staff-signin-submit {
   position: relative;
   isolation: isolate;
   width: 100%;
-  min-height: 52px;
+  min-height: var(--staff-signin-control-height);
   margin-top: 28px;
   overflow: hidden;
   border: 1px solid var(--brand-primary);
   border-radius: 10px;
   background: var(--brand-primary);
   color: white;
-  font-size: 14px;
+  font-size: calc(var(--staff-signin-text) * 0.875);
   font-weight: 650;
   cursor: pointer;
 }
@@ -196,7 +203,7 @@
   margin-top: 24px;
   text-align: center;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: calc(var(--staff-signin-text) * 0.75);
   line-height: 1.8;
 }
 .staff-signin-access strong {
@@ -209,18 +216,21 @@
   border-radius: 8px;
   background: var(--surface-selected);
   color: var(--text-main);
-  font-size: 13px;
+  font-size: calc(var(--staff-signin-text) * 0.8125);
   line-height: 1.7;
   overflow-wrap: anywhere;
 }
 .staff-signin-footer {
   text-align: center;
-  font-size: 11px;
+  font-size: calc(var(--staff-signin-text) * 0.6875);
   color: var(--text-muted);
   line-height: 1.7;
 }
 .staff-signin-mobile-brand {
   display: none;
+}
+.staff-signin-shell .signin-back {
+  font-size: calc(var(--staff-signin-text) * 0.8);
 }
 .staff-signin-shell :is(a, button):focus-visible {
   outline: 2px solid var(--brand-primary);
@@ -232,18 +242,19 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  margin: 14px 14px 14px 0;
-  padding: clamp(28px, 3.5vw, 56px);
+  margin: 0.875em 0.875em 0.875em 0;
+  padding: clamp(1.75em, 3.5cqi, 3.5em);
   overflow: hidden;
-  border-radius: 22px;
+  border-radius: 1.375em;
   color: white;
+  font-size: 1rem;
   background:
     radial-gradient(
       ellipse at 100% 0%,
       rgb(161 181 255 / 38%),
       transparent 55%
     ),
-    linear-gradient(160deg, var(--brand-primary), var(--text-main));
+    linear-gradient(160deg, var(--brand-primary), var(--ink));
 }
 .staff-signin-hotel::before {
   content: "";
@@ -253,56 +264,67 @@
   pointer-events: none;
   background: radial-gradient(
       circle,
-      rgb(255 255 255 / 22%) 1px,
-      transparent 1.5px
+      rgb(255 255 255 / 22%) 0.0625em,
+      transparent 0.09375em
     )
-    0 0 / 22px 22px;
+    0 0 / 1.375em 1.375em;
   mask-image: linear-gradient(black, transparent 80%);
 }
 .staff-signin-hotel .signin-brand {
-  gap: 12px;
+  gap: 0.75em;
 }
 .staff-signin-hotel .signin-brand img {
-  width: 48px;
-  height: 48px;
+  width: 3em;
+  height: 3em;
+  padding: 0.25em;
+  border-radius: 0.6em;
+}
+.staff-signin-hotel .signin-brand > span {
+  font-size: 1.5em;
+}
+.staff-signin-hotel .signin-brand small {
+  margin-top: 0.4rem;
+  font-size: 0.4em;
 }
 .staff-signin-hotel-copy {
-  margin-top: clamp(32px, 5vh, 64px);
+  margin-top: clamp(2em, 2.6cqi, 3.125em);
 }
 .staff-signin-hotel-copy .signin-eyebrow {
   color: rgb(255 255 255 / 75%);
+  font-size: 0.65em;
 }
 .staff-signin-hotel-copy h2 {
-  margin-top: 16px;
+  margin-top: 1rem;
   font-family: "Palatino Linotype", Palatino, Georgia, serif;
-  font-size: clamp(32px, 3.6vw, 54px);
+  font-size: clamp(2em, 3.6cqi, 3.375em);
   font-weight: 400;
   line-height: 1.1;
   letter-spacing: -0.035em;
 }
 .staff-signin-hotel-copy > p:last-child {
   max-width: 36ch;
-  margin-top: 20px;
+  margin-top: 1.25rem;
   color: rgb(255 255 255 / 78%);
-  font-size: 14px;
+  font-size: 0.875em;
   line-height: 1.8;
 }
 .staff-signin-hotel-scene {
   position: relative;
   width: 100%;
-  max-width: 540px;
-  min-height: 340px;
+  max-width: 33.75em;
+  min-height: 21.25em;
+  aspect-ratio: 27 / 17;
   margin: auto;
-  padding-block: 36px;
+  padding-block: 2.25em;
 }
 .staff-signin-hotel-photo {
   position: absolute;
-  inset: 32px 24px 44px;
+  inset: 2em 1.5em 2.75em;
   overflow: hidden;
   border: 1px solid rgb(255 255 255 / 24%);
-  border-radius: 16px;
-  background: var(--text-main);
-  box-shadow: 0 24px 48px rgb(0 0 0 / 18%);
+  border-radius: 1em;
+  background: var(--ink);
+  box-shadow: 0 1.5em 3em rgb(0 0 0 / 18%);
 }
 .staff-signin-hotel-photo img {
   width: 100%;
@@ -327,44 +349,48 @@
   position: absolute;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0.75em;
   max-width: 90%;
-  padding: 14px 16px;
+  padding: 0.875em 1em;
   border: 1px solid rgb(255 255 255 / 25%);
-  border-radius: 12px;
+  border-radius: 0.75em;
   background: rgb(23 33 61 / 76%);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+  backdrop-filter: blur(0.75em);
+  box-shadow: 0 0.5em 1.5em rgb(0 0 0 / 12%);
 }
 .staff-signin-glass > span {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 2.25em;
+  height: 2.25em;
   flex-shrink: 0;
-  border-radius: 9px;
+  border-radius: 0.5625em;
   background: rgb(255 255 255 / 12%);
+}
+.staff-signin-glass svg {
+  width: 1.25em;
+  height: 1.25em;
 }
 .staff-signin-glass small {
   display: block;
   color: rgb(255 255 255 / 72%);
-  font-size: 8px;
+  font-size: 0.5em;
   letter-spacing: 0.1em;
   font-weight: 650;
 }
 .staff-signin-glass strong {
   display: block;
-  margin-top: 5px;
-  font-size: 12px;
+  margin-top: 0.3125rem;
+  font-size: 0.75em;
   font-weight: 600;
 }
 .staff-signin-glass p {
-  margin-top: 3px;
+  margin-top: 0.1875rem;
   color: rgb(255 255 255 / 78%);
-  font-size: 11px;
+  font-size: 0.6875em;
 }
 .staff-signin-glass-arrival {
-  top: 12px;
+  top: 0.75em;
   left: 0;
 }
 .staff-signin-glass-rooms {
@@ -372,25 +398,25 @@
   right: 0;
 }
 .staff-signin-glass-care {
-  bottom: 16px;
-  left: 16px;
+  bottom: 1em;
+  left: 1em;
 }
 .staff-signin-hotel-footer {
-  margin-top: 24px;
-  padding-top: 24px;
+  margin-top: 1.5em;
+  padding-top: 1.5em;
   border-top: 1px solid rgb(255 255 255 / 18%);
 }
 .staff-signin-hotel-footer p {
   max-width: 38ch;
   font-family: "Palatino Linotype", Palatino, Georgia, serif;
-  font-size: 18px;
+  font-size: 1.125em;
   line-height: 1.5;
 }
 .staff-signin-hotel-footer > span {
   display: block;
-  margin-top: 12px;
+  margin-top: 1.2em;
   color: rgb(255 255 255 / 65%);
-  font-size: 10px;
+  font-size: 0.625em;
 }
 .staff-signin-hotel a:focus-visible {
   outline-color: white;
@@ -401,7 +427,7 @@
   }
   .staff-signin-eye:hover {
     background: var(--surface-selected);
-    color: var(--brand-primary);
+    color: var(--accent-text);
   }
   .staff-signin-recover:not(:disabled):hover {
     text-decoration: underline;
@@ -431,7 +457,7 @@
       transform: translateY(0);
     }
     50% {
-      transform: translateY(-8px);
+      transform: translateY(-0.5em);
     }
   }
   @keyframes staff-signin-sheen {
@@ -480,6 +506,7 @@
 @media (max-width: 759px) {
   .staff-signin-shell {
     grid-template-columns: minmax(0, 1fr);
+    min-height: 100dvh;
   }
   .staff-signin-hotel {
     display: none;
@@ -667,7 +694,7 @@
   width: 2rem;
   height: 2rem;
   border-radius: 0.6rem;
-  color: var(--brand-primary);
+  color: var(--accent-text);
   background: var(--surface-selected);
   font-size: 1.2rem;
 }
@@ -727,7 +754,7 @@
 }
 .signin-form-eyebrow {
   margin-bottom: 1rem;
-  color: var(--brand-primary);
+  color: var(--accent-text);
 }
 .signin-form-content > p:first-child {
   display: none;
@@ -853,7 +880,7 @@
   padding: clamp(1.25rem, 3vw, 2rem);
 }
 .email-code-eyebrow {
-  color: var(--brand-primary);
+  color: var(--accent-text);
   font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.15em;
@@ -909,7 +936,7 @@
   margin-top: 1.5rem;
   border-radius: 0.65rem;
   background: var(--accent-booking);
-  color: var(--text-main);
+  color: var(--ink);
   font-weight: 700;
 }
 .email-code-screen .email-code-change {
@@ -917,7 +944,7 @@
   border: 0;
   padding-inline: 0;
   background: transparent;
-  color: var(--brand-primary);
+  color: var(--accent-text);
 }
 .email-code-fields:disabled {
   opacity: 0.65;
@@ -929,7 +956,7 @@
   color: var(--text-muted);
 }
 .email-code-message[role="alert"] {
-  color: #b91c1c;
+  color: var(--error-text, #b91c1c);
 }
 .email-code-device {
   display: flex;
@@ -958,7 +985,7 @@
   width: 3rem;
   height: 0.3rem;
   border-radius: 1rem;
-  background: var(--text-main);
+  background: var(--ink);
 }
 .email-code-phone img {
   width: 3rem;
@@ -971,7 +998,7 @@
   width: 3rem;
   height: 3rem;
   border-radius: 1rem;
-  color: var(--brand-primary);
+  color: var(--accent-text);
   background: var(--surface-selected);
   font-size: 1.75rem;
 }

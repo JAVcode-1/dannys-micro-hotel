@@ -1,4 +1,8 @@
 import React from "react";
+import StaffLoadingSkeleton, {
+  SkeletonBlock,
+  SkeletonField,
+} from "./StaffLoadingSkeleton";
 import type { FormEvent } from "react";
 import { notifySuccess } from "./notifications";
 import { parsePesoInput, pesoInputValue } from "./peso-input";
@@ -20,6 +24,7 @@ export default function StaffCatalog({ token }: { token: string }) {
   const [price, setPrice] = React.useState("");
   const [message, setMessage] = React.useState("");
   const [busy, setBusy] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
   const [history, setHistory] = React.useState<Package[]>([]);
   const [categoryNames, setCategoryNames] = React.useState<
     Record<string, string>
@@ -117,10 +122,14 @@ export default function StaffCatalog({ token }: { token: string }) {
   }
   React.useEffect(() => {
     const controller = new AbortController();
-    void load(controller.signal).catch(() => {
-      if (!controller.signal.aborted)
-        setMessage("Current rates are unavailable.");
-    });
+    void load(controller.signal)
+      .catch(() => {
+        if (!controller.signal.aborted)
+          setMessage("Current rates are unavailable.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
     return () => controller.abort();
   }, []);
   async function save(event: FormEvent) {
@@ -160,6 +169,32 @@ export default function StaffCatalog({ token }: { token: string }) {
     } finally {
       setBusy(false);
     }
+  }
+  if (loading) {
+    return (
+      <section className="staff-management space-y-4">
+        <h2 className="text-2xl font-semibold">Catalog</h2>
+        <StaffLoadingSkeleton label="Loading catalog…">
+          <div className="space-y-4">
+            <div className="staff-management-card">
+              <SkeletonBlock className="h-5 w-48" />
+            </div>
+            <div className="staff-management-card space-y-4">
+              <SkeletonBlock className="h-5 w-32" />
+              <SkeletonBlock className="h-3 w-72" />
+              <div className="staff-management-fields">
+                <SkeletonField />
+                <SkeletonField />
+                <SkeletonBlock className="h-11 w-28" />
+              </div>
+            </div>
+            <div className="staff-management-card">
+              <SkeletonBlock className="h-5 w-64" />
+            </div>
+          </div>
+        </StaffLoadingSkeleton>
+      </section>
+    );
   }
   return (
     <section className="staff-management space-y-4">

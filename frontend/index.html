@@ -7,6 +7,16 @@
       content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
     />
     <meta name="theme-color" content="#FAFAFD" />
+    <script>
+      try {
+        if (localStorage.getItem("staytrack-theme") === "dark") {
+          document.documentElement.dataset.theme = "dark";
+          document.querySelector('meta[name="theme-color"]').content = "#10172A";
+        }
+      } catch {
+        // Storage can be unavailable in restricted browser contexts.
+      }
+    </script>
     <meta name="description" content="StayTrack at Danny's Micro Hotel" />
     <title>StayTrack - Danny's Micro Hotel</title>
   </head>

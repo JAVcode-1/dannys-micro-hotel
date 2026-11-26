@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import StaffLoadingSkeleton, { SkeletonBlock } from "./StaffLoadingSkeleton";
 import { apiBase } from "./staff-auth";
 import { parsePesoInput } from "./peso-input";
 
@@ -81,7 +82,16 @@ export function StaffRefundIssueQueue({ token }: { token: string }) {
       {failed ? (
         <p role="status">Refund reports are unavailable.</p>
       ) : !items ? (
-        <p role="status">Loading refund reports…</p>
+        <StaffLoadingSkeleton label="Loading refund reports…">
+          <div className="space-y-3 rounded-lg border border-subtle p-3">
+            <SkeletonBlock className="h-4 w-48" />
+            <SkeletonBlock className="h-3 w-36" />
+            <div className="flex flex-wrap gap-2">
+              <SkeletonBlock className="h-9 w-24" />
+              <SkeletonBlock className="h-9 w-36" />
+            </div>
+          </div>
+        </StaffLoadingSkeleton>
       ) : !items.length ? (
         <p>No open refund reports.</p>
       ) : (
@@ -200,9 +210,18 @@ function RefundIssue({
       {open && (
         <div className="space-y-2">
           {error && <p role="alert">{error}</p>}
-          {issue === undefined && !error && (
-            <p role="status">Loading refund report…</p>
-          )}
+          {issue === undefined &&
+            !error &&
+            (role === "staff" ? (
+              <StaffLoadingSkeleton label="Loading refund report…">
+                <div className="space-y-2">
+                  <SkeletonBlock className="h-4 w-44" />
+                  <SkeletonBlock className="h-3 w-3/4" />
+                </div>
+              </StaffLoadingSkeleton>
+            ) : (
+              <p role="status">Loading refund report…</p>
+            ))}
           {issue && (
             <div role="status">
               <p>

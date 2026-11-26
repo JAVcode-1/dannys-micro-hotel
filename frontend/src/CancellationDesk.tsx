@@ -7,6 +7,7 @@ import { notifySuccess } from "./notifications";
 import { hotelTime, peso } from "./BookingPlanner";
 import { parsePesoInput } from "./peso-input";
 import { StaffRefundIssue, StaffRefundIssueQueue } from "./RefundIssue";
+import StaffLoadingSkeleton, { SkeletonBlock } from "./StaffLoadingSkeleton";
 const button = "rounded-lg bg-primary px-4 py-2 text-white disabled:opacity-50";
 type PayerForm = {
   name: string;
@@ -97,7 +98,9 @@ export default function CancellationDesk({
     }
   });
   const [page, setPage] = useState(0);
-  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [historyStatus, setHistoryStatus] = useState<
+    "loading" | "ready" | "error"
+  >("loading");
   const [enabled, setEnabled] = useState(!token);
   const [actor, setActor] = useState("Synthetic staff");
   const [message, setMessage] = useState("");
@@ -116,7 +119,7 @@ export default function CancellationDesk({
   const base = guest ? "/guest/cancellations" : "/staff/cancellations";
   async function load() {
     if (!token) return;
-    setHistoryLoaded(false);
+    setHistoryStatus("loading");
     try {
       const response = await fetch(apiBase + base + `?page=${page}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -127,8 +130,9 @@ export default function CancellationDesk({
       setRows(data.items);
       setEnabled(data.enabled);
       setActor(data.actorId ?? "");
-      setHistoryLoaded(true);
+      setHistoryStatus("ready");
     } catch {
+      setHistoryStatus("error");
       setEnabled(false);
       setMessage(
         "Cancellation history unavailable. Approved migration and acceptance are required.",
@@ -425,7 +429,26 @@ export default function CancellationDesk({
           )}
         </div>
       )}
-      {token && !guest && historyLoaded && !rows.length && (
+      {token && !guest && historyStatus === "loading" && (
+        <StaffLoadingSkeleton label="Loading cancellation history…">
+          {rows.length ? (
+            <SkeletonBlock className="h-4 w-44" />
+          ) : (
+            <article className="space-y-4 rounded-xl border border-subtle bg-white/80 p-4">
+              <SkeletonBlock className="h-5 w-44" />
+              <SkeletonBlock className="h-8 w-28" />
+              <SkeletonBlock className="h-3 w-48" />
+              <SkeletonBlock className="h-3 w-3/4" />
+              <div className="flex flex-wrap items-center gap-3 border-t border-subtle pt-4">
+                <SkeletonBlock className="h-6 w-24" />
+                <SkeletonBlock className="h-4 w-36" />
+              </div>
+              <SkeletonBlock className="h-10 w-44" />
+            </article>
+          )}
+        </StaffLoadingSkeleton>
+      )}
+      {token && !guest && historyStatus === "ready" && !rows.length && (
         <p className="staff-change-empty">
           No cancellation records on this page.
         </p>

@@ -31,6 +31,7 @@ import { ReschedulePreview } from "./RescheduleDesk";
 import CancellationDesk from "./CancellationDesk";
 import CheckInDesk from "./CheckInDesk";
 import StayMonitor from "./StayMonitor";
+import ThemeToggle from "./ThemeToggle";
 
 type AppOptions = {
   reviewsEnabled?: boolean;
@@ -160,6 +161,7 @@ function GuestLayout() {
           <NavLink to="/book" className="guest-book-now">
             Book now
           </NavLink>
+          <ThemeToggle />
         </nav>
       </header>
       {message && (
