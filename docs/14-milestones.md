@@ -4,6 +4,10 @@ status: in-progress
 ---
 # 14 — Milestones & Work Tracker
 
+## Staff Booking changes visual refresh (2026-11-27)
+
+Rescheduling, Extensions and charges, and Cancellations and refunds use the Royal Horizon glass workspace. The pages highlight schedule comparisons, extension balances, and refund details with shared styles. Rescheduling distinguishes loading, successful empty results, and errors. Build, typecheck, lint, and all 239 application tests passed. Sample-data previews and scoped checks covered the three staff routes. Phase 07 acceptance remains open.
+
 ## Staff Rooms and Function Hall visual refresh (2026-11-27)
 
 Rooms and Function Hall use the Royal Horizon glass workspace with existing hotel photos. Room cards fit the available width, and the Hall calendar gives readiness and event groups distinct surfaces. Sample-data Edge previews were checked at 1440 px and 390 px. The Rooms sample preserved distinct available and held rooms, and the Hall sample verified Calendar, New booking, and Settings navigation.

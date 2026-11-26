@@ -11,6 +11,7 @@ import type { RescheduleInput, RescheduleRecord } from "@staytrack/shared";
 import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
 import { hotelTime, peso } from "./BookingPlanner";
+import StaffIcon from "./StaffIcon";
 const field =
   "mt-1 min-h-11 w-full rounded-lg border border-subtle bg-white p-2 text-base";
 const button =
@@ -431,7 +432,7 @@ function DecisionCard({
         </summary>
         <p className="break-all">{row.id}</p>
       </details>
-      <dl className="mt-3 space-y-2 text-sm">
+      <dl className="staff-change-summary mt-3 space-y-2 text-sm">
         <div>
           <dt className="text-muted">Current schedule</dt>
           <dd>
@@ -588,9 +589,11 @@ export default function RescheduleDesk({
   const [page, setPage] = useState(0);
   const [message, setMessage] = useState("");
   const [refresh, setRefresh] = useState(0);
+  const [loaded, setLoaded] = useState(!token);
   useEffect(() => {
     if (!token) return;
     let active = true;
+    setLoaded(false);
     setEnabled(false);
     void api(`/${guest ? "guest" : "staff"}/reschedules?page=${page}`, token)
       .then((data) => {
@@ -598,6 +601,7 @@ export default function RescheduleDesk({
           setRows(data.items);
           setEnabled(data.enabled);
           setMessage("");
+          setLoaded(true);
         }
       })
       .catch((e) => {
@@ -608,7 +612,10 @@ export default function RescheduleDesk({
     };
   }, [token, guest, page, refresh]);
   return (
-    <section aria-label="Rescheduling" className="mt-6 text-main">
+    <section
+      aria-label="Rescheduling"
+      className="staff-change-desk mt-6 text-main"
+    >
       <h2 className="text-2xl font-bold">Schedule changes</h2>
       {(!token || guest) && (
         <p className="mt-2 text-sm text-muted">
@@ -627,6 +634,18 @@ export default function RescheduleDesk({
       >
         Refresh requests
       </button>
+      {token && !guest && !rows.length && !message && (
+        loaded ? (
+          <p className="staff-change-empty">
+            <StaffIcon name="changes" />
+            No schedule change requests on this page.
+          </p>
+        ) : (
+          <p className="staff-change-empty" role="status">
+            Loading schedule change requests…
+          </p>
+        )
+      )}
       {rows.map((row) =>
         guest ? (
           <article
@@ -674,7 +693,10 @@ export default function RescheduleDesk({
         ),
       )}
       {token && (
-        <div className="mt-4 flex gap-4">
+        <nav
+          aria-label="Schedule change request pages"
+          className="staff-change-pages mt-4 flex flex-wrap items-center gap-3"
+        >
           <button
             className={button}
             disabled={page === 0}
@@ -682,6 +704,7 @@ export default function RescheduleDesk({
           >
             Previous page
           </button>
+          {!guest && <span>Page {page + 1}</span>}
           <button
             className={button}
             disabled={rows.length < 100}
@@ -689,7 +712,7 @@ export default function RescheduleDesk({
           >
             Next page
           </button>
-        </div>
+        </nav>
       )}
     </section>
   );

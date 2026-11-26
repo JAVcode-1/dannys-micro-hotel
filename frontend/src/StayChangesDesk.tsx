@@ -194,7 +194,7 @@ function Item({
         Current checkout: {hotelTime(row.effectiveCheckoutAt)}{" "}
         {row.checkedOut ? " |  Departed" : ""}
       </p>
-      <dl className="my-4 grid gap-3 sm:grid-cols-3">
+      <dl className="staff-change-summary my-4 grid gap-3 sm:grid-cols-3">
         <div>
           <dt className="text-sm text-muted">Total amount</dt>
           <dd className="font-semibold">{peso(f.netChargeCentavos)}</dd>
@@ -816,7 +816,7 @@ export default function StayChangesDesk({
     await refresh();
   };
   return (
-    <section className="mx-auto max-w-6xl">
+    <section className="staff-change-desk mx-auto max-w-6xl">
       <h1 className="text-2xl font-bold">Extensions and charges</h1>
       <p className="my-3" role="status">
         {previewRows
@@ -837,7 +837,7 @@ export default function StayChangesDesk({
         Refresh current stays
       </button>
       {message && <p role="alert">{message}</p>}
-      <div className="mt-5 grid gap-6">
+      <div className="staff-change-records mt-5 grid gap-6">
         {rows.map((row) => (
           <Item
             key={row.id}
@@ -858,7 +858,9 @@ export default function StayChangesDesk({
         </button>
       )}
       {!loading && !rows.length && !message && (
-        <p className="staff-empty mt-4">No stays available for changes.</p>
+        <p className="staff-change-empty staff-empty mt-4">
+          No stays available for changes.
+        </p>
       )}
     </section>
   );

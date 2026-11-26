@@ -36,6 +36,10 @@ The configured checkout reminders are 30, 15, and 5 minutes. The single alert ap
 
 Staff monitor expired packages in the stay monitor and use Extend this stay when a guest requests more time. The Extensions and charges page no longer offers overtime reviews or decisions. Existing charges and unpaid charge credits remain available in the charge breakdown.
 
+## Staff Booking changes design (2026-11-27)
+
+Use the Royal Horizon glass workspace across the three Booking changes routes. Put current and requested dates side by side where space permits, group stay balances above their actions, and give refund policy and history distinct surfaces. Render an empty queue only after its request returns successfully.
+
 ## Staff Rooms and Function Hall design (2026-11-27)
 
 Use the Royal Horizon glass workspace for Rooms and Function Hall, with the existing Double Standard and Hall photographs. The room grid adapts to the content width. The Hall uses a clear active view, a separate readiness panel, and responsive event cards with their existing staff controls.

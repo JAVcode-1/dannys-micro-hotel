@@ -178,6 +178,9 @@ export default function StaffWorkspaceLayout({
     "/staff/payments",
     "/staff/rooms",
     "/staff/hall",
+    "/staff/reschedules",
+    "/staff/stay-changes",
+    "/staff/cancellations",
   ].some((pattern) => matchPath(pattern, pathname));
   const title =
     page?.label ??

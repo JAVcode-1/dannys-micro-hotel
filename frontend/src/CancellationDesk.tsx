@@ -97,6 +97,7 @@ export default function CancellationDesk({
     }
   });
   const [page, setPage] = useState(0);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const [enabled, setEnabled] = useState(!token);
   const [actor, setActor] = useState("Synthetic staff");
   const [message, setMessage] = useState("");
@@ -115,6 +116,7 @@ export default function CancellationDesk({
   const base = guest ? "/guest/cancellations" : "/staff/cancellations";
   async function load() {
     if (!token) return;
+    setHistoryLoaded(false);
     try {
       const response = await fetch(apiBase + base + `?page=${page}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -125,6 +127,7 @@ export default function CancellationDesk({
       setRows(data.items);
       setEnabled(data.enabled);
       setActor(data.actorId ?? "");
+      setHistoryLoaded(true);
     } catch {
       setEnabled(false);
       setMessage(
@@ -323,7 +326,7 @@ export default function CancellationDesk({
     }
   }
   return (
-    <section className="mx-auto max-w-5xl space-y-4 rounded-2xl border border-subtle bg-white p-6 text-main">
+    <section className="staff-change-desk mx-auto max-w-5xl space-y-4 rounded-2xl border border-subtle bg-white p-6 text-main">
       <h1 className="text-2xl font-bold text-primary">
         Cancellations and refunds
       </h1>
@@ -408,7 +411,7 @@ export default function CancellationDesk({
         </button>
       )}
       {token && !guest && (
-        <div className="space-y-2 border-b border-subtle pb-4">
+        <div className="staff-change-lookup space-y-2 border-b border-subtle pb-4">
           <label className="grid gap-1">
             Room item reference
             <input
@@ -421,6 +424,11 @@ export default function CancellationDesk({
             <GuestCancellationRequest token={token} itemId={requestId} staff />
           )}
         </div>
+      )}
+      {token && !guest && historyLoaded && !rows.length && (
+        <p className="staff-change-empty">
+          No cancellation records on this page.
+        </p>
       )}
       {rows.map((row) => {
         const payer = payerForms[row.id] ?? emptyPayer;
@@ -472,7 +480,7 @@ export default function CancellationDesk({
             )}
             {row.approved && (
               <>
-                <p>
+                <p className="staff-change-refund-amount">
                   Item refund {peso(row.refundCentavos ?? 0)} · Refunded{" "}
                   {peso(refunded)} · Still due {peso(remaining)}
                 </p>
@@ -687,7 +695,10 @@ export default function CancellationDesk({
         );
       })}
       {token && (
-        <nav aria-label="Cancellation history pages" className="flex gap-3">
+        <nav
+          aria-label="Cancellation history pages"
+          className="staff-change-pages flex flex-wrap items-center gap-3"
+        >
           <button
             className={button}
             disabled={page === 0 || busy}

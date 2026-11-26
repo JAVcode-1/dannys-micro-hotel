@@ -2875,3 +2875,93 @@
     }
   }
 }
+
+/* Booking changes */
+@media screen {
+  .staff-content > .staff-change-desk {
+    container-type: inline-size;
+  }
+
+  .staff-content > .staff-change-desk > :is(h1, h2):first-child {
+    font-size: clamp(1.75rem, 2.6vw, 2.65rem);
+  }
+
+  .staff-content > .staff-change-desk > :is(
+    article.border,
+    details,
+    [aria-label="Open refund reports"],
+    .staff-change-lookup,
+    .staff-change-empty,
+    .staff-change-pages
+  ),
+  .staff-content .staff-change-records > article.border {
+    min-width: 0;
+    padding: clamp(1rem, 2vw, 1.4rem);
+    border: 1px solid var(--glass-edge);
+    border-radius: 1.25rem;
+    background: var(--glass-surface);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: blur(16px);
+    overflow-wrap: anywhere;
+  }
+
+  .staff-content .staff-change-desk .staff-change-empty {
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    margin-block: 1rem;
+    color: var(--text-muted);
+  }
+
+  .staff-content .staff-change-empty svg {
+    color: var(--brand-primary);
+  }
+
+  .staff-content .staff-change-desk .staff-change-summary {
+    display: grid;
+    gap: .7rem;
+  }
+
+  .staff-content .staff-change-summary > div,
+  .staff-content .staff-change-refund-amount {
+    margin-block: 0;
+    padding: .7rem .85rem;
+    border-radius: .8rem;
+    background: var(--surface-selected);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .staff-content .staff-change-summary dd,
+  .staff-content .staff-change-refund-amount {
+    color: var(--brand-primary);
+    font-weight: 650;
+  }
+
+  .staff-content > .staff-change-desk > .staff-change-pages {
+    padding: .65rem;
+    color: var(--text-muted);
+    font-size: .85rem;
+  }
+
+  .staff-content .staff-change-pages button,
+  .staff-content > .staff-change-desk > button {
+    border-color: var(--border-subtle);
+    background: var(--surface-card);
+    color: var(--brand-primary);
+  }
+
+  .staff-content .staff-change-pages button:disabled {
+    background: var(--surface-selected);
+    color: var(--text-muted);
+  }
+
+  .staff-content .staff-change-desk article button.bg-primary:not(:disabled) {
+    background: var(--glass-action);
+  }
+
+  @container (width >= 36rem) {
+    .staff-content .staff-change-desk .staff-change-summary {
+      grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    }
+  }
+}
