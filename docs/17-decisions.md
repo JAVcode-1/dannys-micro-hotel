@@ -4,6 +4,10 @@ status: approved-baseline
 ---
 # 17 — Approved Decisions Register
 
+## Staff Analytics charts (2026-11-27)
+
+Use vertical net-collection columns for the reported Manila periods, horizontal net-collection bars for room categories, and stacked purchase-count bars ranked by original purchases for packages. Extensions remain a separately labeled segment. Use the daily collection columns in the separate Function Hall report. Keep the summary cards, existing report filters, and exact figures under View data. Chart dimensions use the authoritative report values, including negative net amounts for refund-heavy periods.
+
 ## Staff Management design (2026-11-27)
 
 Analytics, Staff audit, Catalog, and Settings use the shared Royal Horizon workspace and existing hotel photo. Analytics emphasizes collection totals and keeps report tables scrollable. Staff audit pairs its filter disclosure with a results panel. Catalog distinguishes current rate editing from version history. Settings groups stay and booking controls, GCash QR configuration, and session actions. The layouts adapt to the available workspace width and use the existing staff APIs and controls.

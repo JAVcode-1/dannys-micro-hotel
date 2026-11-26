@@ -8,7 +8,7 @@ globalThis.window = dom.window;
 globalThis.document = dom.window.document;
 globalThis.HTMLElement = dom.window.HTMLElement;
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-const { render, screen, fireEvent, cleanup } =
+const { render, screen, fireEvent, cleanup, within } =
   await import("@testing-library/react");
 const { default: StaffAnalytics } = await import("../src/StaffAnalytics.tsx");
 
@@ -57,6 +57,98 @@ test("analytics displays loading, applies Manila filters, and clears a pending v
   }
 });
 
+test("Analytics charts show signed net collections and rank original purchases separately from extensions", async (t) => {
+  t.after(cleanup);
+  const zero = { gross: "0", refunds: "0", net: "0" };
+  const receipt = { gross: "12000", refunds: "0", net: "12000" };
+  const refund = { gross: "0", refunds: "2500", net: "-2500" };
+  t.mock.method(globalThis, "fetch", async () => ({
+    ok: true,
+    json: async () => ({
+      overall: { gross: "12000", refunds: "2500", net: "9500" },
+      trends: [
+        { period: "2026-11-24", ...receipt },
+        { period: "2026-11-26", ...refund },
+      ],
+      categories: [
+        {
+          name: null,
+          ...refund,
+          packages: zero,
+          additional: zero,
+          unclassified: refund,
+        },
+        {
+          name: "double_standard",
+          ...receipt,
+          packages: receipt,
+          additional: zero,
+          unclassified: zero,
+        },
+      ],
+      packages: [
+        {
+          id: "standard-old",
+          category: "double_standard",
+          version: 1,
+          duration: 180,
+          price: "20000",
+          originals: 1,
+          extensions: 6,
+          ...zero,
+        },
+        {
+          id: "standard-new",
+          category: "double_standard",
+          version: 2,
+          duration: 180,
+          price: "22000",
+          originals: 4,
+          extensions: 1,
+          ...receipt,
+        },
+      ],
+    }),
+  }));
+  render(createElement(StaffAnalytics, { token: "sample-staff" }));
+
+  const trend = await screen.findByRole("region", {
+    name: "Net collections by period",
+  });
+  assert.ok(within(trend).getByLabelText("2026-11-26: −₱25.00"));
+  assert.equal(trend.querySelectorAll("li").length, 2);
+  const categories = screen.getByRole("list", {
+    name: "Net collections by room category",
+  });
+  assert.match(categories.firstElementChild.textContent, /Double Standard/);
+  assert.match(
+    categories.lastElementChild.textContent,
+    /Unattributed.*−₱25.00/,
+  );
+  const packages = screen.getByRole("list", {
+    name: "Packages ranked by original purchases",
+  });
+  assert.match(
+    packages.firstElementChild.textContent,
+    /Double Standard · 3 hours · v2/,
+  );
+  assert.match(
+    packages.lastElementChild.textContent,
+    /Double Standard · 3 hours · v1/,
+  );
+  assert.ok(within(packages).getByText("4 original purchases, 1 extension"));
+
+  const panel = screen.getByRole("region", { name: "Collection trends" });
+  const disclosure = within(panel).getByText("View data").closest("details");
+  assert.equal(disclosure.open, false);
+  fireEvent.click(within(panel).getByText("View data"));
+  assert.equal(disclosure.open, true);
+  assert.match(
+    within(panel).getByRole("table").textContent,
+    /2026-11-26.*₱25.00.*−₱25.00/,
+  );
+});
+
 test("Analytics opens the Function Hall report with its existing date filters and authorization", async () => {
   const originalFetch = globalThis.fetch;
   const originalForm = globalThis.FormData;
@@ -99,8 +191,16 @@ test("Analytics opens the Function Hall report with its existing date filters an
       target: { value: "2026-11-25" },
     });
     fireEvent.click(screen.getByRole("button", { name: "View report" }));
+    const chart = await screen.findByRole("region", {
+      name: "Daily Hall net collections",
+    });
+    assert.ok(within(chart).getByLabelText("2026-11-24: ₱0.00"));
+    const panel = screen.getByRole("region", {
+      name: "Daily Hall collections",
+    });
+    fireEvent.click(within(panel).getByText("View data"));
     assert.ok(
-      await screen.findByRole("table", { name: "Daily Hall collections" }),
+      within(panel).getByRole("table", { name: "Daily Hall collections" }),
     );
     assert.match(
       screen.getByText(/actual occupied minutes/).textContent,

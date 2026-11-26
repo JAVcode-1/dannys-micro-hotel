@@ -1,5 +1,12 @@
 import React from "react";
 import { apiBase } from "./staff-auth";
+import {
+  CategoryCollectionsChart,
+  CollectionsChart,
+  PackagePopularityChart,
+  pesos,
+} from "./AnalyticsCharts";
+import type { PackagePurchase } from "./AnalyticsCharts";
 
 type Money = { gross: string; refunds: string; net: string };
 type HallReport = Money & {
@@ -21,28 +28,8 @@ type Report = {
     additional: Money;
     unclassified: Money;
   })[];
-  packages: (Money & {
-    category: string;
-    id: string;
-    version: number;
-    duration: number;
-    price: string;
-    originals: number;
-    extensions: number;
-  })[];
+  packages: (Money & PackagePurchase)[];
 };
-
-function pesos(value: string) {
-  const centavos = BigInt(value);
-  const absolute = centavos < 0n ? -centavos : centavos;
-  return (
-    (centavos < 0n ? "−" : "") +
-    "₱" +
-    (absolute / 100n).toLocaleString("en-PH") +
-    "." +
-    String(absolute % 100n).padStart(2, "0")
-  );
-}
 
 const money = (row: Money) => [
   pesos(row.gross),
@@ -50,70 +37,85 @@ const money = (row: Money) => [
   pesos(row.net),
 ];
 
-function Table({
+function ReportPanel({
   title,
   columns,
   rows,
+  children,
 }: {
   title: string;
   columns: string[];
   rows: string[][];
+  children: React.ReactNode;
 }) {
   return (
-    <section className="staff-management-card space-y-3">
+    <section
+      aria-label={title}
+      className="staff-management-card staff-analytics-panel space-y-3"
+    >
       <h3 className="text-lg font-semibold">{title}</h3>
       {rows.length ? (
-        <div
-          className="staff-management-table overflow-x-auto"
-          role="region"
-          aria-label={title + " table"}
-          tabIndex={0}
-        >
-          <table
-            aria-label={title}
-            className="w-full whitespace-nowrap text-sm"
-          >
-            <thead className="bg-canvas">
-              <tr>
-                {columns.map((column) => (
-                  <th key={column} scope="col" className="px-4 py-3 text-left">
-                    {column}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, i) => (
-                <tr key={i} className="border-b border-subtle">
-                  {row.map((value, j) =>
-                    j === 0 ? (
+        <>
+          {children}
+          <details className="staff-analytics-data">
+            <summary>View data</summary>
+            <div
+              className="staff-management-table overflow-x-auto"
+              role="region"
+              aria-label={title + " table"}
+              tabIndex={0}
+            >
+              <table
+                aria-label={title}
+                className="w-full whitespace-nowrap text-sm"
+              >
+                <thead className="bg-canvas">
+                  <tr>
+                    {columns.map((column) => (
                       <th
-                        key={j}
-                        scope="row"
-                        className="px-4 py-3 text-left font-medium"
+                        key={column}
+                        scope="col"
+                        className="px-4 py-3 text-left"
                       >
-                        {value}
+                        {column}
                       </th>
-                    ) : (
-                      <td key={j} className="px-4 py-3 tabular-nums">
-                        {columns[j] === "Package" ? (
-                          <details>
-                            <summary className="min-h-11 cursor-pointer text-primary">
-                              Package {value.slice(0, 8).toUpperCase()}
-                            </summary>
-                            <span className="break-all">{value}</span>
-                          </details>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row, i) => (
+                    <tr key={i} className="border-b border-subtle">
+                      {row.map((value, j) =>
+                        j === 0 ? (
+                          <th
+                            key={j}
+                            scope="row"
+                            className="px-4 py-3 text-left font-medium"
+                          >
+                            {value}
+                          </th>
                         ) : (
-                          value
-                        )}
-                      </td>
-                    ),
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                          <td key={j} className="px-4 py-3 tabular-nums">
+                            {columns[j] === "Package" ? (
+                              <details>
+                                <summary className="min-h-11 cursor-pointer text-primary">
+                                  Package {value.slice(0, 8).toUpperCase()}
+                                </summary>
+                                <span className="break-all">{value}</span>
+                              </details>
+                            ) : (
+                              value
+                            )}
+                          </td>
+                        ),
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
+        </>
       ) : (
         <p className="text-sm text-muted">
           No activity for the selected filters.
@@ -254,12 +256,20 @@ function RoomAnalytics({ token }: { token: string }) {
               ),
             )}
           </dl>
-          <Table
+          <ReportPanel
             title="Collection trends"
             columns={["Period (Manila)", "Gross", "Refunds", "Net Collections"]}
             rows={report.trends.map((row) => [row.period, ...money(row)])}
-          />
-          <Table
+          >
+            <p className="text-sm text-muted">
+              Net collections · Manila period start
+            </p>
+            <CollectionsChart
+              rows={report.trends}
+              grain={filters.get("grain")}
+            />
+          </ReportPanel>
+          <ReportPanel
             title="Room category performance"
             columns={[
               "Category",
@@ -277,8 +287,11 @@ function RoomAnalytics({ token }: { token: string }) {
               pesos(row.additional.net),
               pesos(row.unclassified.net),
             ])}
-          />
-          <Table
+          >
+            <p className="text-sm text-muted">Net collections</p>
+            <CategoryCollectionsChart rows={report.categories} />
+          </ReportPanel>
+          <ReportPanel
             title="Package popularity"
             columns={[
               "Category",
@@ -300,7 +313,9 @@ function RoomAnalytics({ token }: { token: string }) {
               String(row.extensions),
               pesos(row.net),
             ])}
-          />
+          >
+            <PackagePopularityChart rows={report.packages} />
+          </ReportPanel>
         </>
       )}
     </section>
@@ -412,11 +427,17 @@ function HallAnalytics({ token }: { token: string }) {
             {report.utilization.preparation_minutes} setup minutes ·{" "}
             {report.utilization.cleanup_minutes} cleanup minutes
           </p>
-          <Table
+          <ReportPanel
             title="Daily Hall collections"
             columns={["Manila day", "Gross", "Refunds", "Net Collections"]}
             rows={report.days.map((day) => [day.day, ...money(day)])}
-          />
+          >
+            <p className="text-sm text-muted">Net collections · Manila date</p>
+            <CollectionsChart
+              label="Daily Hall net collections"
+              rows={report.days.map(({ day, net }) => ({ period: day, net }))}
+            />
+          </ReportPanel>
         </>
       )}
     </section>

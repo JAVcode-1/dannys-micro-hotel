@@ -4,6 +4,12 @@ status: in-progress
 ---
 # 14 — Milestones & Work Tracker
 
+## Staff Analytics charts (2026-11-27)
+
+Rooms Analytics now shows net-collection columns, room-category bars, and ranked stacked bars for original purchases and extensions. The separate Function Hall report reuses the daily columns. Exact figures are available under View data. This frontend checkpoint uses the existing report payloads, Royal Horizon tokens, and dependencies.
+
+Build, typecheck, lint, and all 240 application tests passed. Edge previews with synthetic data at 1440 px and 390 px verified the shared zero baseline for positive and negative amounts, phone-width chart scrolling without page overflow, the weekly filter, and exact data for both Rooms and Function Hall. The existing bundle size warning remains. Phase 08 acceptance and hosted and physical-device checks remain open.
+
 ## Staff Management visual refresh (2026-11-27)
 
 Analytics, Staff audit, Catalog, and Settings use the existing Royal Horizon hotel-photo backdrop, frosted cards, and staff controls. Analytics emphasizes collection totals, audit keeps long tables scrollable, Catalog distinguishes rate editing from history, and Settings groups stay controls, GCash QR configuration, and sign-out. The refresh uses existing frontend dependencies and staff APIs.
