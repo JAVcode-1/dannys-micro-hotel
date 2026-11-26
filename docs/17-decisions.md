@@ -4,6 +4,12 @@ status: approved-baseline
 ---
 # 17 — Approved Decisions Register
 
+## Staff workspace header and navigation (2026-11-27)
+
+Apply the owner reference to the shared desktop staff shell. Use labeled sidebar sections, the existing hotel logo with lavender and blue accents, breadcrumbs, and an icon for the current page. The orange New walk-in action uses Midnight Navy text. Header shortcuts lead to Reservations search, Today, and Settings. The sidebar accordion, selection movement, and mobile navigation keep their established behavior.
+
+Give the Room category performance and Package popularity charts labeled scales and identify single-row results. The charts use the existing report rows and keep exact figures under View data.
+
 ## Staff Analytics charts (2026-11-27)
 
 Use vertical net-collection columns for the reported Manila periods, horizontal net-collection bars for room categories, and stacked purchase-count bars ranked by original purchases for packages. Extensions remain a separately labeled segment. Use the daily collection columns in the separate Function Hall report. Keep the summary cards, existing report filters, and exact figures under View data. Chart dimensions use the authoritative report values, including negative net amounts for refund-heavy periods.

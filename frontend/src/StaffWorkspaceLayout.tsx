@@ -24,7 +24,7 @@ const icons: Record<string, string> = {
   "/staff/rooms": "rooms",
   "/staff/analytics": "analytics",
   "/staff/audit": "audit",
-  "/staff/settings": "settings",
+  "/staff/settings": "gear",
   "/staff/settings/catalog": "settings",
   "/staff/hall": "hall",
   "/staff/reviews": "reviews",
@@ -40,6 +40,12 @@ const groupIcons: Record<string, string> = {
   Property: "layers",
   "Booking changes": "changes",
   Management: "people",
+};
+
+const groupSections: Record<string, string | undefined> = {
+  Property: "Property",
+  "Booking changes": "Bookings",
+  Management: "Management",
 };
 
 function StaffNavGroup({
@@ -63,6 +69,11 @@ function StaffNavGroup({
   if (!entries.length) return null;
   return (
     <div className="staff-nav-group" data-open={open}>
+      {groupSections[label] && (
+        <p className="staff-nav-section" aria-hidden="true">
+          {groupSections[label]}
+        </p>
+      )}
       <button
         type="button"
         className="staff-nav-group-toggle"
@@ -191,6 +202,9 @@ export default function StaffWorkspaceLayout({
     (pathname.startsWith("/staff/reservations/")
       ? "Reservation details"
       : "Staff workspace");
+  const pageIcon =
+    icons[pathname] ??
+    (pathname.startsWith("/staff/reservations/") ? "reservations" : "today");
   const groups = [
     [
       "Front desk",
@@ -391,6 +405,9 @@ export default function StaffWorkspaceLayout({
               className="staff-nav-selection"
               aria-hidden="true"
             />
+            <p className="staff-nav-section" aria-hidden="true">
+              Operations
+            </p>
             <NavLink
               to="/staff"
               end
@@ -456,14 +473,49 @@ export default function StaffWorkspaceLayout({
               Danny’s <strong>Micro Hotel</strong>
             </span>
           </div>
-          <div>
-            <p className="staff-eyebrow">
-              Danny’s Micro Hotel <span>/</span> Workspace
-            </p>
-            <h1 className="staff-page-title">{title}</h1>
+          <div className="staff-header-context">
+            <nav
+              className="staff-eyebrow staff-workspace-path"
+              aria-label="Workspace location"
+            >
+              <Link to="/staff">
+                <StaffIcon name="home" />
+                Danny’s Micro Hotel
+              </Link>
+              <StaffIcon name="chevron" />
+              <span>Workspace</span>
+              <StaffIcon name="chevron" />
+              <span aria-current="page" title={title}>
+                {title}
+              </span>
+            </nav>
+            <div className="staff-header-heading">
+              <span className="staff-header-page-icon">
+                <StaffIcon name={pageIcon} />
+              </span>
+              <h1 className="staff-page-title">{title}</h1>
+            </div>
           </div>
           <div className="staff-topbar-actions">
+            <Link
+              to="/staff/reservations"
+              className="staff-header-search"
+              aria-label="Search reservations"
+            >
+              <StaffIcon name="search" />
+              <span>Search reservations</span>
+            </Link>
+            <Link
+              to="/staff"
+              className="staff-header-work"
+              aria-label="Today's work"
+              title="Today's work"
+            >
+              <StaffIcon name="bell" />
+              {staffNavTotal(pages, counts) > 0 && <span aria-hidden="true" />}
+            </Link>
             <div className="staff-date">
+              <StaffIcon name="reservations" />
               <time
                 dateTime={new Intl.DateTimeFormat("en-CA", {
                   timeZone: "Asia/Manila",
@@ -482,6 +534,19 @@ export default function StaffWorkspaceLayout({
               </time>
               <span>Asia/Manila</span>
             </div>
+            {pages.some(({ path }) => path === "/staff/settings") && (
+              <Link
+                to="/staff/settings"
+                className="staff-header-profile"
+                aria-label="Staff settings"
+                title={`Signed in as ${identity}`}
+              >
+                <span className="staff-avatar" aria-hidden="true">
+                  {identity.slice(0, 1).toUpperCase()}
+                </span>
+                <StaffIcon name="chevron" />
+              </Link>
+            )}
             <Link to="/staff/walkins" className="staff-primary-action">
               <StaffIcon name="plus" />
               New walk-in

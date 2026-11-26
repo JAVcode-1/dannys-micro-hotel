@@ -21,6 +21,7 @@ const paths: Record<string, string> = {
   audit: "M6 3h12v18H6z M9 7h6 M9 11h6 M9 15h4",
   analytics: "M4 3v18h17 M8 16v-4 M13 16V8 M18 16V5",
   settings: "M4 6h16 M4 12h16 M4 18h16 M8 3v6 M16 9v6 M10 15v6",
+  gear: "M10 2h4l.6 2.9 2 .9 2.5-1.2 2 3.5-2 1.9v4l2 1.9-2 3.5-2.5-1.2-2 .9L14 22h-4l-.6-2.9-2-.9-2.5 1.2-2-3.5 2-1.9v-4l-2-1.9 2-3.5 2.5 1.2 2-.9z M15 12a3 3 0 1 0-6 0 3 3 0 0 0 6 0",
   hall: "M3 21V7l9-4 9 4v14 M7 21V11h10v10 M10 21v-5h4v5",
   reviews: "M4 4h16v12H9l-5 4z M8 8h8 M8 12h5",
   plus: "M12 5v14 M5 12h14",

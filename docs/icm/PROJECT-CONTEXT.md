@@ -6,6 +6,10 @@ status: unified-online-booking-development-review
 
 The Function Hall and refunds checkpoint has passing build, typecheck, lint, formatting, 229 application tests and 40 integration tests on disposable PostgreSQL. The targeted unified-booking PostgreSQL check also passed. Staff-assisted rescheduling now uses the current form props, and test fixtures exercise the current availability, payment and staff sign-in flows. Manual browser acceptance remains pending.
 
+## Staff workspace header and navigation (2026-11-27)
+
+The shared Royal Horizon staff shell has labeled sidebar sections, a page breadcrumb and icon, the orange New walk-in action, and shortcuts to existing staff destinations. The original navigation motion still controls the accordion and mobile menu. The two horizontal Analytics charts use explicit scales and describe when the selected dates produce one row.
+
 ## Staff Analytics charts (2026-11-27)
 
 The Rooms report shows collection trends, room category comparisons, and package popularity as Royal Horizon charts. The Function Hall report uses the same collection chart for daily totals. The charts use the existing staff report payloads. Exact tables open under View data.

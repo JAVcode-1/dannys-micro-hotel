@@ -125,6 +125,11 @@ test("Analytics charts show signed net collections and rank original purchases s
     categories.lastElementChild.textContent,
     /Unattributed.*−₱25.00/,
   );
+  const categoryPanel = screen.getByRole("region", {
+    name: "Room category performance",
+  });
+  assert.ok(within(categoryPanel).getByText("−₱30.00"));
+  assert.ok(within(categoryPanel).getByText("₱200.00"));
   const packages = screen.getByRole("list", {
     name: "Packages ranked by original purchases",
   });
@@ -137,6 +142,10 @@ test("Analytics charts show signed net collections and rank original purchases s
     /Double Standard · 3 hours · v1/,
   );
   assert.ok(within(packages).getByText("4 original purchases, 1 extension"));
+  const packagePanel = screen.getByRole("region", {
+    name: "Package popularity",
+  });
+  assert.ok(within(packagePanel).getByText("8 purchases"));
 
   const panel = screen.getByRole("region", { name: "Collection trends" });
   const disclosure = within(panel).getByText("View data").closest("details");

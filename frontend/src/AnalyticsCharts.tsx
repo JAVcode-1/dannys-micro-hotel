@@ -23,21 +23,43 @@ export function pesos(value: string | bigint) {
   );
 }
 
-function netScale(values: bigint[]) {
+function axisLimit(amount: bigint) {
+  if (amount === 0n) return 0n;
+  const increment = 10n ** BigInt(amount.toString().length - 1);
+  return (amount / increment + 1n) * increment;
+}
+
+function netScale(values: bigint[], addHeadroom = false) {
   let minimum = 0n;
   let maximum = 0n;
   for (const value of values) {
     if (value < minimum) minimum = value;
     if (value > maximum) maximum = value;
   }
+  if (addHeadroom) {
+    minimum = -axisLimit(-minimum);
+    maximum = axisLimit(maximum);
+    if (minimum === maximum) maximum = 100n;
+  }
   const span = maximum - minimum || 1n;
   const percent = (amount: bigint) =>
     `${Number((amount * 10000n) / span) / 100}%`;
   return {
+    minimum,
+    maximum,
     zero: percent(-minimum),
     start: (value: bigint) => percent((value < 0n ? value : 0n) - minimum),
     extent: (value: bigint) => percent(value < 0n ? -value : value),
   };
+}
+
+function RankingAxis({ start, end }: { start: string; end: string }) {
+  return (
+    <div className="staff-chart-axis tabular-nums" aria-hidden="true">
+      <span>{start}</span>
+      <span>{end}</span>
+    </div>
+  );
 }
 
 const shortDay = new Intl.DateTimeFormat("en-PH", {
@@ -133,35 +155,46 @@ export function CategoryCollectionsChart({
   categories.sort((a, b) =>
     a.net === b.net ? a.name.localeCompare(b.name) : a.net > b.net ? -1 : 1,
   );
-  const scale = netScale(categories.map(({ net }) => net));
+  const scale = netScale(
+    categories.map(({ net }) => net),
+    true,
+  );
   return (
-    <ul
-      role="list"
-      aria-label="Net collections by room category"
-      className="staff-chart-ranking"
-      style={{ "--chart-zero": scale.zero } as CSSProperties}
-    >
-      {categories.map(({ key, name, net }) => (
-        <li key={key}>
-          <div className="staff-chart-row">
-            <span>{name}</span>
-            <span className="tabular-nums">{pesos(net)}</span>
-          </div>
-          <div
-            className="staff-chart-track staff-chart-signed"
-            aria-hidden="true"
-          >
-            {net !== 0n && (
-              <span
-                className="staff-chart-mark"
-                data-negative={net < 0n}
-                style={{ left: scale.start(net), width: scale.extent(net) }}
-              />
-            )}
-          </div>
-        </li>
-      ))}
-    </ul>
+    <div className="staff-chart-breakdown">
+      {categories.length === 1 && (
+        <p className="staff-chart-note">
+          One category with recorded activity in this period.
+        </p>
+      )}
+      <ul
+        role="list"
+        aria-label="Net collections by room category"
+        className="staff-chart-ranking"
+        style={{ "--chart-zero": scale.zero } as CSSProperties}
+      >
+        {categories.map(({ key, name, net }) => (
+          <li key={key}>
+            <div className="staff-chart-row">
+              <span>{name}</span>
+              <span className="tabular-nums">{pesos(net)}</span>
+            </div>
+            <div
+              className="staff-chart-track staff-chart-signed"
+              aria-hidden="true"
+            >
+              {net !== 0n && (
+                <span
+                  className="staff-chart-mark"
+                  data-negative={net < 0n}
+                  style={{ left: scale.start(net), width: scale.extent(net) }}
+                />
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+      <RankingAxis start={pesos(scale.minimum)} end={pesos(scale.maximum)} />
+    </div>
   );
 }
 
@@ -187,10 +220,11 @@ export function PackagePopularityChart({ rows }: { rows: PackagePurchase[] }) {
         No package purchases or extensions for the selected filters.
       </p>
     );
-  const maximum = ranked.reduce(
+  const largestTotal = ranked.reduce(
     (largest, row) => Math.max(largest, row.originals + row.extensions),
     0,
   );
+  const maximum = Math.ceil((largestTotal + 1) / 4) * 4;
   return (
     <>
       <div className="staff-chart-legend">
@@ -201,54 +235,65 @@ export function PackagePopularityChart({ rows }: { rows: PackagePurchase[] }) {
           <i aria-hidden="true" /> Extensions
         </span>
       </div>
-      <ul
-        role="list"
-        className="staff-chart-ranking"
-        aria-label="Packages ranked by original purchases"
-      >
-        {ranked.map(
-          ({
-            id,
-            category,
-            duration,
-            price,
-            label,
-            version,
-            originals,
-            extensions,
-          }) => (
-            <li
-              key={JSON.stringify([category, id, duration, version, price])}
-              title={`Version ${version} · ${pesos(price)}`}
-            >
-              <div className="staff-chart-row">
-                <span>
-                  {(labelCounts.get(label) ?? 0) > 1
-                    ? `${label} · v${version}`
-                    : label}
-                </span>
-                <span className="tabular-nums">
-                  <span aria-hidden="true">
-                    {originals} + {extensions}
-                  </span>
-                  <span className="sr-only">
-                    {originals} original{" "}
-                    {originals === 1 ? "purchase" : "purchases"}, {extensions}{" "}
-                    {extensions === 1 ? "extension" : "extensions"}
-                  </span>
-                </span>
-              </div>
-              <div
-                className="staff-chart-track staff-chart-stack"
-                aria-hidden="true"
-              >
-                <span style={{ width: `${(100 * originals) / maximum}%` }} />
-                <span style={{ width: `${(100 * extensions) / maximum}%` }} />
-              </div>
-            </li>
-          ),
+      <div className="staff-chart-breakdown">
+        {ranked.length === 1 && (
+          <p className="staff-chart-note">
+            One package with purchases or extensions in this period.
+          </p>
         )}
-      </ul>
+        <ul
+          role="list"
+          className="staff-chart-ranking"
+          aria-label="Packages ranked by original purchases"
+        >
+          {ranked.map(
+            ({
+              id,
+              category,
+              duration,
+              price,
+              label,
+              version,
+              originals,
+              extensions,
+            }) => (
+              <li
+                key={JSON.stringify([category, id, duration, version, price])}
+                title={`Version ${version} · ${pesos(price)}`}
+              >
+                <div className="staff-chart-row">
+                  <span>
+                    {(labelCounts.get(label) ?? 0) > 1
+                      ? `${label} · v${version}`
+                      : label}
+                  </span>
+                  <span className="tabular-nums">
+                    <span aria-hidden="true">
+                      {originals} + {extensions}
+                    </span>
+                    <span className="sr-only">
+                      {originals} original{" "}
+                      {originals === 1 ? "purchase" : "purchases"}, {extensions}{" "}
+                      {extensions === 1 ? "extension" : "extensions"}
+                    </span>
+                  </span>
+                </div>
+                <div
+                  className="staff-chart-track staff-chart-stack"
+                  aria-hidden="true"
+                >
+                  <span style={{ width: `${(100 * originals) / maximum}%` }} />
+                  <span style={{ width: `${(100 * extensions) / maximum}%` }} />
+                </div>
+              </li>
+            ),
+          )}
+        </ul>
+        <RankingAxis
+          start="0"
+          end={`${maximum.toLocaleString("en-PH")} purchases`}
+        />
+      </div>
     </>
   );
 }

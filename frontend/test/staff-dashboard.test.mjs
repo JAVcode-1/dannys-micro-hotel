@@ -408,6 +408,20 @@ test("staff shell preserves outlet context, capability gates and menu controls",
     "false",
   );
   assert.ok(screen.getByRole("heading", { name: "Reservations", level: 1 }));
+  const location = screen.getByRole("navigation", {
+    name: "Workspace location",
+  });
+  assert.match(location.textContent, /Workspace.*Reservations/);
+  assert.equal(
+    screen
+      .getByRole("link", { name: "Search reservations" })
+      .getAttribute("href"),
+    "/staff/reservations",
+  );
+  assert.equal(
+    screen.getByRole("link", { name: "Today's work" }).getAttribute("href"),
+    "/staff",
+  );
   fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
   await waitFor(() =>
     assert.ok(screen.getByText("Sign-out failed. Please try again.")),

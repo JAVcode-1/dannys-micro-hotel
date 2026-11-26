@@ -4,6 +4,12 @@ status: in-progress
 ---
 # 14 — Milestones & Work Tracker
 
+## Staff navigation, header, and Analytics chart readability (2026-11-27)
+
+The desktop staff shell uses the owner's reference for the sidebar sections, hotel branding, breadcrumbs, current-page icon, and orange New walk-in action. The search, bell, and avatar reuse Reservations, Today, and Settings destinations. The two horizontal Analytics charts have thicker bars, labeled scales, and a note for a single reported row. The checkpoint uses existing routes, report data, and dependencies.
+
+Build, typecheck, lint, and all 240 application tests passed. Synthetic Edge checks at 1440 px, 1024 px, and 390 px verified the layout, 587 ms accordion, 100 ms first-link delay, 200 ms click motion, Reservations shortcut, and both single-row chart scales. The existing bundle size warning remains. Phase, hosted, and physical-device acceptance remain open.
+
 ## Staff Analytics charts (2026-11-27)
 
 Rooms Analytics now shows net-collection columns, room-category bars, and ranked stacked bars for original purchases and extensions. The separate Function Hall report reuses the daily columns. Exact figures are available under View data. This frontend checkpoint uses the existing report payloads, Royal Horizon tokens, and dependencies.
