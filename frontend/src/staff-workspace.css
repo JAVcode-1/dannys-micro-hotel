@@ -2965,3 +2965,167 @@
     }
   }
 }
+
+/* Management */
+@media screen {
+  .staff-content > .staff-management {
+    container-type: inline-size;
+  }
+
+  .staff-content > .staff-management > h2:first-child {
+    font-size: clamp(1.75rem, 2.6vw, 2.65rem);
+  }
+
+  .staff-content .staff-management-card {
+    min-width: 0;
+    padding: clamp(1rem, 2vw, 1.4rem);
+    border: 1px solid var(--glass-edge);
+    border-radius: 1.25rem;
+    background: var(--glass-surface);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: blur(16px);
+    overflow-wrap: anywhere;
+  }
+
+  .staff-management-card > summary {
+    align-content: center;
+  }
+
+  .staff-management-card:not([open]) > summary {
+    padding-block: 0;
+  }
+
+  .staff-management-tabs {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+    padding: .4rem;
+    border: 1px solid var(--glass-edge);
+    border-radius: .95rem;
+    background: var(--glass-surface);
+    box-shadow: var(--glass-shadow);
+  }
+
+  .staff-management :is(
+    .staff-management-tabs [aria-pressed="true"],
+    button.bg-primary:not(:disabled)
+  ) {
+    border-color: var(--brand-primary);
+    background: var(--glass-action);
+    color: white;
+  }
+
+  .staff-management-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+    align-items: end;
+    gap: .85rem;
+  }
+
+  .staff-management-fields > * {
+    min-width: 0;
+  }
+
+  .staff-management-fields > label :is(input, select) {
+    width: 100%;
+    margin-top: .25rem;
+  }
+
+  .staff-management-fields > button {
+    justify-self: start;
+  }
+
+  .staff-management-wide {
+    grid-column: 1 / -1;
+  }
+
+  .staff-management-totals,
+  .staff-settings-grid {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .staff-management-totals dt {
+    color: var(--text-muted);
+    font-size: .85rem;
+  }
+
+  .staff-management-totals dd {
+    margin-top: .35rem;
+    font-size: clamp(1.25rem, 2vw, 1.85rem);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .staff-management-totals > div:last-child {
+    background: var(--surface-selected);
+    color: var(--brand-primary);
+  }
+
+  .staff-content .staff-management-table thead th {
+    background: var(--surface-selected);
+    color: var(--text-main);
+  }
+
+  .staff-content .staff-management-table td > details > summary {
+    align-content: center;
+    padding-block: 0;
+    color: var(--brand-primary);
+  }
+
+  .staff-content .staff-management-table :is(th, td) {
+    vertical-align: middle;
+  }
+
+  .staff-management-state {
+    min-width: 4.65rem;
+    padding: .25rem .55rem;
+    border-radius: 2rem;
+    background: var(--surface-canvas);
+    color: var(--text-muted);
+    font-size: .75rem;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .staff-management-state[data-active="true"] {
+    background: var(--surface-selected);
+    color: var(--brand-primary);
+  }
+
+  .staff-content .staff-settings-payment input::file-selector-button {
+    margin-inline-end: .7rem;
+    color: var(--brand-primary);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  @container (21rem <= width < 34rem) {
+    .staff-analytics-fields {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @container (width >= 34rem) {
+    .staff-management-totals,
+    .staff-audit-fields {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .staff-settings-grid > .staff-management-fields {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @container (width >= 43rem) {
+    .staff-catalog-category {
+      grid-template-columns: minmax(0, 1fr) auto auto;
+    }
+  }
+
+  @container (width >= 62rem) {
+    .staff-settings-grid {
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+      align-items: start;
+    }
+  }
+}

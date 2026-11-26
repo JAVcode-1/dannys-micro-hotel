@@ -63,108 +63,118 @@ export default function OperationalSettings({ token }: { token: string }) {
     }
   }
   return (
-    <section className="mt-8 border-t border-subtle pt-6">
+    <section className="staff-management space-y-4">
       <h2 className="text-2xl font-bold">Operational settings</h2>
-      {value && (
-        <form
-          onSubmit={(event) => void save(event)}
-          className="mt-6 grid gap-4 sm:grid-cols-2"
-        >
-          <div className="sm:col-span-2">
-            <label
-              className="text-sm font-medium"
-              htmlFor="settings-cleaning-buffer"
-            >
-              Cleaning buffer (minutes after checkout)
-            </label>
-            <input
-              id="settings-cleaning-buffer"
-              className="mt-1 min-h-11 w-full rounded-lg border border-subtle px-3"
-              type="number"
-              min="0"
-              max="1440"
-              disabled={busy}
-              value={value.cleaningBufferMinutes ?? ""}
-              onChange={(event) =>
-                setValue({
-                  ...value,
-                  cleaningBufferMinutes:
-                    event.target.value === ""
-                      ? null
-                      : Number(event.target.value),
-                })
-              }
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <label
-              className="text-sm font-medium"
-              htmlFor="settings-checkout-alert"
-            >
-              Checkout reminder (minutes before checkout)
-            </label>
-            <input
-              id="settings-checkout-alert"
-              className="mt-1 min-h-11 w-full rounded-lg border border-subtle px-3"
-              type="number"
-              min="1"
-              max="1440"
-              disabled={busy}
-              value={value.checkoutAlertMinutes ?? ""}
-              onChange={(event) =>
-                setValue({
-                  ...value,
-                  checkoutAlertMinutes:
-                    event.target.value === ""
-                      ? null
-                      : Number(event.target.value),
-                })
-              }
-            />
-          </div>
-          <div className="border-t border-subtle pt-4 sm:col-span-2">
-            <label
-              className="text-sm font-medium"
-              htmlFor="settings-cancellation-policy"
-            >
-              Online cancellation policy wording
-            </label>
-            <textarea
-              id="settings-cancellation-policy"
-              aria-describedby="settings-cancellation-help"
-              className="mt-1 min-h-24 w-full rounded-lg border border-subtle p-3"
-              disabled={busy}
-              maxLength={2000}
-              value={value.cancellationDisplayText ?? ""}
-              onChange={(event) =>
-                setValue({
-                  ...value,
-                  cancellationDisplayText: event.target.value || null,
-                })
-              }
-            />
-            <p
-              id="settings-cancellation-help"
-              className="mt-2 text-sm text-muted"
-            >
-              Applies to newly confirmed online reservations.
-            </p>
-          </div>
-          <button
-            disabled={busy}
-            className="min-h-11 rounded-lg bg-primary px-5 font-semibold text-white disabled:opacity-50 sm:col-span-2 sm:justify-self-end"
+      <div className="staff-settings-grid">
+        {value && (
+          <form
+            onSubmit={(event) => void save(event)}
+            className="staff-management-card staff-management-fields"
           >
-            Save settings
-          </button>
-        </form>
-      )}
-      {message && (
-        <p role="status" className="mt-4 text-sm text-muted">
-          {message}
-        </p>
-      )}
-      <PaymentQrSettings token={token} />
-      <section className="mt-8 rounded-xl border border-subtle bg-white p-5">
+            <h3 className="staff-management-wide text-lg font-semibold">
+              Stay and booking settings
+            </h3>
+            <div>
+              <label
+                className="text-sm font-medium"
+                htmlFor="settings-cleaning-buffer"
+              >
+                Cleaning buffer (minutes after checkout)
+              </label>
+              <input
+                id="settings-cleaning-buffer"
+                className="mt-1 min-h-11 w-full rounded-lg border border-subtle px-3"
+                type="number"
+                min="0"
+                max="1440"
+                disabled={busy}
+                value={value.cleaningBufferMinutes ?? ""}
+                onChange={(event) =>
+                  setValue({
+                    ...value,
+                    cleaningBufferMinutes:
+                      event.target.value === ""
+                        ? null
+                        : Number(event.target.value),
+                  })
+                }
+              />
+            </div>
+            <div>
+              <label
+                className="text-sm font-medium"
+                htmlFor="settings-checkout-alert"
+              >
+                Checkout reminder (minutes before checkout)
+              </label>
+              <input
+                id="settings-checkout-alert"
+                className="mt-1 min-h-11 w-full rounded-lg border border-subtle px-3"
+                type="number"
+                min="1"
+                max="1440"
+                disabled={busy}
+                value={value.checkoutAlertMinutes ?? ""}
+                onChange={(event) =>
+                  setValue({
+                    ...value,
+                    checkoutAlertMinutes:
+                      event.target.value === ""
+                        ? null
+                        : Number(event.target.value),
+                  })
+                }
+              />
+            </div>
+            <div className="staff-management-wide border-t border-subtle pt-4">
+              <label
+                className="text-sm font-medium"
+                htmlFor="settings-cancellation-policy"
+              >
+                Online cancellation policy wording
+              </label>
+              <textarea
+                id="settings-cancellation-policy"
+                aria-describedby="settings-cancellation-help"
+                className="mt-1 min-h-24 w-full rounded-lg border border-subtle p-3"
+                disabled={busy}
+                maxLength={2000}
+                value={value.cancellationDisplayText ?? ""}
+                onChange={(event) =>
+                  setValue({
+                    ...value,
+                    cancellationDisplayText: event.target.value || null,
+                  })
+                }
+              />
+              <p
+                id="settings-cancellation-help"
+                className="mt-2 text-sm text-muted"
+              >
+                Applies to newly confirmed online reservations.
+              </p>
+            </div>
+            <button
+              disabled={busy}
+              className="staff-management-wide min-h-11 justify-self-start rounded-lg bg-primary px-5 font-semibold text-white disabled:opacity-50"
+            >
+              Save settings
+            </button>
+            {message && (
+              <p role="status" className="staff-management-wide">
+                {message}
+              </p>
+            )}
+          </form>
+        )}
+        {!value && (
+          <p role="status" className="staff-management-card">
+            {message || "Loading operational settings…"}
+          </p>
+        )}
+        <PaymentQrSettings token={token} />
+      </div>
+      <section className="staff-management-card">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h3 className="font-semibold">Your session</h3>
           <button

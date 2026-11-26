@@ -162,10 +162,10 @@ export default function StaffCatalog({ token }: { token: string }) {
     }
   }
   return (
-    <section className="mt-8 border-t border-subtle pt-6">
-      <h2 className="text-lg font-bold">Package rates</h2>
-      <details className="my-5 space-y-3">
-        <summary className="min-h-11 cursor-pointer font-semibold">
+    <section className="staff-management space-y-4">
+      <h2 className="text-2xl font-semibold">Catalog</h2>
+      <details className="staff-management-card space-y-3">
+        <summary className="font-semibold text-primary">
           Manage room categories
         </summary>
         {history
@@ -176,13 +176,13 @@ export default function StaffCatalog({ token }: { token: string }) {
           .map((item) => (
             <form
               key={item.code}
-              className="flex flex-wrap items-end gap-3 rounded border border-subtle p-3"
+              className="staff-management-fields staff-catalog-category rounded-xl border border-subtle bg-canvas p-3"
               onSubmit={(event) => {
                 event.preventDefault();
                 void saveCategory(item);
               }}
             >
-              <label className="min-w-0 flex-1">
+              <label>
                 Category name
                 <input
                   className="block min-h-11 w-full rounded border px-3 text-base"
@@ -213,57 +213,64 @@ export default function StaffCatalog({ token }: { token: string }) {
             </form>
           ))}
       </details>
-      <p className="mt-1 text-sm text-muted">
-        New rates apply to future purchases. Previous rates stay on record.
-      </p>
-      <form onSubmit={(event) => void save(event)} className="mt-5 space-y-4">
-        <label className="block text-sm font-medium">
-          Package
-          <select
-            required
-            className="mt-1 min-h-11 w-full rounded-lg border border-subtle px-3"
-            value={selected}
-            onChange={(event) => {
-              setSelected(event.target.value);
-              const item = packages.find(
-                (row) =>
-                  `${row.code}:${row.duration_minutes}` === event.target.value,
-              );
-              setPrice(item ? pesoInputValue(item.price_centavos) : "");
-            }}
-          >
-            <option value="">Choose a package</option>
-            {packages.map((item) => (
-              <option
-                key={`${item.code}:${item.duration_minutes}`}
-                value={`${item.code}:${item.duration_minutes}`}
-              >
-                {item.name} · {item.duration_minutes / 60} hours
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm font-medium">
-          Price (PHP)
-          <input
-            required
-            min="0"
-            inputMode="decimal"
-            placeholder="₱1,000.00"
-            className="mt-1 min-h-11 w-full rounded-lg border border-subtle px-3"
-            value={price}
-            onChange={(event) => setPrice(event.target.value)}
-          />
-        </label>
-        <button
-          disabled={busy || !selected}
-          className="min-h-11 rounded-lg bg-primary px-5 font-semibold text-white disabled:opacity-50"
+      <section className="staff-management-card space-y-4">
+        <h3 className="text-lg font-semibold">Package rates</h3>
+        <p className="text-sm text-muted">
+          New rates apply to future purchases. Previous rates stay on record.
+        </p>
+        <form
+          onSubmit={(event) => void save(event)}
+          className="staff-management-fields"
         >
-          {busy ? "Saving…" : "Save price"}
-        </button>
-      </form>
-      <details className="mt-8">
-        <summary className="min-h-11 cursor-pointer font-bold">
+          <label className="block text-sm font-medium">
+            Package
+            <select
+              required
+              className="mt-1 min-h-11 w-full rounded-lg border border-subtle px-3"
+              value={selected}
+              onChange={(event) => {
+                setSelected(event.target.value);
+                const item = packages.find(
+                  (row) =>
+                    `${row.code}:${row.duration_minutes}` ===
+                    event.target.value,
+                );
+                setPrice(item ? pesoInputValue(item.price_centavos) : "");
+              }}
+            >
+              <option value="">Choose a package</option>
+              {packages.map((item) => (
+                <option
+                  key={`${item.code}:${item.duration_minutes}`}
+                  value={`${item.code}:${item.duration_minutes}`}
+                >
+                  {item.name} · {item.duration_minutes / 60} hours
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-sm font-medium">
+            Price (PHP)
+            <input
+              required
+              min="0"
+              inputMode="decimal"
+              placeholder="₱1,000.00"
+              className="mt-1 min-h-11 w-full rounded-lg border border-subtle px-3"
+              value={price}
+              onChange={(event) => setPrice(event.target.value)}
+            />
+          </label>
+          <button
+            disabled={busy || !selected}
+            className="min-h-11 rounded-lg bg-primary px-5 font-semibold text-white disabled:opacity-50"
+          >
+            {busy ? "Saving…" : "Save price"}
+          </button>
+        </form>
+      </section>
+      <details className="staff-management-card">
+        <summary className="font-semibold text-primary">
           Rate history and package availability
         </summary>
         <ul className="mt-3 divide-y divide-subtle text-sm">
@@ -272,14 +279,24 @@ export default function StaffCatalog({ token }: { token: string }) {
               key={`${item.code}:${item.duration_minutes}:${item.version}`}
               className="flex flex-wrap items-center justify-between gap-3 py-3"
             >
-              <span>
-                {item.name} · {item.duration_minutes / 60} hours · v
-                {item.version} · ₱
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold">
+                  {item.name} · {item.duration_minutes / 60} hours
+                </p>
+                <p className="mt-1 text-muted">Version {item.version}</p>
+              </div>
+              <strong className="tabular-nums text-primary">
+                ₱
                 {(item.price_centavos / 100).toLocaleString("en-PH", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
-                })}{" "}
-                · {item.active ? "Active" : "Inactive"}
+                })}
+              </strong>
+              <span
+                className="staff-management-state"
+                data-active={item.active}
+              >
+                {item.active ? "Active" : "Inactive"}
               </span>
               {item.version ===
                 Math.max(

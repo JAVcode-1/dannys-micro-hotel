@@ -53,14 +53,14 @@ export default function StaffAuditDesk({ token }: { token: string }) {
   const field =
     "mt-1 min-h-11 w-full rounded-lg border border-subtle bg-white px-3";
   return (
-    <section className="mt-6 space-y-4">
+    <section className="staff-management space-y-4">
       <h2 className="text-xl font-semibold">Activity log</h2>
-      <details>
+      <details className="staff-management-card">
         <summary className="min-h-11 cursor-pointer font-semibold text-primary">
           Filter activity
         </summary>
         <form
-          className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+          className="staff-management-fields staff-audit-fields"
           onSubmit={(event) => {
             event.preventDefault();
             const filters = new URLSearchParams();
@@ -115,7 +115,7 @@ export default function StaffAuditDesk({ token }: { token: string }) {
             Through date (Manila)
             <input className={field} name="to" type="date" />
           </label>
-          <div className="sm:col-span-2 lg:col-span-3">
+          <div className="staff-management-wide">
             <button
               className="min-h-11 rounded-lg bg-primary px-4 py-2 font-semibold text-white"
               type="submit"
@@ -132,67 +132,76 @@ export default function StaffAuditDesk({ token }: { token: string }) {
         </p>
       )}
       {page && page.entries.length === 0 && (
-        <p className="staff-empty">No matching audit entries.</p>
+        <p className="staff-management-card staff-empty">
+          No matching audit entries.
+        </p>
       )}
       {page && page.entries.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <caption className="sr-only">
-              Staff audit results in Manila time
-            </caption>
-            <thead>
-              <tr>
-                {["Manila time", "Action", "Actor ID", "Subject"].map(
-                  (label) => (
-                    <th key={label} scope="col" className="p-2">
-                      {label}
-                    </th>
-                  ),
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {page.entries.map((entry) => (
-                <tr key={entry.id} className="border-t border-subtle">
-                  <td className="p-2">
-                    <time dateTime={entry.occurredAt}>
-                      {auditTime.format(new Date(entry.occurredAt))}
-                    </time>
-                  </td>
-                  <td className="p-2">
-                    {readableLabel(entry.action.replaceAll(".", " "))}
-                  </td>
-                  <td className="p-2">
-                    <details>
-                      <summary className="min-h-11 cursor-pointer">
-                        Staff {entry.actorId.slice(0, 8).toUpperCase()}
-                      </summary>
-                      <span className="break-all">{entry.actorId}</span>
-                    </details>
-                  </td>
-                  <td className="break-all p-2">
-                    {entry.subjectType ? (
+        <div className="staff-management-card">
+          <div
+            className="staff-management-table overflow-x-auto"
+            role="region"
+            aria-label="Audit activity"
+            tabIndex={0}
+          >
+            <table className="w-full text-left text-sm">
+              <caption className="sr-only">
+                Staff audit results in Manila time
+              </caption>
+              <thead>
+                <tr>
+                  {["Manila time", "Action", "Actor ID", "Subject"].map(
+                    (label) => (
+                      <th key={label} scope="col" className="p-2">
+                        {label}
+                      </th>
+                    ),
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {page.entries.map((entry) => (
+                  <tr key={entry.id} className="border-t border-subtle">
+                    <td className="p-2">
+                      <time dateTime={entry.occurredAt}>
+                        {auditTime.format(new Date(entry.occurredAt))}
+                      </time>
+                    </td>
+                    <td className="p-2">
+                      {readableLabel(entry.action.replaceAll(".", " "))}
+                    </td>
+                    <td className="p-2">
                       <details>
                         <summary className="min-h-11 cursor-pointer">
-                          {readableLabel(entry.subjectType)}{" "}
-                          {entry.subjectId?.slice(0, 8).toUpperCase()}
+                          Staff {entry.actorId.slice(0, 8).toUpperCase()}
                         </summary>
-                        <span className="break-all">{entry.subjectId}</span>
+                        <span className="break-all">{entry.actorId}</span>
                       </details>
-                    ) : (
-                      "No subject recorded"
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </td>
+                    <td className="break-all p-2">
+                      {entry.subjectType ? (
+                        <details>
+                          <summary className="min-h-11 cursor-pointer">
+                            {readableLabel(entry.subjectType)}{" "}
+                            {entry.subjectId?.slice(0, 8).toUpperCase()}
+                          </summary>
+                          <span className="break-all">{entry.subjectId}</span>
+                        </details>
+                      ) : (
+                        "No subject recorded"
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
       {page?.nextCursor && (
         <button
           type="button"
-          className="min-h-11 rounded-lg border border-subtle px-4"
+          className="min-h-11 rounded-lg border border-subtle px-4 text-primary"
           onClick={() =>
             setSearch((current) => ({ ...current, cursor: page.nextCursor! }))
           }

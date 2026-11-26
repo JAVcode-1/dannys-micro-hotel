@@ -4,6 +4,12 @@ status: in-progress
 ---
 # 14 — Milestones & Work Tracker
 
+## Staff Management visual refresh (2026-11-27)
+
+Analytics, Staff audit, Catalog, and Settings use the existing Royal Horizon hotel-photo backdrop, frosted cards, and staff controls. Analytics emphasizes collection totals, audit keeps long tables scrollable, Catalog distinguishes rate editing from history, and Settings groups stay controls, GCash QR configuration, and sign-out. The refresh uses existing frontend dependencies and staff APIs.
+
+Build, typecheck, lint, and all 239 application tests passed. Edge previews at 1440 px and 390 px used synthetic data and verified report selection, Hall date filters, audit pagination, package selection, and the Settings save request. The existing bundle size warning remains. Phase acceptance stays open pending owner review on a physical device and in the hosted environment.
+
 ## Staff Booking changes visual refresh (2026-11-27)
 
 Rescheduling, Extensions and charges, and Cancellations and refunds use the Royal Horizon glass workspace. The pages highlight schedule comparisons, extension balances, and refund details with shared styles. Rescheduling distinguishes loading, successful empty results, and errors. Build, typecheck, lint, and all 239 application tests passed. Sample-data previews and scoped checks covered the three staff routes. Phase 07 acceptance remains open.

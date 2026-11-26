@@ -60,10 +60,15 @@ function Table({
   rows: string[][];
 }) {
   return (
-    <section className="space-y-3">
+    <section className="staff-management-card space-y-3">
       <h3 className="text-lg font-semibold">{title}</h3>
       {rows.length ? (
-        <div className="overflow-x-auto">
+        <div
+          className="staff-management-table overflow-x-auto"
+          role="region"
+          aria-label={title + " table"}
+          tabIndex={0}
+        >
           <table
             aria-label={title}
             className="w-full whitespace-nowrap text-sm"
@@ -110,7 +115,9 @@ function Table({
           </table>
         </div>
       ) : (
-        <p>No activity for the selected filters.</p>
+        <p className="text-sm text-muted">
+          No activity for the selected filters.
+        </p>
       )}
     </section>
   );
@@ -161,9 +168,9 @@ function RoomAnalytics({ token }: { token: string }) {
   }, [query, token]);
   const filters = new URLSearchParams(query);
   return (
-    <section aria-label="Room analytics" className="space-y-6">
+    <section aria-label="Room analytics" className="space-y-4">
       <form
-        className="flex flex-wrap items-end gap-4 rounded-xl bg-canvas p-4"
+        className="staff-management-card staff-management-fields staff-analytics-fields"
         onSubmit={(event) => {
           event.preventDefault();
           const data = new FormData(event.currentTarget);
@@ -235,10 +242,10 @@ function RoomAnalytics({ token }: { token: string }) {
         <p role="status">Loading analytics…</p>
       ) : (
         <>
-          <dl className="grid gap-3 sm:grid-cols-3">
+          <dl className="staff-management-totals">
             {["Gross collections", "Completed refunds", "Net Collections"].map(
               (label, i) => (
-                <div key={label} className="rounded-xl bg-canvas p-4">
+                <div key={label} className="staff-management-card">
                   <dt>{label}</dt>
                   <dd className="break-all text-xl font-semibold">
                     {money(report.overall)[i]}
@@ -341,9 +348,9 @@ function HallAnalytics({ token }: { token: string }) {
   }, [filters, token]);
 
   return (
-    <section aria-label="Function Hall report" className="space-y-6">
+    <section aria-label="Function Hall report" className="space-y-4">
       <form
-        className="flex flex-wrap items-end gap-4 rounded-xl bg-canvas p-4"
+        className="staff-management-card staff-management-fields staff-analytics-fields"
         onSubmit={(event) => {
           event.preventDefault();
           const form = new FormData(event.currentTarget);
@@ -386,10 +393,10 @@ function HallAnalytics({ token }: { token: string }) {
       )}
       {report && (
         <>
-          <dl className="grid gap-3 sm:grid-cols-3">
+          <dl className="staff-management-totals">
             {["Gross collections", "Completed refunds", "Net Collections"].map(
               (label, index) => (
-                <div key={label} className="rounded-xl bg-canvas p-4">
+                <div key={label} className="staff-management-card">
                   <dt>{label}</dt>
                   <dd className="break-all text-xl font-semibold">
                     {money(report)[index]}
@@ -398,7 +405,7 @@ function HallAnalytics({ token }: { token: string }) {
               ),
             )}
           </dl>
-          <p>
+          <p className="staff-management-card text-sm">
             {report.utilization.bookings} bookings ·{" "}
             {report.utilization.scheduled_minutes} scheduled event minutes ·{" "}
             {report.utilization.actual_minutes} actual occupied minutes ·{" "}
@@ -427,10 +434,10 @@ export default function StaffAnalytics({
   const showingHall = hallEnabled && hallSelected;
 
   return (
-    <section className="mt-8 space-y-6">
+    <section className="staff-management space-y-4">
       <h2 className="text-2xl font-semibold">Analytics</h2>
       {hallEnabled && (
-        <nav aria-label="Analytics reports" className="flex flex-wrap gap-3">
+        <nav aria-label="Analytics reports" className="staff-management-tabs">
           {(
             [
               ["Rooms", false],

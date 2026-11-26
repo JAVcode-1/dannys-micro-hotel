@@ -4,6 +4,10 @@ status: approved-baseline
 ---
 # 17 — Approved Decisions Register
 
+## Staff Management design (2026-11-27)
+
+Analytics, Staff audit, Catalog, and Settings use the shared Royal Horizon workspace and existing hotel photo. Analytics emphasizes collection totals and keeps report tables scrollable. Staff audit pairs its filter disclosure with a results panel. Catalog distinguishes current rate editing from version history. Settings groups stay and booking controls, GCash QR configuration, and session actions. The layouts adapt to the available workspace width and use the existing staff APIs and controls.
+
 ## Analytics reporting scope (2026-11-26)
 
 The owner approved on-screen staff Analytics with date-range filtering. The current scope includes Revenue Analytics, Room Category Performance, and Package Popularity, with Function Hall reporting in its existing separate view. CSV and Excel downloads are out of scope. This supersedes the earlier download decision.

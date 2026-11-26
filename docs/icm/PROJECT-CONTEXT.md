@@ -6,6 +6,10 @@ status: unified-online-booking-development-review
 
 The Function Hall and refunds checkpoint has passing build, typecheck, lint, formatting, 229 application tests and 40 integration tests on disposable PostgreSQL. The targeted unified-booking PostgreSQL check also passed. Staff-assisted rescheduling now uses the current form props, and test fixtures exercise the current availability, payment and staff sign-in flows. Manual browser acceptance remains pending.
 
+## Staff Management visual refresh (2026-11-27)
+
+Analytics, Staff audit, Catalog, and Settings join the Royal Horizon glass workspace. The shared hotel photo and frosted surfaces frame the existing reports, audit filters, rate management, and settings forms. Browser verification used synthetic staff data. See [[../14-milestones]] for evidence and pending acceptance.
+
 ## Staff Booking changes visual refresh (2026-11-27)
 
 Rescheduling, Extensions and charges, and Cancellations and refunds use the shared Royal Horizon glass shell. The frontend groups schedule comparisons, balances, and refund records without altering the existing booking and payment workflows.

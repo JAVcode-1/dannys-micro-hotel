@@ -75,8 +75,8 @@ export default function PaymentQrSettings({ token }: { token: string }) {
     }
   }
   return (
-    <section className="mt-8 border-t border-subtle pt-6">
-      <h2 className="text-2xl font-bold">GCash QR image</h2>
+    <section className="staff-management-card staff-settings-payment">
+      <h3 className="text-lg font-semibold">GCash QR image</h3>
       <p className="mt-2 text-sm text-muted">
         Upload the hotel-approved QR and verify its recipient. Saving an image
         does not open guest payments.
@@ -85,7 +85,7 @@ export default function PaymentQrSettings({ token }: { token: string }) {
         <img
           src={qr}
           alt="Current private GCash QR configuration"
-          className="mt-4 max-h-64 max-w-full object-contain"
+          className="mt-4 max-h-48 max-w-full rounded-xl border border-subtle bg-white object-contain p-2"
         />
       )}
       <form onSubmit={(event) => void submit(event)} className="mt-5 space-y-4">
