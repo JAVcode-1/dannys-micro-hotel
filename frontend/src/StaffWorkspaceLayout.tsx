@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { ComponentType } from "react";
-import { Link, NavLink, Outlet, useLocation } from "react-router";
+import { Link, matchPath, NavLink, Outlet, useLocation } from "react-router";
 import { notifySuccess } from "./notifications";
 import { staffAuth } from "./staff-auth";
 import StaffIcon from "./StaffIcon";
@@ -171,6 +171,15 @@ export default function StaffWorkspaceLayout({
   }, []);
   useEffect(() => setMenuOpen(false), [pathname]);
   const page = pages.find((entry) => entry.path === pathname);
+  const glassWorkspace = [
+    "/staff",
+    "/staff/reservations",
+    "/staff/reservations/:id",
+    "/staff/check-ins",
+    "/staff/stays",
+    "/staff/walkins",
+    "/staff/payments",
+  ].some((pattern) => matchPath(pattern, pathname));
   const title =
     page?.label ??
     (pathname.startsWith("/staff/reservations/")
@@ -256,6 +265,7 @@ export default function StaffWorkspaceLayout({
   return (
     <div
       className="staff-shell"
+      data-glass-workspace={glassWorkspace || undefined}
       onClickCapture={(event) => {
         if (
           event.detail === 0 ||
@@ -483,7 +493,7 @@ export default function StaffWorkspaceLayout({
               {message || notice}
             </p>
           )}
-          <Outlet context={{ token, hallEnabled, signOut }} />
+          <Outlet context={{ token, hallEnabled, signOut, identity }} />
         </div>
       </div>
       <StaffMobileNavigation

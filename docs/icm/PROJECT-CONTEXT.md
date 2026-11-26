@@ -6,6 +6,26 @@ status: unified-online-booking-development-review
 
 The Function Hall and refunds checkpoint has passing build, typecheck, lint, formatting, 229 application tests and 40 integration tests on disposable PostgreSQL. The targeted unified-booking PostgreSQL check also passed. Staff-assisted rescheduling now uses the current form props, and test fixtures exercise the current availability, payment and staff sign-in flows. Manual browser acceptance remains pending.
 
+## Staff Walk-ins and Payments visual refresh (2026-11-26)
+
+Walk-ins and Payments join the shared Royal Horizon glass workspace. Walk-ins pairs its booking form with the payment ledger, and Payments separates the selectable queue from the manual GCash review. Both keep their existing booking, payment, proof, and verification workflows.
+
+## Staff Stays and checkout visual refresh (2026-11-26)
+
+Stays and checkout shares the Royal Horizon glass workspace with Today, Reservations, and Check-in. Active cards group timing, balance, and checkout controls. Completed rows surface departures and retain the original checkout and unpaid-departure indicators where present. The existing stay API, server clock, and checkout workflow support the presentation.
+
+## Staff Check-in visual refresh (2026-11-26)
+
+Check-in now shares the Royal Horizon glass workspace with Today and Reservations. Its guest cards highlight scheduled times, Ready-room selection, arrival review, and recorded occupancy. It uses the existing Check-in API and feature gate.
+
+## Staff Reservations visual refresh (2026-11-26)
+
+Today, Reservations, and reservation details share the Royal Horizon glass shell. The Reservations list has a frosted search panel and responsive rows. The layout uses a native scrollbar when needed. This is a frontend presentation change using existing assets and routes.
+
+## Staff Today visual refresh (2026-11-26)
+
+Today follows the supplied light glass dashboard reference in the Royal Horizon palette. The existing Family Executive photo blends into the full workspace backdrop. Frosted surfaces cover the Today header, sidebar, mobile navigation, metrics, queues, room readiness, and shortcuts. The work is in the working tree because the full frontend test gate is still open.
+
 ## Housekeeping response recovery (2026-11-25)
 
 The reported housekeeping connection reset coincided with a development API restart. `StaffRooms.tsx` now asks staff to refresh the board before retrying an unconfirmed action, using the existing retry key. The booking email warning is separate and indicates that the development mail provider is unconfigured. No mail settings were changed.

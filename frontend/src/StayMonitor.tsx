@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
 import { bookingReference, readableLabel } from "./presentation";
+import StaffIcon from "./StaffIcon";
 import { countdown, serverTime, type ClockAnchor } from "./stay-clock";
 type Item = {
   id: string;
@@ -211,7 +212,7 @@ export default function StayMonitor({ token }: { token?: string }) {
     }
   }
   return (
-    <section className="mx-auto max-w-5xl space-y-5 rounded-2xl border border-subtle bg-white p-6 text-main">
+    <section className="staff-stays mx-auto max-w-5xl space-y-5 rounded-2xl border border-subtle bg-white p-6 text-main">
       <h1 className="text-2xl font-semibold text-primary">
         Stays and checkout
       </h1>
@@ -243,10 +244,14 @@ export default function StayMonitor({ token }: { token?: string }) {
         [
           {
             label: "Active stays",
+            kind: "active",
+            icon: "stays",
             items: items.filter((item) => !item.checked_out_at),
           },
           {
             label: "Completed stays",
+            kind: "completed",
+            icon: "logout",
             items: items.filter((item) => item.checked_out_at),
           },
         ].map((group) => (
@@ -255,112 +260,143 @@ export default function StayMonitor({ token }: { token?: string }) {
             className="space-y-3"
             aria-label={group.label}
           >
-            <h2 className="text-lg font-semibold">
+            <h2 className="staff-stays-heading text-lg font-semibold">
+              <StaffIcon name={group.icon} />
               {group.label}{" "}
-              <span className="text-sm text-muted">({group.items.length})</span>
+              <span className="staff-stays-count">({group.items.length})</span>
             </h2>
             {!group.items.length && (
-              <p className="staff-empty text-sm text-muted">
+              <p className="staff-stays-empty staff-empty text-sm text-muted">
                 {group.label === "Active stays"
                   ? "No active stays."
                   : "No completed stays in this list."}
               </p>
             )}
-            {group.items.map((item) => {
-              const clock = countdown(
-                Date.parse(item.checkout_at),
-                clockNow,
-                warnings,
-              );
-              const seconds = Math.ceil(Math.max(0, clock.remainingMs) / 1000);
-              return (
-                <article
-                  key={item.id}
-                  className="space-y-2 rounded-xl border border-subtle p-4"
-                >
-                  <h3 className="font-semibold">
-                    {item.room_code} ·{" "}
-                    {item.channel === "online" ? "Online" : "Walk-in"}
-                  </h3>
-                  <p>
-                    {bookingReference(item.reservation_id)} ·{" "}
-                    {readableLabel(item.category_code)}
-                  </p>
-                  <p>
-                    Checked in {time(item.checked_in_at)} · Scheduled checkout{" "}
-                    {time(item.checkout_at)}
-                    {item.original_checkout_at &&
-                      item.original_checkout_at !== item.checkout_at && (
-                        <span className="block text-sm text-muted">
-                          Original checkout: {time(item.original_checkout_at)}
-                        </span>
+            {group.items.length > 0 && (
+              <div className="staff-stays-list" data-kind={group.kind}>
+                {group.items.map((item) => {
+                  const clock = countdown(
+                    Date.parse(item.checkout_at),
+                    clockNow,
+                    warnings,
+                  );
+                  const seconds = Math.ceil(
+                    Math.max(0, clock.remainingMs) / 1000,
+                  );
+                  return (
+                    <article
+                      key={item.id}
+                      className="staff-stay-card rounded-xl border border-subtle p-4"
+                    >
+                      <div>
+                        <h3 className="font-semibold">
+                          {item.room_code} ·{" "}
+                          {item.channel === "online" ? "Online" : "Walk-in"}
+                        </h3>
+                        <p className="text-sm text-muted">
+                          {bookingReference(item.reservation_id)} ·{" "}
+                          {readableLabel(item.category_code)}
+                        </p>
+                      </div>
+                      <dl className="staff-stay-schedule">
+                        <div>
+                          <dt>Checked in</dt>
+                          <dd>{time(item.checked_in_at)}</dd>
+                        </div>
+                        <div>
+                          <dt>Scheduled checkout</dt>
+                          <dd>{time(item.checkout_at)}</dd>
+                        </div>
+                        {item.original_checkout_at &&
+                          item.original_checkout_at !== item.checkout_at && (
+                            <div className="staff-stay-original-checkout">
+                              <dt>Original checkout</dt>
+                              <dd>{time(item.original_checkout_at)}</dd>
+                            </div>
+                          )}
+                      </dl>
+                      {item.checked_out_at ? (
+                        <div className="staff-stay-departure">
+                          <p className="staff-stay-checkout-status">
+                            Checkout recorded
+                          </p>
+                          <p className="text-sm">
+                            Departed {time(item.checked_out_at)}
+                          </p>
+                          {item.exception_reason && (
+                            <p className="text-sm text-muted">
+                              Unpaid-departure exception recorded
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <p
+                            className="staff-stay-clock rounded-xl p-3 font-bold tabular-nums"
+                            data-clock={clock.state}
+                          >
+                            <span role="status">
+                              {clock.state === "overdue" ? "Package expired" : ""}
+                            </span>
+                            {clock.state !== "overdue" && (
+                              <>
+                                {clock.state === "warning"
+                                  ? `Checkout warning (${clock.warningMinutes}m)`
+                                  : "Time remaining"}{" "}
+                                <span className="staff-stay-clock-duration">
+                                  {Math.floor(seconds / 3600)}h{" "}
+                                  {Math.floor(seconds / 60) % 60}m{" "}
+                                  {seconds % 60}s
+                                </span>
+                              </>
+                            )}
+                          </p>
+                          <dl className="staff-stay-balance">
+                            <div>
+                              <dt>Remaining balance (whole reservation)</dt>
+                              <dd>{money(item.balance_centavos)}</dd>
+                            </div>
+                          </dl>
+                          {item.balance_centavos > 0 && (
+                            <label className="grid gap-1">
+                              Unpaid-departure exception reason · {item.room_code}
+                              <textarea
+                                className="rounded-lg border border-subtle p-2"
+                                maxLength={1000}
+                                value={reasons[item.id] ?? ""}
+                                onChange={(e) =>
+                                  setReasons({
+                                    ...reasons,
+                                    [item.id]: e.target.value,
+                                  })
+                                }
+                              />
+                            </label>
+                          )}
+                          <div className="staff-stay-actions">
+                            <button
+                              className="min-h-11 rounded-lg bg-primary px-4 py-2 text-white disabled:opacity-50"
+                              disabled={!enabled || !synced || busy}
+                              onClick={() => void depart(item)}
+                            >
+                              Record checkout · {item.room_code}
+                            </button>
+                            {token && (
+                              <a
+                                href="/staff/stay-changes"
+                                className="inline-flex min-h-11 items-center font-semibold text-primary"
+                              >
+                                Extensions and stay changes
+                              </a>
+                            )}
+                          </div>
+                        </>
                       )}
-                  </p>
-                  {item.checked_out_at ? (
-                    <p>
-                      Departed {time(item.checked_out_at)} · Checkout recorded
-                      {item.exception_reason
-                        ? " · Unpaid-departure exception recorded"
-                        : ""}
-                    </p>
-                  ) : (
-                    <>
-                      <p
-                        className={`rounded-xl p-3 text-xl font-bold tabular-nums ${clock.state === "overdue" ? "bg-red-50 text-red-800" : clock.state === "warning" ? "bg-amber-50 text-amber-900" : "bg-selected text-primary"}`}
-                      >
-                        <span role="status">
-                          {clock.state === "overdue" ? "Package expired" : ""}
-                        </span>
-                        {clock.state !== "overdue" && (
-                          <>
-                            {clock.state === "warning"
-                              ? `Checkout warning (${clock.warningMinutes}m)`
-                              : "Time remaining"}{" "}
-                            · {Math.floor(seconds / 3600)}h{" "}
-                            {Math.floor(seconds / 60) % 60}m {seconds % 60}s
-                          </>
-                        )}
-                      </p>
-                      <p>
-                        Remaining balance (whole reservation):{" "}
-                        {money(item.balance_centavos)}
-                      </p>
-                      {item.balance_centavos > 0 && (
-                        <label className="grid gap-1">
-                          Unpaid-departure exception reason · {item.room_code}
-                          <textarea
-                            className="rounded-lg border border-subtle p-2"
-                            maxLength={1000}
-                            value={reasons[item.id] ?? ""}
-                            onChange={(e) =>
-                              setReasons({
-                                ...reasons,
-                                [item.id]: e.target.value,
-                              })
-                            }
-                          />
-                        </label>
-                      )}
-                      <button
-                        className="min-h-11 rounded-lg bg-primary px-4 py-2 text-white disabled:opacity-50"
-                        disabled={!enabled || !synced || busy}
-                        onClick={() => void depart(item)}
-                      >
-                        Record checkout · {item.room_code}
-                      </button>
-                      {token && (
-                        <a
-                          href="/staff/stay-changes"
-                          className="ml-3 inline-flex min-h-11 items-center font-semibold text-primary"
-                        >
-                          Extensions and stay changes
-                        </a>
-                      )}
-                    </>
-                  )}
-                </article>
-              );
-            })}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
           </section>
         ))}
       {!token && (

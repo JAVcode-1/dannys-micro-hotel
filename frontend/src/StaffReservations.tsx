@@ -135,30 +135,32 @@ export default function StaffReservations({ token }: { token: string }) {
     return () => controller.abort();
   }, [token, query, page]);
   return (
-    <section className="staff-reservation-index mt-6 min-w-0">
-      <h2 className="text-xl font-bold">All reservations</h2>
-      <p className="mt-2 text-sm text-muted">
-        Find a booking, review its details and manage each stay.
-      </p>
+    <section
+      className="staff-reservation-index"
+      aria-labelledby="staff-reservations-heading"
+    >
+      <h2 id="staff-reservations-heading">All reservations</h2>
       <form
-        className="my-4 flex flex-wrap gap-2"
+        className="staff-reservation-search"
         onSubmit={(event) => {
           event.preventDefault();
           setPage(0);
           setQuery(search.trim());
         }}
       >
-        <label className="min-w-0 flex-1">
-          Guest name, email or full booking ID
-          <input
-            className="block w-full rounded border p-3 text-base"
-            value={search}
-            maxLength={120}
-            placeholder="Search reservations…"
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <label>
+          <span>Guest name, email or full booking ID</span>
+          <span className="staff-reservation-search-field">
+            <StaffIcon name="search" />
+            <input
+              value={search}
+              maxLength={120}
+              placeholder="Search reservations…"
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </span>
         </label>
-        <button className="self-end rounded bg-primary px-4 py-3 text-white">
+        <button type="submit" className="bg-primary text-white">
           Search
         </button>
       </form>
@@ -191,8 +193,13 @@ export default function StaffReservations({ token }: { token: string }) {
                 <div className="staff-reservation-summary">
                   <p className="text-sm text-muted">
                     {r.channel === "online" ? "Online" : "Walk-in"} ·{" "}
-                    {serviceLabel(r.serviceKind)} · {r.roomCount ?? 0} rooms
-                    {r.hallCount ? ` · ${r.hallCount} Hall event` : ""}
+                    {serviceLabel(r.serviceKind)}
+                    {r.roomCount
+                      ? ` · ${r.roomCount} ${r.roomCount === 1 ? "room" : "rooms"}`
+                      : ""}
+                    {r.hallCount
+                      ? ` · ${r.hallCount} Hall ${r.hallCount === 1 ? "event" : "events"}`
+                      : ""}
                   </p>
                   <div className="staff-status-list">
                     {r.states?.map((s, index) => (
@@ -271,22 +278,23 @@ export function StaffReservationDetail({ token }: { token: string }) {
   if (!data) return <p role="status">Loading reservation…</p>;
   return (
     <section className="staff-reservation-detail mt-6 min-w-0 [overflow-wrap:anywhere]">
-      <div className="print:hidden">
-        <Link to="/staff/reservations" className="text-primary underline">
-          All reservations
-        </Link>
+      <Link
+        to="/staff/reservations"
+        className="staff-reservation-back print:hidden"
+      >
+        <StaffIcon name="arrow" /> All reservations
+      </Link>
+      <div className="staff-reservation-identity">
+        <h2 className="text-2xl font-bold">{data.reservation.primaryName}</h2>
+        <p className="mt-2 font-semibold text-primary">
+          {bookingReference(data.reservation.id)} -{" "}
+          {serviceLabel(data.reservation.serviceKind)}
+        </p>
+        <p>
+          {data.reservation.email || data.contact?.email || "No email recorded"} ·{" "}
+          {readableLabel(data.reservation.channel)}
+        </p>
       </div>
-      <h2 className="mt-4 text-2xl font-bold">
-        {data.reservation.primaryName}
-      </h2>
-      <p className="mt-2 font-semibold text-primary">
-        {bookingReference(data.reservation.id)} -{" "}
-        {serviceLabel(data.reservation.serviceKind)}
-      </p>
-      <p>
-        {data.reservation.email || data.contact?.email || "No email recorded"} ·{" "}
-        {readableLabel(data.reservation.channel)}
-      </p>
       {data.contact && (
         <details className="my-3 text-sm">
           <summary className="cursor-pointer font-semibold">
@@ -603,9 +611,11 @@ function StaffAssistedReschedule({
 export function StaffDashboard({
   token,
   hallEnabled = false,
+  identity,
 }: {
   token: string;
   hallEnabled?: boolean;
+  identity?: string;
 }) {
   const [counts, setCounts] = useState<Record<string, number>>();
   const [message, setMessage] = useState("");
@@ -698,101 +708,122 @@ export function StaffDashboard({
     };
   }, [token]);
   const value = (key: string) => counts?.[key]?.toLocaleString("en-PH") ?? "—";
+  const hour = Number(
+    new Intl.DateTimeFormat("en-PH", {
+      hour: "numeric",
+      hourCycle: "h23",
+      timeZone: "Asia/Manila",
+    }).format(new Date()),
+  );
+  const greeting =
+    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const staffName = identity?.split("@")[0];
   return (
     <section
       className="staff-dashboard"
       aria-labelledby="staff-dashboard-heading"
     >
-      <div className="staff-dashboard-intro">
-        <div>
-          <p className="staff-eyebrow">THE FRONT DESK</p>
-          <h2 id="staff-dashboard-heading">Today at a glance</h2>
+      <div className="staff-today-overview">
+        <div className="staff-dashboard-intro">
+          <div>
+            <h2 id="staff-dashboard-heading">
+              {greeting}
+              {staffName && <>, <span>{staffName}</span></>}
+            </h2>
+            <p>Today at a glance</p>
+          </div>
+          <div className="staff-refresh-note">
+            <StaffIcon name="clock" />
+            <span>
+              {updatedAt
+                ? `Last updated ${updatedAt.toLocaleTimeString("en-PH", { timeZone: "Asia/Manila", hour: "numeric", minute: "2-digit", hour12: true })}`
+                : "Refreshes every 30 seconds"}
+            </span>
+          </div>
         </div>
-        <div className="staff-refresh-note">
-          <StaffIcon name="clock" />
-          <span>
-            {updatedAt
-              ? `Last updated ${updatedAt.toLocaleTimeString("en-PH", { timeZone: "Asia/Manila", hour: "numeric", minute: "2-digit", hour12: true })}`
-              : "Refreshes every 30 seconds"}
-          </span>
-        </div>
-      </div>
-      {message && (
-        <p role="status" className="staff-notice">
-          {message}
-        </p>
-      )}
-      {!counts && !message && (
-        <p role="status" className="staff-loading">
-          Loading operational summary…
-        </p>
-      )}
-      <dl
-        aria-label="Current operational queues"
-        className="staff-metrics"
-        aria-busy={!counts && !message}
-      >
-        {[
-          ["arrivals", "Arrivals today", "arrivals", "Expected room check-ins"],
-          ["occupied", "Active stays", "stays", "Currently checked in"],
-          [
-            "paymentReviews",
-            "Payment reviews",
-            "payments",
-            "Awaiting GCash verification",
-          ],
-          [
-            "overdue",
-            "Expired stay packages",
-            "clock",
-            "Requires staff review",
-          ],
-          ...(hallEnabled
-            ? [
-                [
-                  "hallArrivals",
-                  "Hall events today",
-                  "hall",
-                  "Confirmed events scheduled today",
-                ],
-              ]
-            : []),
-        ].map(([key, label, icon, description]) => (
-          <div className="staff-metric" key={key} title={description}>
+        {message && (
+          <p role="status" className="staff-notice">
+            {message}
+          </p>
+        )}
+        {!counts && !message && (
+          <p role="status" className="staff-loading">
+            Loading operational summary…
+          </p>
+        )}
+        <dl
+          aria-label="Current operational queues"
+          className="staff-metrics"
+          aria-busy={!counts && !message}
+        >
+          {[
+            ["arrivals", "Arrivals today", "arrivals", "Expected room check-ins"],
+            ["occupied", "Active stays", "stays", "Currently checked in"],
+            [
+              "paymentReviews",
+              "Payment reviews",
+              "payments",
+              "Awaiting GCash verification",
+            ],
+            [
+              "overdue",
+              "Expired stay packages",
+              "clock",
+              "Requires staff review",
+            ],
+            ...(hallEnabled
+              ? [
+                  [
+                    "hallArrivals",
+                    "Hall events today",
+                    "hall",
+                    "Confirmed events scheduled today",
+                  ],
+                ]
+              : []),
+          ].map(([key, label, icon, description]) => (
+            <div
+              className="staff-metric"
+              data-metric={key}
+              key={key}
+              title={description}
+            >
+              <dt>
+                <span>{label}</span>
+                <span
+                  className={`staff-metric-icon ${key === "overdue" && (counts?.overdue ?? 0) > 0 ? "is-urgent" : ""}`}
+                >
+                  <StaffIcon name={icon} />
+                </span>
+              </dt>
+              <dd>{value(key)}</dd>
+            </div>
+          ))}
+          <div className="staff-metric" data-metric="checkouts">
             <dt>
-              <span>{label}</span>
-              <span
-                className={`staff-metric-icon ${key === "overdue" && (counts?.overdue ?? 0) > 0 ? "is-urgent" : ""}`}
-              >
-                <StaffIcon name={icon} />
+              <Link to="/staff/stays">Upcoming checkouts</Link>
+              <span className="staff-metric-icon">
+                <StaffIcon name="clock" />
               </span>
             </dt>
-            <dd>{value(key)}</dd>
+            <dd>{upcomingCheckouts?.count ?? "—"}</dd>
+            {upcomingCheckouts?.next && (
+              <dd className="staff-metric-next">
+                Next: {time(upcomingCheckouts.next)}
+              </dd>
+            )}
           </div>
-        ))}
-        <div className="staff-metric">
-          <dt>
-            <Link to="/staff/stays">Upcoming checkouts</Link>
-            <span className="staff-metric-icon">
-              <StaffIcon name="clock" />
-            </span>
-          </dt>
-          <dd>{upcomingCheckouts?.count ?? "—"}</dd>
-          {upcomingCheckouts?.next && (
-            <p>Next: {time(upcomingCheckouts.next)}</p>
-          )}
-        </div>
-      </dl>
+        </dl>
+      </div>
       <div className="staff-dashboard-columns">
         <section
           className="staff-panel staff-attention"
           aria-labelledby="staff-attention-heading"
         >
           <div className="staff-panel-heading">
-            <div>
-              <p className="staff-eyebrow">YOUR WORK QUEUES</p>
-              <h3 id="staff-attention-heading">Needs attention</h3>
-            </div>
+            <h3 id="staff-attention-heading">
+              <StaffIcon name="bell" /> Needs attention
+            </h3>
             <span className="staff-panel-symbol">
               <StaffIcon name="today" />
             </span>
@@ -834,6 +865,7 @@ export function StaffDashboard({
                 </span>
                 <span className="staff-queue-copy">
                   <strong>{label}</strong>
+                  <span>{description}</span>
                 </span>
                 <span
                   className="staff-queue-count"
@@ -851,10 +883,9 @@ export function StaffDashboard({
           aria-labelledby="staff-property-heading"
         >
           <div className="staff-panel-heading">
-            <div>
-              <p className="staff-eyebrow">THE PROPERTY</p>
-              <h3 id="staff-property-heading">Room readiness</h3>
-            </div>
+            <h3 id="staff-property-heading">
+              <StaffIcon name="stays" /> Room readiness
+            </h3>
             <span className="staff-panel-symbol">
               <StaffIcon name="rooms" />
             </span>
@@ -863,11 +894,9 @@ export function StaffDashboard({
             <strong>{availableRooms ?? "—"}</strong>
             <div>
               <span>Available now</span>
-              <small>
-                {availableRooms === undefined
-                  ? "Availability unavailable"
-                  : "Current room-board availability"}
-              </small>
+              {availableRooms === undefined && (
+                <small>Availability unavailable</small>
+              )}
             </div>
           </div>
           <div className="staff-category-line">
@@ -907,7 +936,9 @@ export function StaffDashboard({
         className="staff-shortcuts"
         aria-labelledby="staff-shortcuts-heading"
       >
-        <h3 id="staff-shortcuts-heading">Quick actions</h3>
+        <h3 id="staff-shortcuts-heading">
+          <StaffIcon name="bolt" /> Quick actions
+        </h3>
         <nav aria-label="Staff shortcuts">
           {[
             [

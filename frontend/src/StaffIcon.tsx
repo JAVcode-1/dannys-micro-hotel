@@ -10,6 +10,8 @@ const paths: Record<string, string> = {
   people:
     "M16 21v-3a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v3 M21 21v-3a4 4 0 0 0-3-4 M17 3a4 4 0 0 1 0 8 M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0",
   today: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
+  bell: "M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9 M10 21h4",
+  bolt: "M13 2 4 14h7l-1 8 10-12h-7z",
   reservations: "M5 5h14v16H5z M8 3v4 M16 3v4 M8 11h8 M8 15h5",
   rooms: "M4 21V3h13v18 M2 21h19 M8 7h5 M8 11h5 M13 16h.01",
   arrivals: "M14 4h6v16h-6 M3 12h12 M10 7l5 5-5 5",
@@ -23,6 +25,7 @@ const paths: Record<string, string> = {
   reviews: "M4 4h16v12H9l-5 4z M8 8h8 M8 12h5",
   plus: "M12 5v14 M5 12h14",
   arrow: "M5 12h14 M14 7l5 5-5 5",
+  search: "M16 10a6 6 0 1 1-12 0 6 6 0 0 1 12 0z M15 15l5 5",
   logout: "M10 4H4v16h6 M9 12h12 M16 7l5 5-5 5",
   menu: "M4 6h16 M4 12h16 M4 18h16",
   chevron: "M9 5l7 7-7 7",

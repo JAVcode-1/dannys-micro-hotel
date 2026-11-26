@@ -9,6 +9,7 @@ import type {
 import { parsePesoInput } from "./peso-input";
 import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
+import StaffIcon from "./StaffIcon";
 
 const money = (value: number) =>
   new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(
@@ -185,7 +186,7 @@ export function PaymentReviewPanel({
     }
   }
   return (
-    <article className="min-w-0 rounded-xl border border-subtle bg-white p-5 sm:p-7">
+    <article className="staff-payment-panel min-w-0 rounded-xl border border-subtle bg-white p-5 sm:p-7">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-primary">
@@ -201,7 +202,7 @@ export function PaymentReviewPanel({
           {labels[review.age]}
         </span>
       </div>
-      <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+      <dl className="staff-payment-summary mt-5 grid gap-4 sm:grid-cols-2">
         <div>
           <dt className="text-sm text-muted">Total amount</dt>
           <dd className="text-2xl font-bold">
@@ -330,21 +331,21 @@ export function PaymentReviewPanel({
           className="mt-4 max-h-96 max-w-full rounded-lg border border-subtle object-contain"
         />
       )}
-      <p className="mt-4 rounded-lg bg-lavender p-3 text-sm">
-        Check the hotel’s GCash account and confirm only after you see the full
-        payment was received.
-      </p>
-      {!confirmationEnabled && (
-        <p className="mt-3 text-sm font-semibold text-primary">
-          Live confirmation is disabled pending hosted acceptance and security
-          checks.
-        </p>
-      )}
       {review.status !== "confirmed" && (
         <form
           onSubmit={(event) => void submit(event)}
           className="mt-5 space-y-4"
         >
+          <p className="staff-payment-verification-note rounded-lg bg-lavender p-3 text-sm">
+            <StaffIcon name="payments" />
+            Verify the full payment in the hotel’s GCash account before
+            confirming.
+          </p>
+          {!confirmationEnabled && (
+            <p className="text-sm font-semibold text-primary">
+              Payment confirmation is currently unavailable.
+            </p>
+          )}
           <label className="block text-sm font-semibold">
             Review decision
             <select
@@ -606,8 +607,8 @@ export default function StaffPaymentReviews({ token }: { token: string }) {
     return data;
   }
   return (
-    <section className="mt-6">
-      <div className="mb-5 flex items-center justify-between gap-3">
+    <section className="staff-payment-reviews mt-6">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Payment review</h1>
         <button
           type="button"
@@ -624,7 +625,7 @@ export default function StaffPaymentReviews({ token }: { token: string }) {
       )}
       <nav
         aria-label="Review queue pages"
-        className="mb-4 flex items-center gap-4 text-sm"
+        className="staff-worklist-toolbar mb-4 flex flex-wrap items-center gap-4 text-sm"
       >
         <button
           type="button"
@@ -645,13 +646,15 @@ export default function StaffPaymentReviews({ token }: { token: string }) {
         </button>
       </nav>
       {current && (
-        <div className="grid gap-5 lg:grid-cols-[15rem_1fr]">
-          <nav aria-label="Payment review queue" className="space-y-2">
+        <div className="staff-payment-layout grid gap-5">
+          <nav aria-label="Payment review queue" className="staff-payment-queue space-y-2">
             {reviews.map((row) => (
               <button
                 key={row.id}
+                type="button"
                 onClick={() => setSelected(row.id)}
-                className={`w-full rounded-lg border border-subtle p-3 text-left ${row.id === current.id ? "bg-selected" : "bg-white"}`}
+                aria-pressed={row.id === current.id}
+                className="w-full rounded-lg border border-subtle p-3 text-left"
               >
                 <strong className="block break-words">{row.primaryName}</strong>
                 <span className="block text-sm">

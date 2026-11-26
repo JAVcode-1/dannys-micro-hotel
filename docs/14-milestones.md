@@ -5,6 +5,28 @@ status: in-progress
 # 14 — Milestones & Work Tracker
 
 ## Housekeeping response recovery (2026-11-25)
+## Staff Walk-ins and Payments visual refresh (2026-11-26)
+
+Walk-ins and Payments now use the shared Royal Horizon glass workspace. Verified desktop and phone previews with sample data, including booking selection, policy disclosure, and queue switching. Build, typecheck, lint, 129 backend tests, and 109 frontend tests passed. The existing staff-shell Reservations navigation assertion remains open. Phase 05 and Phase 06 checklist status remains open.
+
+## Staff Stays and checkout visual refresh (2026-11-26)
+
+Stays and checkout uses the Royal Horizon glass workspace, with focused active-stay cards and compact completed-stay history. Reviewed sample-data Edge previews for desktop, phone, and the empty-active-stays view. The five focused stay and countdown tests passed, including interrupted checkout recovery and unpaid-departure handling. The full suite passed 129 backend and 109 frontend tests. The existing staff-shell Reservations navigation assertion still fails and Phase 06 acceptance remains open.
+
+## Staff Check-in visual refresh (2026-11-26)
+
+Check-in now uses the Royal Horizon glass workspace with responsive Arriving guests and Checked in sections. Build, typecheck, lint, and Edge previews at 1440 px and 390 px passed. Synthetic checks passed for room selection, recording and reopening a no-show review, and completing check-in. The full suite passed 129 backend and 109 frontend tests. The existing staff-shell Reservations navigation assertion still fails. Phase 06 checklist status remains open.
+
+## Staff Reservations visual refresh (2026-11-26)
+
+Reservations and reservation details now use the Royal Horizon glass workspace. The list keeps its search, status badges, totals, and links in a responsive layout. A local sample-data check passed for search, opening a reservation, and returning to the list. Edge measured the unused Today scrollbar gutter at 15 px before the change and 0 px after it. Build, typecheck, lint, 129 backend tests, and 109 frontend tests passed. The existing staff-shell Reservations navigation assertion still fails, and checklist status remains open.
+
+## Staff Today visual refresh (2026-11-26)
+
+The glass treatment now spans the entire Today workspace, including the desktop sidebar, header, and mobile navigation. Build, typecheck, lint, and Edge previews at 1440 px and 390 px passed. The suite passed 129 backend and 109 frontend tests, with the existing staff-shell Reservations navigation assertion still open.
+
+The Today dashboard uses Royal Horizon frosted cards, a Manila-time greeting, the existing hotel room photo, and a responsive metric grid. The frontend reuses the current staff identity, links, and dashboard data. Build, typecheck, lint, 129 backend tests, and the three Today tests passed. Edge previews with sample data were checked at 1440 px and 390 px. The full frontend run had two failures. The guest booking test passed in a focused rerun, while the existing staff-shell Reservations navigation assertion still blocks the checkpoint. Checklist status remains open.
+
 
 The Rooms board now gives a refresh instruction when a disconnect or empty proxy error leaves a housekeeping action unconfirmed. After refreshing, staff can retry an action that is still offered with the original request key. The test reproduced the reported JSON error before the fix. The local Vite proxy returned HTTP 200 for `/api/health`. Browser acceptance on Room 2 remains pending. No Phase 08 checklist item was marked complete.
 

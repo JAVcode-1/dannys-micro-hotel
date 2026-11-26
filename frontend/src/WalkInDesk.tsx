@@ -12,6 +12,7 @@ import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
 import { hotelTime, peso } from "./BookingPlanner";
 import WalkInPolicies from "./WalkInPolicies";
+import StaffIcon from "./StaffIcon";
 
 type Rate = {
   code: BookingItemInput["category"];
@@ -232,11 +233,10 @@ function WalkInPlanner({
     }
   }
   return (
-    <section className="rounded-xl border border-subtle bg-white p-5">
+    <section className="staff-walk-in-panel rounded-xl border border-subtle bg-white p-5">
       <h2 className="text-xl font-bold">New walk-in</h2>
       <p className="mt-2 text-sm text-muted">
-        Add guest details and rooms, review the total, then record payment. The
-        stay starts at staff check-in.
+        The stay starts at recorded check-in.
       </p>
       <form onSubmit={(e) => void quoteItems(e)} className="mt-5 space-y-4">
         <fieldset disabled={busy} className="space-y-4">
@@ -252,7 +252,7 @@ function WalkInPlanner({
             />
           </label>
           {!preview && (
-            <div className="space-y-3 rounded border border-subtle p-4">
+            <div className="staff-walk-in-contact flex flex-col gap-3 rounded border border-subtle p-4">
               <label className="block">
                 Contact number
                 <input
@@ -313,7 +313,7 @@ function WalkInPlanner({
           {items.map((item, index) => (
             <fieldset
               key={index}
-              className="space-y-4 rounded-lg border border-subtle p-4"
+              className="staff-walk-in-room space-y-4 rounded-lg border border-subtle p-4"
             >
               <legend className="px-2 font-semibold">Room {index + 1}</legend>
               <label className="block text-sm">
@@ -465,7 +465,10 @@ function WalkInPlanner({
             >
               Add room
             </button>
-            <button className={buttonClass}>
+            <button
+              type="submit"
+              className={`${buttonClass} staff-walk-in-quote`}
+            >
               {preview ? "Preview total" : "Review total"}
             </button>
           </div>
@@ -591,9 +594,9 @@ export function WalkInLedger({
     }
   }
   return (
-    <section className="rounded-xl border border-subtle bg-white p-5">
+    <section className="staff-walk-in-panel rounded-xl border border-subtle bg-white p-5">
       <h2 className="break-words text-xl font-bold">{booking.primaryName}</h2>
-      <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
+      <dl className="staff-walk-in-ledger-totals mt-4 grid grid-cols-2 gap-4 text-sm">
         <div>
           <dt>Total amount</dt>
           <dd className="text-xl font-bold">{peso(booking.totalCentavos)}</dd>
@@ -1011,13 +1014,14 @@ export default function WalkInDesk({
     });
   }
   return (
-    <section className="mx-auto max-w-6xl">
+    <section className="staff-walk-in mx-auto max-w-6xl">
       <h1 className="mb-3 text-3xl font-bold">Walk-in desk</h1>
-      <p className="mb-5 rounded-lg bg-selected p-4 text-sm text-primary">
-        {preview
-          ? "Synthetic preview · fixture prices and slots only; no network booking, payment or real money."
-          : "Room access requires payment eligibility, a Ready room and recorded staff check-in."}
-      </p>
+      {preview && (
+        <p className="mb-5 rounded-lg bg-selected p-4 text-sm text-primary">
+          Synthetic preview · fixture prices and slots only; no network booking,
+          payment or real money.
+        </p>
+      )}
       {!preview && !enabled && (
         <p role="status" className="mb-4 text-sm text-muted">
           Walk-in transactions are currently unavailable.
@@ -1031,7 +1035,7 @@ export default function WalkInDesk({
       {!preview && (
         <nav
           aria-label="Walk-in reservations"
-          className="mb-5 flex flex-wrap gap-2"
+          className="staff-worklist-toolbar mb-5 flex flex-wrap gap-2"
         >
           <button
             className={buttonClass}
@@ -1048,22 +1052,28 @@ export default function WalkInDesk({
           >
             Next
           </button>
-          {list.map((row) => (
-            <button
-              key={row.id}
-              className={buttonClass}
-              onClick={() => {
-                void api(`/${row.id}`)
-                  .then(setBooking)
-                  .catch((error) => setMessage(error.message));
-              }}
-            >
-              {row.primaryName}
-            </button>
-          ))}
+          {list.length > 0 && (
+            <div className="staff-walk-in-bookings">
+              {list.map((row) => (
+                <button
+                  key={row.id}
+                  type="button"
+                  className={buttonClass}
+                  aria-pressed={booking?.id === row.id}
+                  onClick={() => {
+                    void api(`/${row.id}`)
+                      .then(setBooking)
+                      .catch((error) => setMessage(error.message));
+                  }}
+                >
+                  {row.primaryName}
+                </button>
+              ))}
+            </div>
+          )}
         </nav>
       )}
-      <div className="grid items-start gap-6 lg:grid-cols-2">
+      <div className="staff-walk-in-layout grid items-start gap-6 lg:grid-cols-2">
         {rates.length > 0 && (
           <WalkInPlanner
             key={rates.map((r) => `${r.code}:${r.duration_minutes}`).join()}
@@ -1084,12 +1094,10 @@ export default function WalkInDesk({
             onPayment={payment}
           />
         ) : (
-          <div className="rounded-xl border border-subtle bg-white p-5">
-            <h2 className="font-bold">Select or create a walk-in</h2>
-            <p className="mt-3 text-sm text-muted">
-              Choose a guest above to view charges, payments and remaining
-              balance.
-            </p>
+          <div className="staff-walk-in-panel staff-walk-in-empty rounded-xl border border-subtle bg-white p-5">
+            <h2 className="font-bold">
+              <StaffIcon name="reservations" /> Select or create a walk-in
+            </h2>
           </div>
         )}
       </div>

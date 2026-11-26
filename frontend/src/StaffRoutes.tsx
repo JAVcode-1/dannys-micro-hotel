@@ -127,11 +127,13 @@ const hallPage: Page = {
 };
 
 function StaffDashboardPage({ token }: { token: string }) {
-  const { hallEnabled } = useOutletContext<{
-    token: string;
+  const { hallEnabled, identity } = useOutletContext<{
     hallEnabled: boolean;
+    identity: string;
   }>();
-  return <StaffDashboard token={token} hallEnabled={hallEnabled} />;
+  return (
+    <StaffDashboard token={token} hallEnabled={hallEnabled} identity={identity} />
+  );
 }
 
 function StaffAnalyticsPage({ token }: { token: string }) {

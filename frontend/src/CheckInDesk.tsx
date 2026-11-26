@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
 import { readableLabel } from "./presentation";
+import StaffIcon from "./StaffIcon";
 
 type Item = {
   id: string;
@@ -200,7 +201,7 @@ export default function CheckInDesk({ token }: { token?: string }) {
     }
   }
   return (
-    <section className="mx-auto max-w-4xl space-y-4 rounded-2xl border border-subtle bg-white p-6">
+    <section className="staff-check-in mx-auto flex max-w-4xl flex-col gap-4 rounded-2xl border border-subtle bg-white p-6">
       <h1 className="text-2xl font-semibold text-primary">Check-in</h1>
       {!token && (
         <p>
@@ -213,24 +214,27 @@ export default function CheckInDesk({ token }: { token?: string }) {
       {[
         {
           label: "Arriving guests",
+          icon: "arrivals",
           items: items.filter((item) => !item.checked_in_at),
         },
         {
           label: "Checked in",
+          icon: "stays",
           items: items.filter((item) => item.checked_in_at),
         },
       ].map((group) => (
         <section
           key={group.label}
-          className="space-y-3"
+          className="staff-check-in-group"
           aria-label={group.label}
         >
-          <h2 className="text-lg font-semibold">
+          <h2 className="staff-check-in-group-heading text-lg font-semibold">
+            <StaffIcon name={group.icon} />
             {group.label}{" "}
-            <span className="text-sm text-muted">({group.items.length})</span>
+            <span className="staff-check-in-count">({group.items.length})</span>
           </h2>
           {!group.items.length && (
-            <p className="text-sm text-muted">
+            <p className="staff-check-in-empty text-sm text-muted">
               {group.label === "Arriving guests"
                 ? "No guests awaiting check-in."
                 : "No check-ins recorded in this list."}
@@ -239,7 +243,7 @@ export default function CheckInDesk({ token }: { token?: string }) {
           {group.items.map((item) => (
             <article
               key={item.id}
-              className="space-y-2 rounded-lg border border-subtle p-4"
+              className="staff-check-in-card space-y-3 rounded-lg border border-subtle p-4"
             >
               <h3 className="break-words font-semibold">
                 {item.primary_name || "Guest name unavailable"}
@@ -250,12 +254,19 @@ export default function CheckInDesk({ token }: { token?: string }) {
                 {item.reservation_room_number != null &&
                   ` · Booked room ${item.reservation_room_number}`}
               </p>
-              <p>
-                Scheduled arrival {time(item.start_at)} · Checkout{" "}
-                {time(item.end_at)}
-              </p>
+              <dl className="staff-check-in-schedule">
+                <div>
+                  <dt>Scheduled arrival</dt>
+                  <dd>{time(item.start_at)}</dd>
+                </div>
+                <div>
+                  <dt>Checkout</dt>
+                  <dd>{time(item.end_at)}</dd>
+                </div>
+              </dl>
               {item.late && (
-                <p className="font-semibold text-primary">
+                <p className="staff-check-in-late">
+                  <StaffIcon name="clock" />
                   Past the one-hour arrival grace period. Review with staff.
                 </p>
               )}
@@ -269,8 +280,8 @@ export default function CheckInDesk({ token }: { token?: string }) {
                 </p>
               )}
               {token && item.late && !item.checked_in_at && (
-                <div className="space-y-2">
-                  <label className="grid gap-1">
+                <div className="staff-check-in-review">
+                  <label className="staff-check-in-review-note grid gap-1">
                     Arrival review note
                     <input
                       maxLength={1000}
@@ -300,20 +311,20 @@ export default function CheckInDesk({ token }: { token?: string }) {
                       ? "Reopen as expected"
                       : "Record reviewed no-show"}
                   </button>
-                  <p className="text-sm">
+                  <p className="staff-check-in-review-help text-sm">
                     This records the review only. It does not release capacity,
                     charge a penalty or issue a refund.
                   </p>
                 </div>
               )}
               {item.checked_in_at && item.checkout_at ? (
-                <p>
+                <p className="staff-check-in-occupied">
                   {item.assigned_room} occupied · In {time(item.checked_in_at)}{" "}
                   · Out {time(item.checkout_at)}
                 </p>
               ) : (
-                <div className="flex flex-wrap items-end gap-3">
-                  <label className="grid gap-1">
+                <div className="staff-check-in-assign flex flex-wrap items-end gap-3">
+                  <label className="staff-check-in-room grid gap-1">
                     Ready room
                     <select
                       className="rounded-lg border border-subtle p-2"
@@ -338,7 +349,10 @@ export default function CheckInDesk({ token }: { token?: string }) {
                     </select>
                   </label>
                   {!item.rooms.length && (
-                    <p role="status" className="text-sm text-amber-800">
+                    <p
+                      role="status"
+                      className="staff-check-in-unavailable text-sm text-amber-800"
+                    >
                       No Ready rooms available. Refresh before assigning a room.
                     </p>
                   )}
@@ -359,7 +373,7 @@ export default function CheckInDesk({ token }: { token?: string }) {
                   </button>
                   {item.channel === "online" &&
                     Date.parse(item.start_at) > Date.now() && (
-                      <label className="grid gap-1">
+                      <label className="staff-check-in-early grid gap-1">
                         Early check-in approval reason
                         <span className="text-sm text-muted">
                           Purchased duration stays unchanged; checkout moves

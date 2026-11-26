@@ -5,6 +5,26 @@ status: approved-baseline
 # 17 — Approved Decisions Register
 
 The Function Hall and refunds checkpoint preserves the existing staff-assisted reschedule request contract. The shared form receives the current schedule revision and booked duration blocks. Staff approval remains a separate action. No new business policy or dependency was introduced by the checkpoint verification fixes.
+## Staff Walk-ins and Payments design (2026-11-26)
+
+Use the shared Royal Horizon glass workspace for both routes. Walk-ins separates booking entry from the selected booking and its ledger. Payments uses a visually distinct review queue, payment summary, and receiving-account reminder. Both layouts stack on phones and continue to use current controls, data sources, and authorization.
+
+## Staff Stays and checkout design (2026-11-26)
+
+Use the Royal Horizon glass workspace on Stays and checkout. Keep countdowns, reservation balances, and staff actions together on active-stay cards. Show completed stays in compact rows with distinct check-in, scheduled checkout, and recorded departure times. The same information stacks on phones.
+
+## Staff Check-in design (2026-11-26)
+
+Use the existing Royal Horizon glass workspace on the Check-in route. Arriving and checked-in guests appear side by side on wide screens and stack on phones. Separate scheduled times, room assignment, and late-arrival review visually while preserving the current controls and server decisions.
+
+## Staff Reservations design (2026-11-26)
+
+Apply the Royal Horizon glass workspace to the Reservations list and detail routes. Reuse the Today backdrop, frosted shell, and action colors. Let the browser allocate scrollbar space when content scrolls, with the track and thumb using the workspace palette. Reservations keeps its existing search, data, and actions.
+
+## Staff Today design (2026-11-26)
+
+The Today presentation follows the supplied light glass dashboard reference. Use the Royal Horizon palette and the existing Family Executive room photo across the full Today workspace. Frosted surfaces carry through the header, sidebar, mobile navigation, and dashboard cards. The existing staff actions and live data sources continue to drive the page.
+
 
 ## Unconfirmed housekeeping requests (2026-11-25)
 
