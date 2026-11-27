@@ -117,10 +117,10 @@ Actual blocker: obtain the successful CI run/log for the reviewed commit, includ
 ### O02 — Static GCash QR and upload proof
 - [ ] Staff configures QR image from secured administrative settings; validate media and access.
 - [ ] Guest gets QR, full amount, 30m deadline and reminder UI/email schedule.
-- [ ] Require a screenshot and a 10–13 digit transaction reference; file size/type validation, private storage.
+- [ ] Accept a GCash receipt screenshot from the verified guest. Validate file size and type and store it privately.
 - [ ] Display `Payment submitted — awaiting staff verification`, never `Confirmed`.
 
-**Acceptance:** missing proof/ref rejected, expired hold handled, protected submitted proof remains (T07/T08).
+**Acceptance:** reject missing or invalid receipts, enforce expiry, and protect bookings with timely receipts during review (T07/T08).
 
 #### O02 development checkpoint — 2026-11-19
 
@@ -147,7 +147,7 @@ Integration references: [Supabase Storage access controls](https://supabase.com/
 **O02 CI evidence (2026-11-19):** [Run 44344674739](https://github.com/JAVcode-1/dannys-micro-hotel/actions/runs/44344674739), checkpoint `794e3a0fa09da7b098901b37293e503dbafb012b`, passed build/typecheck/lint/format, all 72 application tests and **7 isolated PostgreSQL tests, 0 failed, 0 skipped**. Its log explicitly reports `ok 2 - O02 PostgreSQL: private QR/proof, ownership, atomic pending review, deadlines and reminder schedule`, alongside passing O01/V02/V03 coverage. This supersedes the pending-CI note above. The candidate SQL ran only against disposable CI PostgreSQL with a Storage catalog substitute, not hosted Supabase. Staged Gitleaks scan found no leaks. No hosted migration, real QR/proof upload, payment, booking confirmation, physical inventory seed or O03 work occurred. Hosted/provider/email/retention and formal Phase 03/04 acceptance remain pending.
 
 ### O03 — Staff payment review and confirmation
-- [ ] Staff sees 15/30/60m aging; checks actual GCash account against amount, recipient, time/ref.
+- [ ] Staff sees 15/30/60m aging, verifies the amount, recipient, and time in the hotel GCash ledger, and records the ledger reference for receipt-only submissions.
 - [ ] Prevent verified duplicate transaction reference and double approval with idempotency.
 - [ ] Atomically convert protected claims to confirmed bookings; snapshot cancellation terms and `online_confirmation_at`.
 - [ ] Reject/dispute proof with safe customer recovery/refund process and audit.

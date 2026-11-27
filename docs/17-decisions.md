@@ -4,6 +4,10 @@ status: approved-baseline
 ---
 # 17 — Approved Decisions Register
 
+## Receipt-only guest GCash submission (2026-11-27)
+
+Guests upload a screenshot of the GCash receipt for online rooms, Function Hall, or combined bookings. Timely uploads protect the booking while staff review it. Staff must check the actual receiving account, full amount, and time, and enter the unique reference from the hotel’s GCash ledger. Earlier submissions retain their reference and matching checks. This replaces the guest reference requirement recorded on 2026-11-24.
+
 ## Light and dark themes (2026-11-27)
 
 Keep Royal Horizon light as the default and restore the selected theme before rendering. Reveal the new theme from the toggle in either direction with a one-second circular View Transition. Use a color fade where the API is unavailable and apply the theme immediately for reduced motion. Ignore repeated activations until the current transition settles.

@@ -354,7 +354,7 @@ export async function decidePaymentReview(
         await client.query<{
           status: string;
           review_version: number;
-          transaction_reference: string;
+          transaction_reference: string | null;
           amount_due_centavos: string;
           submitted_at: Date;
         }>(
@@ -398,8 +398,9 @@ export async function decidePaymentReview(
       if (input.decision === "confirmed") {
         const v = input.verification!;
         if (
-          v.reference !==
-            normalizePaymentReference(submission.transaction_reference) ||
+          (submission.transaction_reference !== null &&
+            v.reference !==
+              normalizePaymentReference(submission.transaction_reference)) ||
           v.amountCentavos !== Number(reservation.total_centavos) ||
           submission.amount_due_centavos !== reservation.total_centavos
         )

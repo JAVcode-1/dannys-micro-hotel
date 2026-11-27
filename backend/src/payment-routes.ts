@@ -191,11 +191,12 @@ export function registerPaymentRoutes(
     image,
     async (request, response) => {
       try {
+        const reference = request.header("x-transaction-reference");
         response.json(
           await submitPaymentProof(
             response.locals.guest as GuestIdentity,
             String(request.params.reservationId),
-            decoded(request.header("x-transaction-reference")),
+            reference === undefined ? null : decoded(reference),
             request.body as Buffer,
             request.header("content-type") ?? "",
             options.pool,

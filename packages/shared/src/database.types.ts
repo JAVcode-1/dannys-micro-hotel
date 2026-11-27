@@ -1226,7 +1226,7 @@ export type Database = {
           id: string;
           reservation_id: string;
           submitted_by: string;
-          transaction_reference: string;
+          transaction_reference: string | null;
           object_key: string;
           content_type: string;
           byte_length: number;
@@ -1240,7 +1240,7 @@ export type Database = {
           id?: string;
           reservation_id: string;
           submitted_by: string;
-          transaction_reference: string;
+          transaction_reference?: string | null;
           object_key: string;
           content_type: string;
           byte_length: number;
@@ -1254,7 +1254,7 @@ export type Database = {
           id?: string;
           reservation_id?: string;
           submitted_by?: string;
-          transaction_reference?: string;
+          transaction_reference?: string | null;
           object_key?: string;
           content_type?: string;
           byte_length?: number;

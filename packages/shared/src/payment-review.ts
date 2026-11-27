@@ -26,7 +26,7 @@ export type StaffPaymentReview = {
   id: string;
   reservationId: string;
   primaryName: string;
-  transactionReference: string;
+  transactionReference: string | null;
   payeeLabel?: string | null;
   amountDueCentavos: number;
   submittedAt: string;

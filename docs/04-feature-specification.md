@@ -6,7 +6,7 @@ status: baseline
 
 ## Unified Online Booking workflow - 2026-11-21
 
-UB-01 through UB-06 in [[unified-online-booking-requirements-sync]] supersede historical accommodation-only/staff-inquiry restrictions. Guests select rooms, the Hall, or both; each has an independent schedule, availability and immutable server-priced item. Verify the primary guest's email and ownership, review itemized total/policy/contact, atomically hold all selections for one 30-minute proof deadline, then submit one full-payment GCash reference and private screenshot. Timely proof protects every selected item. Staff verify the real transaction before atomic confirmation, staff-dashboard registration and one itemized confirmation/outbox message. Late-paid cases require reconciliation. Never create a partial initial reservation.
+UB-01 through UB-06 in [[unified-online-booking-requirements-sync]] supersede historical accommodation-only/staff-inquiry restrictions. Guests select rooms, the Hall, or both. Each has an independent schedule, availability and immutable server-priced item. Verify the primary guest's email and ownership, review the itemized total, policy and contact details, and hold all selections atomically for one 30-minute receipt deadline. The guest submits one private screenshot for the full GCash payment. Timely proof protects every selected item. Staff verify the actual transaction and record its ledger reference before atomic confirmation, staff-dashboard registration and one itemized confirmation message. Late-paid cases require reconciliation.
 
 Cancellation and approved changes operate per item; free cancellation ends at the earlier of confirmation plus one hour and actual item start. Manual refunds use item allocations and cumulative caps. Accommodation extensions require at least 50% upfront, Hall extensions 100% of additional cost. Countdown never performs checkout/event completion. Local implementation evidence and remaining gaps are separate from acceptance; production remains closed.
 
@@ -21,7 +21,7 @@ Cancellation and approved changes operate per item; free cancellation ends at th
 | INV-02 | Time-aware conflicts | Start/end, cleaning buffer, maintenance and prior holds respected |
 | RES-01 | Multi-room booking | One reservation, independent room-item package, schedule, status and occupancy |
 | RES-02 | Staff room assignment | Guest never chooses room number; staff assigns Ready feasible physical room |
-| PAY-01 | Online payment pending | QR + screenshot + reference, manual staff verification before `confirmed` |
+| PAY-01 | Online payment pending | QR and guest receipt screenshot, followed by staff ledger verification before `confirmed` |
 | PAY-02 | Holds and proof | 30m proof deadline, pending-proof protections and escalations at 15/30/60m |
 | PAY-03 | Cash/GCash ledger | Mixed walk-in payments, 50% min deposit, payment and refund audit |
 | STAY-01 | Countdown | Walk-in starts at staff check-in; online uses confirmed scheduled end; never auto checkout |
@@ -47,7 +47,7 @@ Cancellation and approved changes operate per item; free cancellation ends at th
 
 1. Guest selects category, supported duration(s), room count and occupant counts.
 2. Backend checks actual feasible capacity and creates payment hold in one transaction.
-3. Guest sees stored base price, extra-bed fee, full amount, and QR; submits screenshot **and** reference before expiry.
+3. The guest reviews the stored base price, extra-bed fee, full amount and QR, then uploads a screenshot of the GCash receipt before expiry.
 4. Backend transitions hold to `proof_pending_review` without releasing capacity at the 30m mark.
 5. Staff confirms the GCash transaction actually exists, matches amount, payee and unused reference; then confirms safely.
 6. Confirmation email contains original scheduled start/end and policy snapshot.

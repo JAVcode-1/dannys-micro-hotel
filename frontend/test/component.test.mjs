@@ -22,7 +22,7 @@ test("landing guides guests to booking while keeping verification out of the mai
   const guide = document.querySelector("#how-to-book");
   assert.equal(guide.querySelectorAll("ol > li").length, 5);
   assert.match(guide.textContent, /30-minute hold/);
-  assert.match(guide.textContent, /transaction reference/);
+  assert.match(guide.textContent, /screenshot of your GCash receipt/);
   assert.match(guide.textContent, /screenshot alone does not confirm/);
   assert.match(guide.textContent, /staff verifies the actual GCash payment/);
   assert.ok(guide.querySelector('a[href="/book"]'));

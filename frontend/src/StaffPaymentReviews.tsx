@@ -66,6 +66,8 @@ export function PaymentReviewPanel({
   const [decision, setDecision] = useState<PaymentDecision>("unresolved");
   const [note, setNote] = useState("");
   const [amount, setAmount] = useState("");
+  const [ledgerReference, setLedgerReference] = useState("");
+  const reference = review.transactionReference ?? ledgerReference.trim();
   const [date, setDate] = useState("");
   const [hour, setHour] = useState("12");
   const [minute, setMinute] = useState("00");
@@ -133,6 +135,10 @@ export function PaymentReviewPanel({
     }
     if (choice === "confirmed") {
       const receivedMs = Date.parse(`${date}T${receivedClock}:00+08:00`);
+      if (!reference) {
+        setMessage("Enter the reference from the hotel’s GCash ledger.");
+        return;
+      }
       if (
         !Number.isFinite(receivedMs) ||
         !receivedCentavos ||
@@ -147,7 +153,7 @@ export function PaymentReviewPanel({
         ledgerChecked: true,
         receivingAccountChecked: true,
         timeChecked: true,
-        reference: review.transactionReference,
+        reference,
         recipient: review.payeeLabel,
         amountCentavos: receivedCentavos,
         receivedAt: syncedTime ?? new Date(receivedMs).toISOString(),
@@ -211,12 +217,14 @@ export function PaymentReviewPanel({
             {money(review.amountDueCentavos)}
           </dd>
         </div>
-        <div>
-          <dt className="text-sm text-muted">Submitted reference</dt>
-          <dd className="break-all font-semibold">
-            {review.transactionReference}
-          </dd>
-        </div>
+        {review.transactionReference && (
+          <div>
+            <dt className="text-sm text-muted">Submitted reference</dt>
+            <dd className="break-all font-semibold">
+              {review.transactionReference}
+            </dd>
+          </div>
+        )}
         <div>
           <dt className="text-sm text-muted">Proof submitted · Manila</dt>
           <dd>{time(review.submittedAt)}</dd>
@@ -373,11 +381,31 @@ export function PaymentReviewPanel({
               <legend className="px-1 font-semibold">
                 Actual receiving-account record
               </legend>
+              {decision === "confirmed" && !review.transactionReference && (
+                <label className="block text-sm">
+                  GCash ledger reference
+                  <input
+                    value={ledgerReference}
+                    maxLength={100}
+                    onChange={(event) => {
+                      setLedgerReference(event.target.value);
+                      setChecks(([ledger, account]) => [
+                        ledger,
+                        account,
+                        false,
+                      ]);
+                    }}
+                    className="mt-1 w-full rounded-lg border border-subtle p-3"
+                  />
+                </label>
+              )}
               {decision === "confirmed" &&
                 [
                   "I checked actual receipt in the hotel’s GCash ledger.",
                   "I matched the hotel receiving account and full amount.",
-                  "I matched the transaction time and submitted reference against GCash.",
+                  review.transactionReference
+                    ? "I matched the transaction time and submitted reference against GCash."
+                    : "I checked the transaction time and reference in the hotel’s GCash ledger.",
                 ].map((label, index) => (
                   <label key={label} className="flex items-start gap-2 text-sm">
                     <input
@@ -518,6 +546,7 @@ export function PaymentReviewPanel({
                 !confirmationEnabled ||
                 decision !== "confirmed" ||
                 !checks.every(Boolean) ||
+                !reference ||
                 !review.payeeLabel ||
                 !date ||
                 !receivedClock ||

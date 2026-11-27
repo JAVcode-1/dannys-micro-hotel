@@ -724,8 +724,8 @@ export default function LandingPage({
                 <h3>Pay &amp; submit proof</h3>
                 <p>
                   Pay the full amount using the hotel’s GCash QR shown in your
-                  booking. Submit your transaction reference and payment
-                  screenshot before the hold expires.
+                  booking. Upload a screenshot of your GCash receipt before the
+                  hold expires.
                 </p>
               </li>
               <li>

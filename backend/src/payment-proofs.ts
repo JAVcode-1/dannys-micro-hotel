@@ -22,7 +22,7 @@ import {
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const confirmedRollback = (error: unknown) =>
   error instanceof BookingError ||
-  ["23505", "23503", "23514", "P0001", "40001", "40P01"].includes(
+  ["23502", "23505", "23503", "23514", "P0001", "40001", "40P01"].includes(
     (error as { code?: string } | null)?.code ?? "",
   );
 function checkId(id: string) {
@@ -227,14 +227,16 @@ export async function submitPaymentProof(
   store = paymentMediaStore(),
 ): Promise<{ status: "pending_review"; replayed: boolean }> {
   const extension = validatePaymentImage(bytes, mime);
-  if (typeof reference !== "string" || !/^[0-9]{10,13}$/.test(reference))
+  if (
+    reference !== null &&
+    (typeof reference !== "string" || !/^[0-9]{10,13}$/.test(reference))
+  )
     throw new BookingError(
       "Enter a GCash transaction reference with 10 to 13 digits.",
     );
-  const ref = reference;
   await ownedReservation(guest, reservationId, pool);
   const hash = createHash("sha256")
-    .update(ref)
+    .update(reference ?? "")
     .update("\0")
     .update(bytes)
     .digest("hex");
@@ -299,7 +301,7 @@ export async function submitPaymentProof(
         [
           reservationId,
           guest.id,
-          ref,
+          reference,
           key,
           mime,
           bytes.length,

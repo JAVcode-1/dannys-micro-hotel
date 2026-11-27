@@ -4,6 +4,12 @@ status: in-progress
 ---
 # 14 — Milestones & Work Tracker
 
+## Receipt-only guest GCash submission (2026-11-27)
+
+The online booking form and payment instructions now ask guests for a GCash receipt screenshot. Staff verify the full transaction in the hotel’s GCash ledger and record its reference before confirming a receipt-only submission. Earlier submissions retain their reference matching. No dependency was added.
+
+Build, typecheck, lint, 246 application tests, and 40 disposable PostgreSQL tests passed. The payment tests cover receipt-only upload, ownership, timely proof protection, replay, manual review, and duplicate reference rejection. Hosted migration `20261127003600`, provider checks and browser acceptance remain pending. No checklist items were closed. The next step is separate approval to apply the migration before deploying the API and frontend.
+
 ## Light and dark themes (2026-11-27)
 
 Guest and staff screens use a shared theme preference with local storage, an expanding View Transition, a CSS color-fade fallback, and an immediate switch for reduced motion. Browser acceptance is pending owner testing. No checklist items were closed.

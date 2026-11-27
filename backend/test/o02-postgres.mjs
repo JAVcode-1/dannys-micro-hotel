@@ -29,6 +29,7 @@ export async function o02Postgres(t, pool) {
       for (const file of [
         "20261118000100_staff_identities.sql",
         "20261118000600_payment_proof_submission.sql",
+        "20261127003600_receipt_only_guest_proof.sql",
       ])
         await pool.query(
           readFileSync(
@@ -258,21 +259,20 @@ export async function o02Postgres(t, pool) {
             .status,
           404,
         );
-        const missing = await fetch(`${base}/proof`, {
+        const unauthorized = await fetch(`${base}/proof`, {
           method: "POST",
           headers: {
-            Authorization: "Bearer owner",
+            Authorization: "Bearer other",
             "Content-Type": "image/png",
           },
           body: png,
         });
-        assert.equal(missing.status, 400);
+        assert.equal(unauthorized.status, 404);
         const accepted = await fetch(`${base}/proof`, {
           method: "POST",
           headers: {
             Authorization: "Bearer owner",
             "Content-Type": "image/png",
-            "X-Transaction-Reference": "0200000001",
           },
           body: png,
         });
@@ -288,7 +288,7 @@ export async function o02Postgres(t, pool) {
         await submitPaymentProof(
           guest,
           hold.id,
-          "0200000001",
+          null,
           png,
           "image/png",
           pool,
@@ -310,11 +310,15 @@ export async function o02Postgres(t, pool) {
       );
       assert.equal(uploads.size, before + 1);
       const saved = await pool.query(
-        "select status, amount_due_centavos::int from staytrack.payment_submissions where reservation_id = $1",
+        "select status, transaction_reference, amount_due_centavos::int from staytrack.payment_submissions where reservation_id = $1",
         [hold.id],
       );
       assert.deepEqual(saved.rows, [
-        { status: "pending_review", amount_due_centavos: 290000 },
+        {
+          status: "pending_review",
+          transaction_reference: null,
+          amount_due_centavos: 290000,
+        },
       ]);
       assert.equal(
         (await guestPaymentSession(guest, hold.id, pool, store)).status,

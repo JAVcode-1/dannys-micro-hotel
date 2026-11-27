@@ -48,14 +48,14 @@ test("an uncertain QR commit retains the private image rather than deleting poss
   assert.equal(objects.size, 1);
 });
 
-test("an uncertain proof commit retains the screenshot for safe reconciliation", async () => {
+test("an uncertain receipt-only proof commit retains the screenshot for reconciliation", async () => {
   const bytes = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aV1cAAAAASUVORK5CYII=",
     "base64",
   );
   const objects = new Map();
   const client = {
-    async query(sql) {
+    async query(sql, params) {
       if (sql === "commit")
         throw Object.assign(new Error("uncertain proof commit"), {
           code: "ECONNRESET",
@@ -76,6 +76,8 @@ test("an uncertain proof commit retains the screenshot for safe reconciliation",
         };
       if (sql.includes("clock_timestamp"))
         return { rows: [{ now: new Date() }], rowCount: 1 };
+      if (sql.includes("insert into staytrack.payment_submissions"))
+        assert.equal(params[2], null);
       return { rows: [], rowCount: 1 };
     },
     release() {},
@@ -102,7 +104,7 @@ test("an uncertain proof commit retains the screenshot for safe reconciliation",
         email: "owner@example.test",
       },
       "44444444-4444-4444-8444-444444444444",
-      "0200000001",
+      null,
       bytes,
       "image/png",
       pool,

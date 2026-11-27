@@ -1302,7 +1302,7 @@ export default function BookingPlanner({
                               {[
                                 {
                                   title: "Payment",
-                                  text: "Pay the full amount via GCash. Submit proof and reference number within 30 minutes.",
+                                  text: "Pay the full amount via GCash. Upload a screenshot of your receipt within 30 minutes.",
                                   icon: "M3 7h18v13H3z M3 7V4h14v3 M16 12h5v4h-5z",
                                 },
                                 {

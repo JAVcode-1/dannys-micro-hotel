@@ -33,14 +33,14 @@ const session = {
   emailDeliveryEnabled: false,
 };
 
-test("O02 preview requires screenshot and reference, then shows pending staff verification only", async () => {
+test("O02 preview accepts a screenshot alone and shows pending staff verification", async () => {
   let submitted;
   render(
     createElement(PaymentPanel, {
       session,
       preview: true,
-      onSubmit: async (reference, file) => {
-        submitted = { reference, file };
+      onSubmit: async (file) => {
+        submitted = file;
       },
     }),
   );
@@ -52,9 +52,7 @@ test("O02 preview requires screenshot and reference, then shows pending staff ve
     .closest("form");
   fireEvent.submit(form);
   assert.ok(screen.getByRole("alert"));
-  fireEvent.change(screen.getByLabelText("Transaction reference"), {
-    target: { value: "0123456789" },
-  });
+  assert.ok(!screen.queryByLabelText("Transaction reference"));
   fireEvent.change(
     screen.getByLabelText("Payment screenshot (PNG/JPEG, up to 5 MB)"),
     {
@@ -73,8 +71,7 @@ test("O02 preview requires screenshot and reference, then shows pending staff ve
       }),
     ),
   );
-  assert.equal(submitted.reference, "0123456789");
-  assert.equal(submitted.file.name, "sample.png");
+  assert.equal(submitted.name, "sample.png");
   assert.ok(screen.getByText(/Your booking is not confirmed yet/));
   assert.equal(screen.queryByRole("button", { name: "Preview upload" }), null);
 });
@@ -89,13 +86,13 @@ test("expired O02 session offers reconciliation and no submission form", () => {
     }),
   );
   assert.ok(screen.getByText(/contact staff for reconciliation/));
-  assert.equal(screen.queryByLabelText("Transaction reference"), null);
+  assert.equal(screen.queryByLabelText(/Payment screenshot/), null);
 });
 
 test("unconfigured real QR keeps proof submission disabled", () => {
   render(createElement(PaymentPanel, { session, onSubmit: async () => {} }));
   assert.equal(
-    screen.getByLabelText("Transaction reference").closest("fieldset").disabled,
+    screen.getByLabelText(/Payment screenshot/).closest("fieldset").disabled,
     true,
   );
   assert.ok(
@@ -117,5 +114,5 @@ test("confirmed payment never shows an expired proof warning or payment form", (
   assert.ok(screen.getByText("Payment verified"));
   assert.ok(screen.getByText(/current status of each room and event/));
   assert.equal(screen.queryByText(/contact staff for reconciliation/), null);
-  assert.equal(screen.queryByLabelText("Transaction reference"), null);
+  assert.equal(screen.queryByLabelText(/Payment screenshot/), null);
 });

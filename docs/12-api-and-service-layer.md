@@ -17,7 +17,7 @@ Use the existing Express guest quote/reservation/proof and staff verification su
 | POST | `/availability/quote` | Server calculates feasible room schedule and price quote |
 | POST | `/holds` | Atomic claim creation for online payment, 30m proof deadline |
 | GET | `/holds/:reference` | Authorized status + deadline |
-| POST | `/holds/:reference/proof` | Upload screenshot/ref, transition to protected review state |
+| POST | `/guest/payments/:reservationId/proof` | Upload a receipt screenshot and transition to protected review state |
 | POST | `/guest/otp/send` | Optional API wrapper around **Supabase Auth email OTP**; throttle and never disclose account existence |
 | POST | `/guest/otp/verify` | Optional API wrapper around Supabase Auth OTP verify; issue/validate scoped identity |
 | POST | `/staff/auth/login` | Optional API wrapper; default login uses Supabase Auth client and Express verifies session/active staff membership |

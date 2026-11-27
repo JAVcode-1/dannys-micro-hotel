@@ -142,7 +142,7 @@ export function HallInformation() {
       </div>
       <p className="text-sm leading-6 text-muted">
         You can add rooms to the same reservation. Online bookings require one
-        full GCash payment with a reference and screenshot. Staff verify the
+        full GCash payment and a screenshot of the receipt. Staff verify the
         actual transaction before confirming all selected items. Timely proof
         protects your selections during review. Booking is available only when
         enabled by the hotel.

@@ -7,7 +7,7 @@ Owner request: 2026-11-21. Final targeted verification: 2026-11-22 (Asia/Manila)
 | Decision | Approved behavior |
 |---|---|
 | UB-01 | 100% upfront for every online reservation. Staff-managed Hall minimum 50% deposit remains. |
-| UB-02 | One actual GCash transaction, reference, private screenshot and authoritative verified payment; item allocations separate room/Hall finances without duplicate receipts. |
+| UB-02 | One full GCash transaction and private receipt screenshot. Staff verify the transaction and record its unique ledger reference. Item allocations separate room and Hall finances. |
 | UB-03 | All selected services must be available; claim all inventory atomically. One 30-minute proof deadline. Timely proof protects every item until staff resolution; otherwise expire all holds together. Paid-late reconciliation remains manual. |
 | UB-04 | Staff verify actual full payment and atomically confirm every item. Persist directly in staff management, protect inventory, generate one itemized confirmation and enqueue email. Review target 15 minutes; escalation 30/60 minutes. |
 | UB-05 | Independent item cancellation before confirmation plus one hour and before actual room check-in/Hall event start. Release only cancelled capacity. Eligible GCash refunds are manual, itemized, idempotent and capped. |
@@ -15,7 +15,7 @@ Owner request: 2026-11-21. Final targeted verification: 2026-11-22 (Asia/Manila)
 
 ## Workflow and architecture
 
-Select rooms, one Hall or both -> independent schedules, attendees/occupants and requests -> server quote and availability -> verified guest ownership/contact/policy review -> atomic common hold -> one full GCash payment/reference/private screenshot -> protected staff review -> actual transaction verification and atomic confirmation -> staff room/Hall operations and one itemized notification.
+Select rooms, one Hall or both -> independent schedules, attendees/occupants and requests -> server quote and availability -> verified guest ownership/contact/policy review -> atomic common hold -> full GCash payment and private receipt upload -> protected staff review -> actual ledger verification and atomic confirmation -> staff room/Hall operations and one itemized notification.
 
 The Hall has Theater Type (70 attendees) or Room Type (50), alternative configurations of one exclusive resource. Bedroom capacity remains 10 Double Standard and 5 Family Executive. Existing Hall hours, notice, buffers, full-hour pricing and staff operations remain separate from room inventory/readiness. Prices and UTC instants are server-authoritative. Ordinary financial inputs use pesos and convert exactly to integer centavos; schedules display Manila AM/PM.
 

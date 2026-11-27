@@ -4,6 +4,10 @@ status: unified-online-booking-development-review
 ---
 # Session Context — StayTrack / Danny's Micro Hotel
 
+## Receipt-only guest GCash submission (2026-11-27)
+
+The guest form uploads the receipt image to the existing Express proof endpoint. Staff enter the actual GCash ledger reference during confirmation of receipt-only submissions. Existing payment verification and capacity checks still apply. Migration `20261127003600` requires separate hosted approval before the frontend and API are deployed together.
+
 The Function Hall and refunds checkpoint has passing build, typecheck, lint, formatting, 229 application tests and 40 integration tests on disposable PostgreSQL. The targeted unified-booking PostgreSQL check also passed. Staff-assisted rescheduling now uses the current form props, and test fixtures exercise the current availability, payment and staff sign-in flows. Manual browser acceptance remains pending.
 
 ## Light and dark themes (2026-11-27)

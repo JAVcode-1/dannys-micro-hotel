@@ -59,7 +59,7 @@ export async function o03Postgres(t, pool) {
         },
       };
       let counter = 0;
-      async function make(reference) {
+      async function make(reference, submittedReference = reference) {
         counter++;
         const start =
           Math.ceil((Date.now() + (180 + counter * 4) * 86400000) / 60000) *
@@ -92,7 +92,7 @@ export async function o03Postgres(t, pool) {
         await submitPaymentProof(
           guest,
           hold.id,
-          reference,
+          submittedReference,
           png,
           "image/png",
           pool,
@@ -236,7 +236,29 @@ export async function o03Postgres(t, pool) {
             row.state === "proof_pending_review" && row.status === "pending",
         ),
       );
-      const races = await Promise.all([make("0300000002"), make("0300000002")]);
+      const races = await Promise.all([
+        make("0300000002", null),
+        make("0300000002", null),
+      ]);
+      const queue = await staffPaymentReviews(pool);
+      for (const record of races) {
+        assert.equal(
+          queue.find((row) => row.id === record.id).transactionReference,
+          null,
+        );
+        assert.ok(
+          (await state(record)).every(
+            (row) => row.state === "proof_pending_review",
+          ),
+        );
+      }
+      await assert.rejects(
+        decide(races[0], {
+          ...races[0].input,
+          verification: { ...races[0].input.verification, reference: "" },
+        }),
+        /reference/i,
+      );
       const results = await Promise.allSettled(races.map((row) => decide(row)));
       assert.equal(
         results.filter((row) => row.status === "fulfilled").length,

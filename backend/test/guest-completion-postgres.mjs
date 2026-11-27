@@ -142,7 +142,7 @@ export async function guestPostgres(t, pool) {
           { ...contact, policyAcknowledged: false },
           expectedTotal,
         ),
-        /acknowledge/,
+        /acknowledge/i,
       );
       assert.equal(
         Number(

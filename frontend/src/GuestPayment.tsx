@@ -1,13 +1,11 @@
 import { useApiQuery, useCurrentSignedMedia, writeApi } from "./api-query";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import type { PaymentSession } from "@staytrack/shared";
 import { hotelTime, peso } from "./BookingPlanner";
 import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
 import { readableLabel } from "./presentation";
-
-const referencePattern = /^[0-9]{10,13}$/;
 
 export function PaymentPanel({
   session,
@@ -18,11 +16,9 @@ export function PaymentPanel({
   session: PaymentSession;
   preview?: boolean;
   receivedAt?: number;
-  onSubmit(reference: string, file: File): Promise<void>;
+  onSubmit(file: File): Promise<void>;
 }) {
   const [elapsed, setElapsed] = useState(0);
-  const [reference, setReference] = useState("");
-  const referenceHintId = useId();
   const [file, setFile] = useState<File | null>(null);
   const [submittedAgainst, setSubmittedAgainst] = useState<string>();
   const pending =
@@ -61,10 +57,6 @@ export function PaymentPanel({
   async function submit(event: FormEvent) {
     event.preventDefault();
     setMessage("");
-    if (!referencePattern.test(reference)) {
-      setMessage("Enter a GCash transaction reference with 10 to 13 digits.");
-      return;
-    }
     if (
       !file ||
       !["image/png", "image/jpeg"].includes(file.type) ||
@@ -76,10 +68,9 @@ export function PaymentPanel({
     }
     setBusy(true);
     try {
-      await onSubmit(reference, file);
+      await onSubmit(file);
       setSubmittedAgainst(session.serverNow);
       setFile(null);
-      setReference("");
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -151,9 +142,9 @@ export function PaymentPanel({
                 hotel’s QR code in GCash to send your payment.
               </li>
               <li>
-                <strong>Submit your payment proof.</strong> Enter the GCash
-                transaction reference, upload your payment screenshot, and
-                select Submit proof before the deadline.
+                <strong>Submit your payment proof.</strong> Upload a screenshot
+                of your GCash receipt and select Submit proof before the
+                deadline.
               </li>
               <li>
                 <strong>Wait for staff verification.</strong> Your booking is
@@ -206,9 +197,8 @@ export function PaymentPanel({
             </p>
             {!expired && (
               <p className="mt-2 text-sm text-muted">
-                Submit both proof and reference before the deadline. Timely
-                submission keeps your selected availability protected during
-                review.
+                Submit your receipt before the deadline. Timely submission keeps
+                your selected availability protected during review.
               </p>
             )}
             {expired ? (
@@ -224,8 +214,7 @@ export function PaymentPanel({
                     role="status"
                     className="mt-4 text-sm font-semibold text-primary"
                   >
-                    Reminder: submit your screenshot and reference before the
-                    deadline.
+                    Reminder: submit your screenshot before the deadline.
                   </p>
                 )}
                 {session.qrUrl && !preview ? (
@@ -263,21 +252,6 @@ export function PaymentPanel({
                     className="space-y-4 disabled:opacity-60"
                   >
                     <legend className="sr-only">Submit payment proof</legend>
-                    <label className="block text-sm font-semibold">
-                      Transaction reference
-                      <input
-                        required
-                        inputMode="numeric"
-                        pattern={referencePattern.source}
-                        aria-describedby={referenceHintId}
-                        value={reference}
-                        onChange={(event) => setReference(event.target.value)}
-                        className="mt-2 min-h-11 w-full rounded-xl border border-subtle px-3 text-base"
-                      />
-                    </label>
-                    <p id={referenceHintId} className="text-sm text-muted">
-                      Enter 10 to 13 digits.
-                    </p>
                     <label className="block text-sm font-semibold">
                       Payment screenshot (PNG/JPEG, up to 5 MB)
                       <input
@@ -358,7 +332,7 @@ export default function GuestPayment({
           key={reservationId}
           receivedAt={payment.dataUpdatedAt}
           session={session}
-          onSubmit={async (reference, file) => {
+          onSubmit={async (file) => {
             const response = await writeApi(
               `${apiBase}/guest/payments/${reservationId}/proof`,
               {
@@ -366,7 +340,6 @@ export default function GuestPayment({
                 headers: {
                   Authorization: `Bearer ${token}`,
                   "Content-Type": file.type,
-                  "X-Transaction-Reference": encodeURIComponent(reference),
                 },
                 body: file,
               },

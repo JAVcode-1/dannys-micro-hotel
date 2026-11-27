@@ -92,13 +92,13 @@ test("O03 synthetic reconciliation saves locally without confirming or changing 
   assert.ok(screen.getByText(/Dec 1, 2026, 2:00 PM/));
   assert.ok(screen.getByText(/Dec 2, 2026, 4:00 PM/));
 });
-test("O03 manual checks and Manila received time are required; uncertain retries reuse the request key", async () => {
+test("O03 receipt-only reviews require a ledger reference, manual checks and Manila received time; retries reuse the request key", async () => {
   const payloads = [];
   const review = {
     id: "test",
     reservationId: "test-reservation",
     primaryName: "TEST GUEST",
-    transactionReference: "TEST-REF",
+    transactionReference: null,
     payeeLabel: "TEST PAYEE",
     amountDueCentavos: 20000,
     submittedAt: "2026-11-19T05:00:00Z",
@@ -143,9 +143,16 @@ test("O03 manual checks and Manila received time are required; uncertain retries
     fireEvent.change(screen.getByLabelText(label), { target: { value } });
   for (const checkbox of screen.getAllByRole("checkbox"))
     fireEvent.click(checkbox);
+  assert.ok(button.disabled);
+  fireEvent.change(screen.getByLabelText("GCash ledger reference"), {
+    target: { value: "0123456789" },
+  });
+  assert.ok(button.disabled);
+  fireEvent.click(screen.getAllByRole("checkbox").at(-1));
   fireEvent.click(button);
   await screen.findByText(/Uncertain network/);
   assert.equal(payloads.length, 1);
+  assert.equal(payloads[0].verification.reference, "0123456789");
   assert.equal(payloads[0].verification.receivedAt, "2026-11-19T05:05:00.000Z");
   assert.equal(payloads[0].verification.amountCentavos, 20000);
   assert.equal(payloads[0].expectedVersion, 2);

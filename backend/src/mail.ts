@@ -42,7 +42,7 @@ export function renderBookingMail(message: MailMessage, site: string) {
     case "reservation_created":
       subject = "Your booking selections are on hold";
       lines.push(
-        "Your booking is not confirmed yet. Submit the full GCash payment reference and private screenshot before the shared deadline. Staff must verify the actual payment.",
+        "Your booking is not confirmed yet. Upload a screenshot of your GCash receipt before the shared deadline. Staff must verify the full payment.",
       );
       break;
     case "payment_submitted":
@@ -96,7 +96,7 @@ export function renderBookingMail(message: MailMessage, site: string) {
     case "payment_reminder":
       subject = "Your booking payment deadline is approaching";
       lines.push(
-        "Submit your GCash reference and screenshot before the shared deadline to keep your selections. If you have already paid but cannot submit proof, contact staff; do not pay again.",
+        "Upload a screenshot of your GCash receipt before the shared deadline to keep your selections. If you have already paid but cannot submit proof, contact staff. Do not pay again.",
       );
       break;
     default:

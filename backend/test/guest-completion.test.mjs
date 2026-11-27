@@ -8,7 +8,7 @@ import {
 import { guestPaymentSession } from "../dist/payment-proofs.js";
 import { cancellationRows } from "../dist/cancellations.js";
 
-test("booking contact requires disclosed current policy and rejects control characters", () => {
+test("booking contact requires disclosed policy and retains the previous version for retries", () => {
   assert.deepEqual(
     parseBookingContact({
       phone: " +63 917 000 0000 ",
@@ -20,6 +20,14 @@ test("booking contact requires disclosed current policy and rejects control char
       policyVersion: bookingPolicy.version,
       policyAcknowledged: true,
     },
+  );
+  assert.equal(
+    parseBookingContact({
+      phone: "09170000000",
+      policyVersion: "booking-v2",
+      policyAcknowledged: true,
+    }).policyVersion,
+    "booking-v2",
   );
   for (const value of [
     undefined,

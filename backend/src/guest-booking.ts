@@ -26,15 +26,16 @@ import { databasePool } from "./database.js";
 import { insertBookedItems } from "./booked-items.js";
 
 export const bookingPolicy = {
-  version: "booking-v2",
-  text: "No smoking. Online reservations require full payment to the configured hotel GCash account and actual staff verification. Upload both payment proof and reference within 30 minutes; timely submitted proof protects capacity while staff review is pending. An upload does not confirm a reservation. Free cancellation ends one hour after staff confirmation or that item's actual room check-in or Hall event start, whichever occurs first; rescheduling does not restart the window. Online late arrival does not move checkout. No-shows require staff review and are generally nonrefundable under the disclosed policy and applicable law. Refunds are processed manually. Occupancy guidance is advisory; minor eligibility and legal limits require staff review.",
+  version: "booking-v3",
+  text: "No smoking. Online reservations require full payment to the configured hotel GCash account and actual staff verification. Upload a screenshot of your GCash receipt within 30 minutes. Timely submitted proof protects capacity while staff review is pending. An upload does not confirm a reservation. Free cancellation ends one hour after staff confirmation or that item's actual room check-in or Hall event start, whichever occurs first; rescheduling does not restart the window. Online late arrival does not move checkout. No-shows require staff review and are generally nonrefundable under the disclosed policy and applicable law. Refunds are processed manually. Occupancy guidance is advisory; minor eligibility and legal limits require staff review.",
   pendingOwnerApproval: true,
 };
 export function parseBookingContact(value: unknown) {
   const contact = value as Record<string, unknown> | null;
   if (
     !contact ||
-    contact.policyVersion !== bookingPolicy.version ||
+    (contact.policyVersion !== bookingPolicy.version &&
+      contact.policyVersion !== "booking-v2") ||
     contact.policyAcknowledged !== true
   )
     throw new BookingError("Acknowledge the current booking policy.");
@@ -46,9 +47,9 @@ export function parseBookingContact(value: unknown) {
       "Enter a Philippine mobile number in 09XX XXX XXXX or +63 9XX XXX XXXX format.",
     );
   return {
-    // Keep the submitted format in the request hash so existing keys can be replayed.
+    // Keep the submitted phone format and policy version for existing hold retries.
     phone: contact.phone.trim(),
-    policyVersion: bookingPolicy.version,
+    policyVersion: contact.policyVersion,
     policyAcknowledged: true as const,
   };
 }

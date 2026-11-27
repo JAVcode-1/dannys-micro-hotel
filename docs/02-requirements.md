@@ -21,7 +21,7 @@ Owner approved same-day and overnight Function Hall bookings without a daily ope
 The owner's implementation request resolves the earlier mixed-booking policy questions. This section supersedes older statements below that describe these decisions as pending or restrict customer Hall bookings to staff inquiries. Implementation and acceptance evidence are recorded separately in [[unified-online-booking-requirements-sync]].
 
 - **UB-01:** All online accommodation, Hall-only and combined reservations require 100% upfront verified payment. Staff-managed Hall reservations retain their existing minimum 50% deposit.
-- **UB-02:** One GCash transaction, reference and private screenshot cover the online reservation. Keep one authoritative payment and item allocations, separate room/Hall reporting and global reference uniqueness. Staff verify the actual transaction; a screenshot never confirms anything.
+- **UB-02:** One full GCash transaction and a private screenshot of the receipt cover the online reservation. Staff verify the actual transaction in the hotel's GCash ledger and record its reference. Keep one authoritative payment and item allocations, separate room/Hall reporting and global reference uniqueness.
 - **UB-03:** Check every selected resource and obtain all room/Hall claims atomically. One 30-minute proof deadline applies. Timely proof protects every selected item until staff resolves verification; otherwise expire all initial holds together. Preserve paid-late reconciliation and manual refund safeguards.
 - **UB-04:** Staff verify the full amount and confirm all items atomically. The same persisted reservation appears in staff management without re-entry. Generate one itemized confirmation and enqueue its email; retain 15-minute review target and 30/60-minute escalation. Assignment, check-in and actual event start remain staff actions.
 - **UB-05:** Free online cancellation ends at one hour after staff confirmation or that item's actual room check-in/Hall start, whichever is earlier. Cancel/refund independently, release only the cancelled capacity and preserve siblings. GCash refunds are manual, itemized, idempotent and bounded by attributable verified payments.
@@ -69,7 +69,7 @@ There is **no 3h Family Executive package**. Multi-day stays consist of permitte
 ## Online reservations — manual GCash verification
 
 - Online guest must pay **full reservation amount before confirmation**, via hotel-owned QR uploaded/configured by staff.
-- Guest uploads payment screenshot **and** transaction reference, subject to authenticity and duplicate-reference checks. Screenshot/reference are NOT proof of actual receipt; staff verifies against the hotel's actual GCash transaction record.
+- The guest uploads a screenshot of the GCash receipt. Staff verify the full payment in the hotel's GCash ledger and record the verified transaction reference before confirmation.
 - Create temporary 30-minute category-capacity hold while payment proof is being submitted; 5m on-screen reminder, 15m and 25m email nudges if feasible.
 - If no proof at 30m, hold expires/releases. If guest actually paid but failed to submit before expiry, staff reconcile money and availability; with guest consent propose a replacement schedule/room or manually refund verified payment.
 - If proof submitted within 30m, capacity remains protected pending staff review, even after the initial hold expires; 15m review target, overdue at 15m, urgent at 30m, critical at 60m; do not silently auto-release just because staff are late.
