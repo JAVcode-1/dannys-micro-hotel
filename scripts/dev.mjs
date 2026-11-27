@@ -70,7 +70,9 @@ const backend = start(
   },
 );
 let ready = false;
-for (let attempt = 0; attempt < 60 && !stopping; attempt++) {
+// Hosted startup includes the pooler connection, schema checks and private storage checks.
+const startupDeadline = performance.now() + 60000;
+while (performance.now() < startupDeadline && !stopping) {
   if (backend.exitCode !== null) break;
   try {
     const response = await fetch(`http://127.0.0.1:${port}/ready`, {
@@ -88,7 +90,7 @@ for (let attempt = 0; attempt < 60 && !stopping; attempt++) {
 if (!ready) {
   stop();
   throw new Error(
-    "Hosted API startup is incomplete. Resolve the configuration or migration error above before restarting.",
+    "Hosted API did not become ready. Check the API output above for connection, configuration or schema errors.",
   );
 }
 // Never pass backend secrets or database credentials to the frontend process.

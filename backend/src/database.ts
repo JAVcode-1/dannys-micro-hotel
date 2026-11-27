@@ -66,7 +66,8 @@ export function databasePool(): Pool {
           servername: url.hostname.replace(/^\[|\]$/g, ""),
         },
     max: 5,
-    connectionTimeoutMillis: 5000,
+    connectionTimeoutMillis:
+      !local && process.env.NODE_ENV === "development" ? 30000 : 5000,
     idleTimeoutMillis: 30000,
     statement_timeout: 10000,
     query_timeout: 10000,
