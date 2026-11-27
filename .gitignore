@@ -21,3 +21,6 @@ supabase/.branches/
 .scanloop/reports/
 .quality/
 /.local-assets/
+
+# Local agent skills
+/.agents/skills/

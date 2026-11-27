@@ -2,6 +2,8 @@
 
 The original Claude `SKILL.md` files are preserved under `.agents/skills/`. In Codex, use `/skills` to check discovery. The verifier compares file hashes with `.agents/skills-manifest.json`. Follow [AGENTS.md](AGENTS.md) for the development checkpoint and full quality-gate requirements.
 
+Before running the full quality gate in a fresh clone, copy the original skill files into the local `.agents/skills/` directory.
+
 ## Run once in VS Code PowerShell
 
 ```powershell
