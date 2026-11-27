@@ -1,3 +1,4 @@
+import { useApiQuery, writeApi } from "./api-query";
 import { readableLabel } from "./presentation";
 import ManilaDateTimeInput from "./ManilaDateTimeInput";
 import { useEffect, useRef, useState } from "react";
@@ -87,7 +88,7 @@ export default function CancellationDesk({
   token?: string;
   guest?: boolean;
 }) {
-  const [rows, setRows] = useState<CancellationRow[]>(() => {
+  const [demoRows, setRows] = useState<CancellationRow[]>(() => {
     if (token) return [];
     try {
       return (
@@ -98,12 +99,7 @@ export default function CancellationDesk({
     }
   });
   const [page, setPage] = useState(0);
-  const [historyStatus, setHistoryStatus] = useState<
-    "loading" | "ready" | "error"
-  >("loading");
-  const [enabled, setEnabled] = useState(!token);
-  const [actor, setActor] = useState("Synthetic staff");
-  const [message, setMessage] = useState("");
+  const [actionMessage, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [confirmation, setConfirmation] = useState<{
     id: string;
@@ -117,34 +113,29 @@ export default function CancellationDesk({
   const [requestId, setRequestId] = useState("");
   const attempts = useRef(new Map<string, { key: string; body: string }>());
   const base = guest ? "/guest/cancellations" : "/staff/cancellations";
-  async function load() {
-    if (!token) return;
-    setHistoryStatus("loading");
-    try {
-      const response = await fetch(apiBase + base + `?page=${page}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error();
-      setRows(data.items);
-      setEnabled(data.enabled);
-      setActor(data.actorId ?? "");
-      setHistoryStatus("ready");
-    } catch {
-      setHistoryStatus("error");
-      setEnabled(false);
-      setMessage(
-        "Cancellation history unavailable. Approved migration and acceptance are required.",
-      );
-    }
-  }
+  const history = useApiQuery<{
+    items: CancellationRow[];
+    enabled: boolean;
+    actorId?: string;
+  }>(token ? base + "?page=" + page : null, token, { live: true });
+  const rows = token ? (history.data?.items ?? []) : demoRows;
+  const actor = token ? (history.data?.actorId ?? "") : "Synthetic staff";
+  const enabled =
+    !token || (history.data?.enabled === true && !history.isError);
+  const historyStatus = history.isError
+    ? "error"
+    : history.isPending
+      ? "loading"
+      : "ready";
+  const message =
+    actionMessage ||
+    (history.isError
+      ? "Cancellation history unavailable. Approved migration and acceptance are required."
+      : "");
+  const load = () => history.refetch({ cancelRefetch: false });
   useEffect(() => {
-    void load();
-  }, [token, guest, page]);
-  useEffect(() => {
-    if (!token) sessionStorage.setItem(demoKey, JSON.stringify(rows));
-  }, [rows, token]);
+    if (!token) sessionStorage.setItem(demoKey, JSON.stringify(demoRows));
+  }, [demoRows, token]);
   async function submit(
     row: CancellationRow,
     action: "request" | "approve" | "reject" | "claim" | "transfer",
@@ -218,7 +209,7 @@ export default function CancellationDesk({
           );
         const attempt = prior ?? { key: crypto.randomUUID(), body: encoded };
         attempts.current.set(attemptId, attempt);
-        const response = await fetch(apiBase + path, {
+        const response = await writeApi(apiBase + path, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -778,7 +769,7 @@ export function GuestCancellationRequest({
           "Retry the original reason or reconcile the uncertain request.",
         );
       attempt.current ??= { key: crypto.randomUUID(), reason: reason.trim() };
-      const response = await fetch(
+      const response = await writeApi(
         `${apiBase}/${staff ? "staff" : "guest"}/cancellations/${itemId}${staff ? "/request" : ""}`,
         {
           method: "POST",

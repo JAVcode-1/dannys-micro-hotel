@@ -1,5 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { apiQueryClient, apiQueryOptions } from "./api-query";
 import App from "./App";
 import SuccessToasts from "./SuccessToasts";
 import {
@@ -40,11 +42,18 @@ if (
 }
 
 async function start() {
-  await initializeDevelopmentCapabilities();
+  const capabilities = await initializeDevelopmentCapabilities();
+  if (capabilities)
+    apiQueryClient.setQueryData(
+      apiQueryOptions("/guest/booking-status", undefined, ["public"]).queryKey,
+      capabilities,
+    );
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
-      <SuccessToasts />
-      <App hallEnabled={hallEnabled} reviewsEnabled={isolatedDevelopment} />
+      <QueryClientProvider client={apiQueryClient}>
+        <SuccessToasts />
+        <App hallEnabled={hallEnabled} reviewsEnabled={isolatedDevelopment} />
+      </QueryClientProvider>
     </StrictMode>,
   );
 }

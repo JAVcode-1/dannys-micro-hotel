@@ -37,7 +37,7 @@ export async function initializeDevelopmentCapabilities() {
     hallEnabled = capabilities.hallEnabled === true;
     if (capabilities.isolatedDevelopment !== true) {
       staffAuth = guestAuth;
-      return;
+      return capabilities;
     }
     if (
       capabilities.bookingEnabled !== true ||
@@ -45,9 +45,10 @@ export async function initializeDevelopmentCapabilities() {
       capabilities.unifiedEnabled !== true ||
       capabilities.paymentsEnabled !== true
     )
-      return;
+      return capabilities;
     staffAuth = createDevelopmentAuth(apiBase, window.sessionStorage);
     isolatedDevelopment = true;
+    return capabilities;
   } catch {
     // Missing/unavailable isolated API leaves capabilities closed.
   }

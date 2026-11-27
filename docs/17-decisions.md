@@ -978,3 +978,17 @@ Verification: both replacement URLs returned HTTP 200, image/webp and nonempty b
 A read-only PostgreSQL probe timed out at 5 seconds and completed in 8.9 seconds with a longer connection budget. Remote development connections now have a 30-second limit, and the `npm run dev` launcher gives the API 60 seconds to become ready before starting Vite. The change uses the existing PostgreSQL driver and readiness checks. TLS verification, schema and private-bucket checks, production connection limits and query timeouts retain their existing settings.
 
 `npm run build`, `npm run typecheck`, `npm run lint` and `npm test` passed. The database configuration regression failed at the old limit and passed with the fix. Hosted `/ready` and Vite `/` returned HTTP 200 during normal startup and with an injected 16-second API delay. The verification processes were stopped before scheduled jobs ran. No credentials or migrations changed. A pooler outage or connection taking more than 30 seconds can still prevent startup. No phase checklist items were closed. No additional feature started.
+
+### Operational reads and private staff Broadcast — 2026-11-27
+
+Use TanStack Query for cacheable Express projections. Quote and availability commands, reconciliation lookups and proof downloads stay on their existing request paths. Private staff and guest cache scopes follow verified sessions. Signed QR responses use short-lived display and leave the cache when the view closes. Server-side authorization, capacity locking, payment verification and auditing remain authoritative.
+
+Use the private `staytrack:staff` Supabase Broadcast channel with a domain-only notification and active staff membership checked by Realtime authorization. Related signals coalesce and refetch affected Express queries. On reconnect, open staff data is synchronized. Active guest bookings and public Hall status use bounded foreground refresh. A small periodic refresh also handles time-driven staff views when connected.
+
+`supabase/migrations/pending-approval/20261127003500_staff_data_realtime.sql` requires separate approval and disposable/staging verification. It adds a topic-specific policy and database triggers, with no application-table publication changes required. Verify Realtime is enabled in the approved Supabase project. Test active staff, disabled staff, guest and anonymous access before considering hosted activation. Hosted settings and databases were untouched. [Supabase Realtime authorization](https://supabase.com/docs/guides/realtime/authorization) · [Database Broadcast](https://supabase.com/docs/guides/realtime/broadcast)
+
+### D-040 Realtime activation evidence — 2026-11-27
+
+The owner approved applying `20261127003500` only to the existing hosted development project. The project guard, linked CLI reference, and TLS-verified database matched D-040 before the transaction. The dry run left zero migration objects behind. The committed transaction installed the expected triggers and receiver and write policies and recorded the exact SQL in Supabase migration history.
+
+The live Realtime service allowed active staff and denied fresh anonymous and non-staff joins. Private delivery contained a catalog domain and the ID of its Supabase message row. Hosted Realtime settings and application-table publications required no changes. The migration source stays outside the bare PostgreSQL isolated launcher, which uses its existing authenticated Express event stream.

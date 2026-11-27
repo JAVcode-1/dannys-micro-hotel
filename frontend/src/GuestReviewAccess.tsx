@@ -1,4 +1,5 @@
-﻿import { useEffect, useState } from "react";
+import { writeApi } from "./api-query";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
@@ -32,7 +33,7 @@ export default function GuestReviewAccess({
     body: Record<string, unknown>,
     key?: string,
   ) {
-    const response = await fetch(apiBase + path, {
+    const response = await writeApi(apiBase + path, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

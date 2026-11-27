@@ -1,6 +1,6 @@
+import { useApiQuery } from "./api-query";
 import React from "react";
 import StaffLoadingSkeleton, { SkeletonBlock } from "./StaffLoadingSkeleton";
-import { apiBase } from "./staff-auth";
 import {
   CategoryCollectionsChart,
   CollectionsChart,
@@ -62,17 +62,21 @@ function AnalyticsSkeleton({ hall = false }: { hall?: boolean }) {
           <SkeletonBlock className="h-3 w-56" />
           <div className="staff-chart-scroll">
             <div className="flex gap-2 px-2 sm:px-4">
-              {["h-12", "h-20", "h-14", "h-24", "h-16", "h-28"].map((height) => (
-                <div
-                  key={height}
-                  className="flex min-w-0 flex-1 flex-col items-center gap-2"
-                >
-                  <div className="flex h-32 w-full items-end justify-center border-b border-subtle">
-                    <SkeletonBlock className={`${height} w-[min(60%,3rem)]`} />
+              {["h-12", "h-20", "h-14", "h-24", "h-16", "h-28"].map(
+                (height) => (
+                  <div
+                    key={height}
+                    className="flex min-w-0 flex-1 flex-col items-center gap-2"
+                  >
+                    <div className="flex h-32 w-full items-end justify-center border-b border-subtle">
+                      <SkeletonBlock
+                        className={`${height} w-[min(60%,3rem)]`}
+                      />
+                    </div>
+                    <SkeletonBlock className="h-3 w-3/4" />
                   </div>
-                  <SkeletonBlock className="h-3 w-3/4" />
-                </div>
-              ))}
+                ),
+              )}
             </div>
           </div>
         </div>
@@ -209,37 +213,11 @@ function RoomAnalytics({ token }: { token: string }) {
       grain: "day",
     }).toString(),
   );
-  const [state, setState] = React.useState<{
-    query: string;
-    report?: Report;
-    error?: string;
-  }>();
-  const report = state?.query === query ? state.report : undefined;
-  const error = state?.query === query ? state.error : undefined;
-  React.useEffect(() => {
-    const controller = new AbortController();
-    void (async () => {
-      try {
-        const response = await fetch(apiBase + "/staff/analytics?" + query, {
-          headers: { Authorization: "Bearer " + token },
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error((await response.json()).error);
-        const result: Report = await response.json();
-        if (!controller.signal.aborted) setState({ query, report: result });
-      } catch (cause) {
-        if (!controller.signal.aborted)
-          setState({
-            query,
-            error:
-              cause instanceof Error
-                ? cause.message
-                : "Analytics is unavailable.",
-          });
-      }
-    })();
-    return () => controller.abort();
-  }, [query, token]);
+  const analytics = useApiQuery<Report>("/staff/analytics?" + query, token, {
+    live: true,
+  });
+  const report = analytics.data;
+  const error = analytics.error?.message;
   const filters = new URLSearchParams(query);
   return (
     <section aria-label="Room analytics" className="space-y-4">
@@ -396,43 +374,13 @@ function RoomAnalytics({ token }: { token: string }) {
 
 function HallAnalytics({ token }: { token: string }) {
   const [filters, setFilters] = React.useState<URLSearchParams>();
-  const [result, setResult] = React.useState<{
-    filters: URLSearchParams;
-    report?: HallReport;
-    error?: string;
-  }>();
-  const report = result?.filters === filters ? result?.report : undefined;
-  const error = result?.filters === filters ? result?.error : undefined;
-
-  React.useEffect(() => {
-    if (!filters) return;
-    const controller = new AbortController();
-    void (async () => {
-      try {
-        const response = await fetch(
-          `${apiBase}/staff/hall/reports?${filters}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-            signal: controller.signal,
-          },
-        );
-        const data = await response.json();
-        if (!response.ok)
-          throw new Error(data.error ?? "Function Hall report unavailable.");
-        if (!controller.signal.aborted) setResult({ filters, report: data });
-      } catch (cause) {
-        if (!controller.signal.aborted)
-          setResult({
-            filters,
-            error:
-              cause instanceof Error
-                ? cause.message
-                : "Function Hall report unavailable.",
-          });
-      }
-    })();
-    return () => controller.abort();
-  }, [filters, token]);
+  const analytics = useApiQuery<HallReport>(
+    filters ? "/staff/hall/reports?" + filters : null,
+    token,
+    { live: true },
+  );
+  const report = analytics.data;
+  const error = analytics.error?.message;
 
   return (
     <section aria-label="Function Hall report" className="space-y-4">
@@ -475,9 +423,7 @@ function HallAnalytics({ token }: { token: string }) {
         </button>
       </form>
       {error && <p role="alert">{error}</p>}
-      {filters && !error && !report && (
-        <AnalyticsSkeleton hall />
-      )}
+      {filters && !error && !report && <AnalyticsSkeleton hall />}
       {report && (
         <>
           <dl className="staff-management-totals">

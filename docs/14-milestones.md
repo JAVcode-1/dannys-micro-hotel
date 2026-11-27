@@ -1002,3 +1002,23 @@ Verification: both replacement URLs returned HTTP 200, image/webp and nonempty b
 A read-only PostgreSQL probe timed out at 5 seconds and completed in 8.9 seconds with a longer connection budget. Remote development connections now have a 30-second limit, and the `npm run dev` launcher gives the API 60 seconds to become ready before starting Vite. The change uses the existing PostgreSQL driver and readiness checks. TLS verification, schema and private-bucket checks, production connection limits and query timeouts retain their existing settings.
 
 `npm run build`, `npm run typecheck`, `npm run lint` and `npm test` passed. The database configuration regression failed at the old limit and passed with the fix. Hosted `/ready` and Vite `/` returned HTTP 200 during normal startup and with an injected 16-second API delay. The verification processes were stopped before scheduled jobs ran. No credentials or migrations changed. A pooler outage or connection taking more than 30 seconds can still prevent startup. No phase checklist items were closed. No additional feature started.
+
+### TanStack Query and staff synchronization — 2026-11-27
+
+Added TanStack Query 5 to the frontend. Operational screens share parameterized, in-memory Express reads. Private caches clear on session changes. Successful commands invalidate affected reads, and staff change signals use the same invalidation rules. The isolated staff workspace reuses its authenticated Express event stream. Hosted staff Broadcast depends on the separately approved Supabase migration described in [[17-decisions]].
+
+The 32 targeted tests passed, covering scoped request deduplication, targeted invalidation, an in-flight read race, event stream authorization and cleanup, dashboard states, guest reservations and payment, Hall recovery and uncertain checkout. Full build, lint, typecheck, suite, database migration execution and hosted two-client acceptance remain pending. No phase checkboxes were closed. No commit or push was made.
+
+Next task is manual `npm run dev` acceptance. Revisit a queue and check for an immediate cached view, switch staff accounts and verify private data clears, then check offline fallback. After separate approval and staging application, verify two staff sessions synchronize on a real test command and a guest session cannot join the staff channel.
+
+### Hosted development Realtime activation — 2026-11-27
+
+Owner-approved migration `20261127003500` passed a transaction dry run and was applied to the pinned D-040 development project. Hosted history records the migration with three Realtime policies and 156 statement triggers across 52 tables. Realtime was already enabled. The normal `npm run dev` launcher served the API readiness check and Vite frontend entry with HTTP 200.
+
+A committed catalog update preserved the stored catalog values and delivered a private Broadcast. The message held only the change domain and Supabase's message ID. Two independent staff browser sessions refetched their catalog queries. Their dashboard queries retained their prior data timestamps. Fresh anonymous and signed-in non-staff subscriptions were denied.
+
+Blocking the Realtime socket while Express stayed available showed the fallback notice and refreshed the foreground dashboard query. Restoring the socket caused a resync with one active channel. Switching directly to another active staff account removed the old cache scope and retained one channel for the new scope. Logout cleared that cache and removed the channel.
+
+Rapid tests sharing the loopback address hit the existing HTTP 429 limit. The focused single-profile retest passed with the limiter in place. Temporary test identities were removed and the normal audit trail was retained. Automated acceptance covered a catalog change and session lifecycle. Full builds, lint, typecheck, suites and release checks were skipped. No phase checklist entries were closed and no commit or push was made.
+
+The GitHub development checkpoint passed `npm run build`, `npm run typecheck`, `npm run lint` and `npm test` with 131 backend and 115 frontend tests passing. Frontend tests reset their in-memory query cache between cases. The repository-wide formatting check identified four pre-existing frontend files outside this checkpoint. Release and phase acceptance remain open.

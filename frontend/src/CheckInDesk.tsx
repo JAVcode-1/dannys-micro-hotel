@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useApiQuery, writeApi } from "./api-query";
+import { useState } from "react";
 import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
 import { readableLabel } from "./presentation";
@@ -62,7 +63,7 @@ function fixtures(): Item[] {
 }
 
 export default function CheckInDesk({ token }: { token?: string }) {
-  const [items, setItems] = useState<Item[]>(() => {
+  const [demoItems, setItems] = useState<Item[]>(() => {
     if (token) return [];
     try {
       return (
@@ -75,39 +76,18 @@ export default function CheckInDesk({ token }: { token?: string }) {
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [earlyReasons, setEarlyReasons] = useState<Record<string, string>>({});
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
-  const [enabled, setEnabled] = useState(!token);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const [listStatus, setListStatus] = useState<"loading" | "ready" | "error">(
-    token ? "loading" : "ready",
+  const desk = useApiQuery<{ items: Item[]; enabled: boolean }>(
+    token ? "/staff/check-ins" : null,
+    token,
+    { live: true, clock: true },
   );
+  const items = token ? (desk.data?.items ?? []) : demoItems;
+  const enabled = !token || (desk.data?.enabled === true && !desk.isError);
+  const listStatus =
+    !token || desk.data ? "ready" : desk.isError ? "error" : "loading";
   const [keys] = useState(() => new Map<string, string>());
-  useEffect(() => {
-    if (!token) return;
-    let active = true;
-    setListStatus("loading");
-    void fetch(`${apiBase}/staff/check-ins`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(async (response) => {
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error);
-        if (active) {
-          setItems(data.items);
-          setEnabled(data.enabled);
-          setListStatus("ready");
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setListStatus("error");
-          setMessage("Unable to load check-in desk.");
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [token]);
   async function submit(item: Item) {
     const room = item.rooms.find(({ id }) => id === selected[item.id]);
     if (!room) return;
@@ -126,18 +106,21 @@ export default function CheckInDesk({ token }: { token?: string }) {
         const attempt = `${item.id}:${room.id}`;
         const key = keys.get(attempt) ?? crypto.randomUUID();
         keys.set(attempt, key);
-        const response = await fetch(`${apiBase}/staff/check-ins/${item.id}`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
+        const response = await writeApi(
+          `${apiBase}/staff/check-ins/${item.id}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              roomId: room.id,
+              requestKey: key,
+              earlyApproval: earlyReasons[item.id],
+            }),
           },
-          body: JSON.stringify({
-            roomId: room.id,
-            requestKey: key,
-            earlyApproval: earlyReasons[item.id],
-          }),
-        });
+        );
         const data = await response.json();
         if (!response.ok) throw new Error(data.error);
         checkedIn = data.checked_in_at;
@@ -155,8 +138,10 @@ export default function CheckInDesk({ token }: { token?: string }) {
             }
           : { ...row, rooms: row.rooms.filter(({ id }) => id !== room.id) },
       );
-      setItems(next);
-      if (!token) sessionStorage.setItem(demoKey, JSON.stringify(next));
+      if (!token) {
+        setItems(next);
+        sessionStorage.setItem(demoKey, JSON.stringify(next));
+      }
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Check-in unavailable.",
@@ -173,7 +158,7 @@ export default function CheckInDesk({ token }: { token?: string }) {
     const key = keys.get(attempt) ?? crypto.randomUUID();
     keys.set(attempt, key);
     try {
-      const response = await fetch(
+      const response = await writeApi(
         `${apiBase}/staff/check-ins/${item.id}/no-show`,
         {
           method: "POST",
@@ -190,16 +175,6 @@ export default function CheckInDesk({ token }: { token?: string }) {
       );
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
-      setItems((current) =>
-        current.map((row) =>
-          row.id === item.id
-            ? {
-                ...row,
-                no_show_review: { decision, note: reviewNotes[item.id] },
-              }
-            : row,
-        ),
-      );
       notifySuccess("No-show review recorded.");
     } catch (error) {
       setMessage(
@@ -233,7 +208,13 @@ export default function CheckInDesk({ token }: { token?: string }) {
           fixtures can be selected.
         </p>
       )}
-      {token && !enabled && listStatus !== "loading" && (
+      {desk.isError && (
+        <p role="alert">
+          Unable to refresh check-ins. Review the current status before
+          recording an arrival.
+        </p>
+      )}
+      {token && !enabled && !desk.isError && listStatus !== "loading" && (
         <p>Live check-in is closed pending acceptance.</p>
       )}
       {message && <p role="alert">{message}</p>}

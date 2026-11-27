@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useApiQuery } from "./api-query";
 import type { ReactNode } from "react";
 import type { PublishedReviewPage } from "@staytrack/shared";
-import { apiBase } from "./staff-auth";
 import StaffIcon from "./StaffIcon";
 import ThemeToggle from "./ThemeToggle";
 
@@ -14,23 +13,10 @@ export default function SignInLayout({
   staff?: boolean;
   reviewsEnabled?: boolean;
 }) {
-  const [review, setReview] =
-    useState<PublishedReviewPage["reviews"][number]>();
-  useEffect(() => {
-    if (!reviewsEnabled || staff) return;
-    const controller = new AbortController();
-    void fetch(`${apiBase}/reviews?page=1`, { signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) return;
-        const data = (await response.json()) as PublishedReviewPage;
-        if (!controller.signal.aborted)
-          setReview(data.reviews.find((entry) => entry.comment?.trim()));
-      })
-      .catch(() => {
-        /* Sign-in remains available without public reviews. */
-      });
-    return () => controller.abort();
-  }, [reviewsEnabled, staff]);
+  const reviews = useApiQuery<PublishedReviewPage>(
+    !staff && reviewsEnabled ? "/reviews?page=1" : null,
+  );
+  const review = reviews.data?.reviews.find((entry) => entry.comment?.trim());
 
   if (staff)
     return (

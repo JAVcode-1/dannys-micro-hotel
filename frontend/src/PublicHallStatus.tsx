@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { apiBase } from "./staff-auth";
+import { useApiQuery } from "./api-query";
 
 const statuses = {
   available: {
@@ -22,44 +21,17 @@ const statuses = {
 type Status = keyof typeof statuses;
 
 export default function PublicHallStatus() {
-  const [status, setStatus] = useState<Status>("loading");
-
-  useEffect(() => {
-    let controller: AbortController | undefined;
-    async function refresh() {
-      controller?.abort();
-      controller = new AbortController();
-      const { signal } = controller;
-      try {
-        const response = await fetch(`${apiBase}/guest/hall-status`, {
-          cache: "no-store",
-          signal,
-        });
-        if (!response.ok) throw new Error("Hall status unavailable.");
-        const data = (await response.json()) as { status?: string };
-        if (!signal.aborted)
-          setStatus(
-            typeof data.status === "string" &&
-              Object.hasOwn(statuses, data.status)
-              ? (data.status as Status)
-              : "unknown",
-          );
-      } catch {
-        if (!signal.aborted) setStatus("unknown");
-      }
-    }
-    const refreshWhenVisible = () => {
-      if (!document.hidden) void refresh();
-    };
-    void refresh();
-    const timer = setInterval(refreshWhenVisible, 30_000);
-    document.addEventListener("visibilitychange", refreshWhenVisible);
-    return () => {
-      clearInterval(timer);
-      document.removeEventListener("visibilitychange", refreshWhenVisible);
-      controller?.abort();
-    };
-  }, []);
+  const hall = useApiQuery<{ status?: string }>(
+    "/guest/hall-status",
+    undefined,
+    { live: true },
+  );
+  const value = hall.data?.status;
+  const status: Status = hall.isPending
+    ? "loading"
+    : hall.isError || !value || !Object.hasOwn(statuses, value)
+      ? "unknown"
+      : (value as Status);
 
   return (
     <div className="rounded-xl border border-subtle bg-selected px-4 py-3 text-sm">

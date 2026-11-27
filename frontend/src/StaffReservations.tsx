@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useApiQuery, writeApi } from "./api-query";
+import { useState } from "react";
 import { Link, useParams } from "react-router";
 import StaffIcon from "./StaffIcon";
 import StaffLoadingSkeleton, { SkeletonBlock } from "./StaffLoadingSkeleton";
@@ -106,35 +107,19 @@ export default function StaffReservations({ token }: { token: string }) {
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(0);
-  const [data, setData] = useState<{
+  const reservations = useApiQuery<{
     reservations: Reservation[];
     hasMore: boolean;
-  }>();
-  const [error, setError] = useState("");
-  useEffect(() => {
-    const controller = new AbortController();
-    setData(undefined);
-    setError("");
-    void fetch(
-      `${apiBase}/staff/reservations?${new URLSearchParams({ q: query, page: String(page) })}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        signal: controller.signal,
-      },
-    )
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Reservation index unavailable.");
-        return response.json();
-      })
-      .then((value) => {
-        if (!controller.signal.aborted) setData(value);
-      })
-      .catch(() => {
-        if (!controller.signal.aborted)
-          setError("Reservation index unavailable. Try again.");
-      });
-    return () => controller.abort();
-  }, [token, query, page]);
+  }>(
+    "/staff/reservations?" +
+      new URLSearchParams({ q: query, page: String(page) }),
+    token,
+    { live: true },
+  );
+  const data = reservations.data;
+  const error = reservations.isError
+    ? "Reservation index unavailable. Try again."
+    : "";
   return (
     <section
       className="staff-reservation-index"
@@ -281,30 +266,14 @@ export default function StaffReservations({ token }: { token: string }) {
 
 export function StaffReservationDetail({ token }: { token: string }) {
   const { id } = useParams();
-  const [data, setData] = useState<Detail>();
-  const [error, setError] = useState("");
-  useEffect(() => {
-    const c = new AbortController();
-    setData(undefined);
-    setError("");
-    void fetch(`${apiBase}/staff/reservations/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: c.signal,
-    })
-      .then(async (r) => {
-        if (!r.ok) throw new Error("Reservation not found or unavailable.");
-        return r.json();
-      })
-      .then((d) => {
-        if (!c.signal.aborted) setData(d);
-      })
-      .catch(() => {
-        if (!c.signal.aborted)
-          setError("Reservation not found or unavailable.");
-      });
-    return () => c.abort();
-  }, [token, id]);
-  if (error) return <p role="alert">{error}</p>;
+  const reservation = useApiQuery<Detail>(
+    id ? "/staff/reservations/" + id : null,
+    token,
+    { live: true },
+  );
+  const data = reservation.data;
+  if (reservation.isError && !data)
+    return <p role="alert">Reservation not found or unavailable.</p>;
   if (!data) {
     return (
       <div className="staff-reservation-detail mt-6 min-w-0">
@@ -337,6 +306,12 @@ export function StaffReservationDetail({ token }: { token: string }) {
   }
   return (
     <section className="staff-reservation-detail mt-6 min-w-0 [overflow-wrap:anywhere]">
+      {reservation.isError && (
+        <p role="status">
+          Could not refresh this reservation. The details shown may be out of
+          date.
+        </p>
+      )}
       <Link
         to="/staff/reservations"
         className="staff-reservation-back print:hidden"
@@ -350,8 +325,8 @@ export function StaffReservationDetail({ token }: { token: string }) {
           {serviceLabel(data.reservation.serviceKind)}
         </p>
         <p>
-          {data.reservation.email || data.contact?.email || "No email recorded"} ·{" "}
-          {readableLabel(data.reservation.channel)}
+          {data.reservation.email || data.contact?.email || "No email recorded"}{" "}
+          · {readableLabel(data.reservation.channel)}
         </p>
       </div>
       {data.contact && (
@@ -603,7 +578,7 @@ function StaffAssistedReschedule({
       </p>
     );
   async function readSnapshot() {
-    const response = await fetch(
+    const response = await writeApi(
       `${apiBase}/staff/reservations/${encodeURIComponent(reservationId)}`,
       { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
     );
@@ -641,7 +616,7 @@ function StaffAssistedReschedule({
         blocks={item.blocks}
         refresh={readSnapshot}
         submit={async (input) => {
-          const response = await fetch(
+          const response = await writeApi(
             `${apiBase}/staff/reschedules/${encodeURIComponent(item.id)}/request`,
             {
               method: "POST",
@@ -676,96 +651,47 @@ export function StaffDashboard({
   hallEnabled?: boolean;
   identity?: string;
 }) {
-  const [counts, setCounts] = useState<Record<string, number>>();
-  const [message, setMessage] = useState("");
-  const [updatedAt, setUpdatedAt] = useState<Date>();
-  const [availableRooms, setAvailableRooms] = useState<number>();
-  const [upcomingCheckouts, setUpcomingCheckouts] = useState<{
-    count: number;
-    next?: string;
-  }>();
-  useEffect(() => {
-    const controller = new AbortController();
-    async function refresh() {
-      void fetch(`${apiBase}/staff/stays`, {
-        headers: { Authorization: `Bearer ${token}` },
-        signal: controller.signal,
-        cache: "no-store",
-      })
-        .then(async (response) => {
-          if (!response.ok) throw new Error();
-          const data = (await response.json()) as {
-            serverNow: string;
-            items: { checkout_at: string; checked_out_at?: string | null }[];
-          };
-          const upcoming = data.items
-            .filter(
-              (item) =>
-                !item.checked_out_at &&
-                Date.parse(item.checkout_at) > Date.parse(data.serverNow),
-            )
-            .sort(
-              (a, b) => Date.parse(a.checkout_at) - Date.parse(b.checkout_at),
-            );
-          if (!controller.signal.aborted)
-            setUpcomingCheckouts({
-              count: upcoming.length,
-              next: upcoming[0]?.checkout_at,
-            });
-        })
-        .catch(() => {
-          if (!controller.signal.aborted) setUpcomingCheckouts(undefined);
-        });
-      // The room board owns availability; readiness alone is not availability.
-      void fetch(`${apiBase}/staff/rooms`, {
-        headers: { Authorization: `Bearer ${token}` },
-        signal: controller.signal,
-        cache: "no-store",
-      })
-        .then(async (response) => {
-          if (!response.ok) throw new Error();
-          const rooms = (await response.json()) as { available_now: boolean }[];
-          if (!controller.signal.aborted)
-            setAvailableRooms(
-              rooms.filter((room) => room.available_now).length,
-            );
-        })
-        .catch(() => {
-          if (!controller.signal.aborted) setAvailableRooms(undefined);
-        });
-      try {
-        const response = await fetch(`${apiBase}/staff/dashboard`, {
-          headers: { Authorization: `Bearer ${token}` },
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error();
-        const next = await response.json();
-        if (!controller.signal.aborted) {
-          setCounts(next);
-          setUpdatedAt(new Date());
-          setMessage("");
-        }
-      } catch {
-        if (!controller.signal.aborted) {
-          setCounts(undefined);
-          setUpdatedAt(undefined);
-          setMessage(
-            "Live summary unavailable. Open the individual operational queues.",
-          );
-        }
-      }
-    }
-    setCounts(undefined);
-    setAvailableRooms(undefined);
-    setUpcomingCheckouts(undefined);
-    setUpdatedAt(undefined);
-    void refresh();
-    const timer = window.setInterval(() => void refresh(), 30000);
-    return () => {
-      controller.abort();
-      window.clearInterval(timer);
-    };
-  }, [token]);
+  const dashboard = useApiQuery<Record<string, number>>(
+    "/staff/dashboard",
+    token,
+    { live: true, clock: true },
+  );
+  const stays = useApiQuery<{
+    serverNow: string;
+    items: { checkout_at: string; checked_out_at?: string | null }[];
+  }>("/staff/stays", token, { live: true });
+  // The room board owns availability; readiness alone is not availability.
+  const rooms = useApiQuery<{ available_now: boolean }[]>(
+    "/staff/rooms",
+    token,
+    { live: true, clock: true },
+  );
+  const counts = dashboard.data;
+  const message = dashboard.isError
+    ? "Live summary unavailable. Open the individual operational queues."
+    : "";
+  const updatedAt =
+    counts && dashboard.dataUpdatedAt
+      ? new Date(dashboard.dataUpdatedAt)
+      : undefined;
+  const roomData = rooms.data;
+  const availableRooms = Array.isArray(roomData)
+    ? roomData.filter((room) => room.available_now).length
+    : undefined;
+  const stayData = stays.data;
+  const stayServerTime = Date.parse(stayData?.serverNow ?? "");
+  const upcoming = (
+    Array.isArray(stayData?.items) ? stayData : undefined
+  )?.items
+    .filter(
+      (item) =>
+        !item.checked_out_at && Date.parse(item.checkout_at) > stayServerTime,
+    )
+    .sort((a, b) => Date.parse(a.checkout_at) - Date.parse(b.checkout_at));
+  const upcomingCheckouts = upcoming && {
+    count: upcoming.length,
+    next: upcoming[0]?.checkout_at,
+  };
   const value = (key: string) => counts?.[key]?.toLocaleString("en-PH") ?? "—";
   const summaryLoading = !counts && !message;
   const hour = Number(
@@ -788,7 +714,11 @@ export function StaffDashboard({
           <div>
             <h2 id="staff-dashboard-heading">
               {greeting}
-              {staffName && <>, <span>{staffName}</span></>}
+              {staffName && (
+                <>
+                  , <span>{staffName}</span>
+                </>
+              )}
             </h2>
             <p>Today at a glance</p>
           </div>
@@ -797,7 +727,7 @@ export function StaffDashboard({
             <span>
               {updatedAt
                 ? `Last updated ${updatedAt.toLocaleTimeString("en-PH", { timeZone: "Asia/Manila", hour: "numeric", minute: "2-digit", hour12: true })}`
-                : "Refreshes every 30 seconds"}
+                : "Waiting for first update"}
             </span>
           </div>
         </div>
@@ -817,7 +747,12 @@ export function StaffDashboard({
           aria-busy={summaryLoading}
         >
           {[
-            ["arrivals", "Arrivals today", "arrivals", "Expected room check-ins"],
+            [
+              "arrivals",
+              "Arrivals today",
+              "arrivals",
+              "Expected room check-ins",
+            ],
             ["occupied", "Active stays", "stays", "Currently checked in"],
             [
               "paymentReviews",

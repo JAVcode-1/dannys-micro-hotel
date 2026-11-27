@@ -138,7 +138,7 @@ export default function StaffWorkspaceLayout({
   notice: string;
 }) {
   const { pathname } = useLocation();
-  const counts = useStaffNavCounts(token, pathname);
+  const counts = useStaffNavCounts(token);
   const [menuOpen, setMenuOpen] = useState(false);
   const [groupChoice, setGroupChoice] = useState<{
     pathname: string;

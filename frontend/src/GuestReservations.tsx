@@ -1,7 +1,8 @@
+import { ApiReadError, useApiQuery, writeApi } from "./api-query";
 import TimePartInput, { manilaClock } from "./TimePartInput";
 import { GuestCancellationRequest } from "./CancellationDesk";
 import { GuestRescheduleRequest } from "./RescheduleDesk";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useState } from "react";
 import type {
   GuestReservation,
   CancellationRow,
@@ -100,57 +101,30 @@ export default function GuestReservations({
   payment?: boolean;
   reviewsEnabled?: boolean;
 }) {
-  const [rows, setRows] = useState<GuestReservation[]>([]);
-  const [loadedToken, setLoadedToken] = useState("");
-  const [message, setMessage] = useState("Loading your reservations…");
   const [offset, setOffset] = useState(0);
-  const [reload, setReload] = useState(0);
   const [review, setReview] = useState<"review" | "feedback" | null>(null);
-  useEffect(() => {
-    const controller = new AbortController();
-    setRows([]);
-    setLoadedToken("");
-    setMessage("Loading your reservations…");
-    const path = reservationId
-      ? `/guest/reservations/${encodeURIComponent(reservationId)}`
-      : `/guest/reservations?limit=20&offset=${offset}`;
-    void fetch(apiBase + path, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok)
-          throw new Error(
-            response.status === 404
-              ? "Reservation not found."
-              : "Reservation lookup is unavailable. Please retry.",
-          );
-        const result = (await response.json()) as
-          GuestReservation | GuestReservation[];
-        const list = Array.isArray(result) ? result : [result];
-        if (!controller.signal.aborted) {
-          setRows(list);
-          setLoadedToken(token);
-          setMessage(
-            list.length
-              ? ""
-              : reservationId
-                ? "Reservation not found."
-                : "No reservations found for your verified identity.",
-          );
-        }
-      })
-      .catch((error: unknown) => {
-        if (!controller.signal.aborted)
-          setMessage(
-            error instanceof Error
-              ? error.message
-              : "Reservation lookup unavailable.",
-          );
-      });
-    return () => controller.abort();
-  }, [token, reservationId, offset, reload]);
-  const visible = loadedToken === token ? rows : [];
+  const path = reservationId
+    ? "/guest/reservations/" + encodeURIComponent(reservationId)
+    : "/guest/reservations?limit=20&offset=" + offset;
+  const reservations = useApiQuery<GuestReservation | GuestReservation[]>(
+    path,
+    token,
+    { live: true },
+  );
+  const result = reservations.data;
+  const visible = result ? (Array.isArray(result) ? result : [result]) : [];
+  const message = reservations.isPending
+    ? "Loading your reservations…"
+    : reservations.error instanceof ApiReadError &&
+        reservations.error.status === 404
+      ? "Reservation not found."
+      : reservations.isError
+        ? "Reservation lookup is unavailable. Please retry."
+        : !visible.length
+          ? reservationId
+            ? "Reservation not found."
+            : "No reservations found for your verified identity."
+          : "";
   const ordered = reservationId
     ? visible
     : ["Ongoing", "Upcoming", "Past"].flatMap((group) =>
@@ -404,7 +378,9 @@ export default function GuestReservations({
                   <GuestHallItem
                     hall={row.hall}
                     token={token}
-                    onRefresh={() => setReload((value) => value + 1)}
+                    onRefresh={() =>
+                      void reservations.refetch({ cancelRefetch: false })
+                    }
                   />
                 )}
                 <div className="mt-5 flex flex-wrap gap-5">
@@ -416,7 +392,9 @@ export default function GuestReservations({
                   </a>
                   <button
                     className={action}
-                    onClick={() => setReload((value) => value + 1)}
+                    onClick={() =>
+                      void reservations.refetch({ cancelRefetch: false })
+                    }
                   >
                     Refresh booking
                   </button>
@@ -508,37 +486,19 @@ function RefundHistory({
   token: string;
   reservationId: string;
 }) {
-  const [rows, setRows] = useState<CancellationRow[]>([]);
-  const [message, setMessage] = useState("Loading refund status…");
-  useEffect(() => {
-    const controller = new AbortController();
-    void fetch(
-      `${apiBase}/guest/cancellations?reservationId=${encodeURIComponent(reservationId)}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        signal: controller.signal,
-      },
-    )
-      .then(async (response) => {
-        if (!response.ok) throw new Error();
-        const data = (await response.json()) as { items: CancellationRow[] };
-        if (!controller.signal.aborted) {
-          setRows(
-            (data.items ?? []).filter(
-              (row) => row.reservationId === reservationId,
-            ),
-          );
-          setMessage("");
-        }
-      })
-      .catch(() => {
-        if (!controller.signal.aborted)
-          setMessage(
-            "Refund status is unavailable. Contact staff before assuming a transfer has completed.",
-          );
-      });
-    return () => controller.abort();
-  }, [token, reservationId]);
+  const history = useApiQuery<{ items: CancellationRow[] }>(
+    "/guest/cancellations?reservationId=" + encodeURIComponent(reservationId),
+    token,
+    { live: true },
+  );
+  const rows =
+    history.data?.items?.filter((row) => row.reservationId === reservationId) ??
+    [];
+  const message = history.isPending
+    ? "Loading refund status…"
+    : history.isError
+      ? "Refund status is unavailable. Contact staff before assuming a transfer has completed."
+      : "";
   if (!message && rows.length === 0) return null;
   return (
     <section className="mt-5">
@@ -610,7 +570,7 @@ function GuestHallItem({
       retry?.body === body ? retry.key : globalThis.crypto.randomUUID();
     setRetry({ body, key });
     try {
-      const response = await fetch(
+      const response = await writeApi(
         `${apiBase}/guest/hall/${encodeURIComponent(hall.id)}/cancel`,
         {
           method: "POST",
@@ -761,7 +721,7 @@ function GuestHallChange({
       retry?.body === body ? retry.key : globalThis.crypto.randomUUID();
     setRetry({ body, key });
     try {
-      const response = await fetch(
+      const response = await writeApi(
         `${apiBase}/guest/hall/${encodeURIComponent(hall.id)}/change`,
         {
           method: "POST",

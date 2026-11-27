@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import PublicHallStatus from "./PublicHallStatus";
 import { hotelContact } from "./hotel-contact";
-import { apiBase } from "./staff-auth";
+import { useApiQuery } from "./api-query";
 import ThemeToggle from "./ThemeToggle";
 
 type CatalogPackage = {
@@ -97,22 +97,7 @@ const currency = new Intl.NumberFormat("en-PH", {
 });
 
 function usePublicData<T>(path: string, enabled = true) {
-  const [data, setData] = useState<T>();
-  useEffect(() => {
-    if (!enabled) return;
-    const controller = new AbortController();
-    void fetch(apiBase + path, { signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) return;
-        const result: T = await response.json();
-        if (!controller.signal.aborted) setData(result);
-      })
-      .catch(() => {
-        // The landing page remains useful while supplementary data is unavailable.
-      });
-    return () => controller.abort();
-  }, [path, enabled]);
-  return enabled ? data : undefined;
+  return useApiQuery<T>(enabled ? path : null).data;
 }
 
 function Logo({

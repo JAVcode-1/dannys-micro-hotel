@@ -1,6 +1,7 @@
+import { accessDenied, useApiQuery, writeApi } from "./api-query";
 import TimePartInput, { manilaClock } from "./TimePartInput";
 import { parsePesoInput } from "./peso-input";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import StaffLoadingSkeleton, {
   SkeletonBlock,
   SkeletonField,
@@ -823,23 +824,54 @@ export default function WalkInDesk({
   token?: string;
   preview?: boolean;
 }) {
-  const [rates, setRates] = useState<Rate[]>(preview ? fixtureRates : []);
-  const [booking, setBooking] = useState<WalkInBooking | null>(null);
-  const [list, setList] = useState<{ id: string; primaryName: string }[]>([]);
-  const [enabled, setEnabled] = useState(preview);
-  const [loading, setLoading] = useState(!preview);
-  const [message, setMessage] = useState("");
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
-  const [policy, setPolicy] = useState<{
-    version: string;
-    text: string;
-    pendingOwnerApproval: boolean;
+  const catalog = useApiQuery<Rate[]>(preview ? null : "/catalog");
+  const rates = preview ? fixtureRates : (catalog.data ?? []);
+  const [savedBooking, setSavedBooking] = useState<{
+    value: WalkInBooking;
+    at: number;
   }>();
+  const setBooking = (value: WalkInBooking) =>
+    setSavedBooking({ value, at: Date.now() });
+  const [bookingId, setBookingId] = useState("");
+  const detail = useApiQuery<WalkInBooking>(
+    bookingId ? "/staff/walkins/" + bookingId : null,
+    token,
+    { live: true },
+  );
+  const booking = preview
+    ? (savedBooking?.value ?? null)
+    : accessDenied(detail.error)
+      ? null
+      : savedBooking &&
+          savedBooking.value.id === bookingId &&
+          savedBooking.at >= detail.dataUpdatedAt
+        ? savedBooking.value
+        : (detail.data ?? null);
+  const [page, setPage] = useState(0);
+  const queue = useApiQuery<{
+    bookings: { id: string; primaryName: string }[];
+    hasMore: boolean;
+    writesEnabled: boolean;
+    policy?: { version: string; text: string; pendingOwnerApproval: boolean };
+  }>(preview ? null : "/staff/walkins?page=" + page, token, { live: true });
+  const list = queue.data?.bookings ?? [];
+  const enabled =
+    preview ||
+    (queue.data?.writesEnabled === true && !queue.isError && !catalog.isError);
+  const loading = !preview && (catalog.isPending || queue.isPending);
+  const hasMore = queue.data?.hasMore ?? false;
+  const policy = queue.data?.policy;
+  const message = detail.isError
+    ? "Walk-in reservation unavailable."
+    : catalog.isError
+      ? "Catalog unavailable."
+      : queue.isError
+        ? "Walk-in desk requires authorized staff and the approved W01 migration."
+        : "";
   const usedRefs = useRef(new Set(["SYNTHETICONLINEUSED"]));
   const headers = { Authorization: `Bearer ${token}` };
   async function api(path: string, body?: unknown) {
-    const response = await fetch(`${apiBase}/staff/walkins${path}`, {
+    const response = await writeApi(`${apiBase}/staff/walkins${path}`, {
       method: body ? "POST" : "GET",
       headers: {
         ...headers,
@@ -852,50 +884,6 @@ export default function WalkInDesk({
       throw new Error(data.error ?? "Walk-in service unavailable.");
     return data;
   }
-  useEffect(() => {
-    if (preview) return;
-    const controller = new AbortController();
-    setLoading(true);
-    setBooking(null);
-    setEnabled(false);
-    void Promise.all([
-      fetch(`${apiBase}/catalog`, { signal: controller.signal }).then(
-        async (r) => {
-          if (!r.ok) throw new Error("Catalog unavailable.");
-          return r.json();
-        },
-      ),
-      fetch(`${apiBase}/staff/walkins?page=${page}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        signal: controller.signal,
-      }).then(async (r) => {
-        if (!r.ok)
-          throw new Error(
-            "Walk-in desk requires authorized staff and the approved W01 migration. Live writes remain closed.",
-          );
-        return r.json();
-      }),
-    ])
-      .then(([catalog, data]) => {
-        if (controller.signal.aborted) return;
-        setRates(catalog);
-        setList(data.bookings);
-        setHasMore(data.hasMore);
-        setEnabled(data.writesEnabled);
-        setPolicy(data.policy);
-        setMessage("");
-      })
-      .catch((error) => {
-        if (!controller.signal.aborted) {
-          setMessage(error.message);
-          setList([]);
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, [token, preview, page]);
   async function quoteItems(items: BookingItemInput[]): Promise<BookingQuote> {
     if (!preview) return api("/quote", { items });
     const quoted = items.map((item) => {
@@ -945,10 +933,7 @@ export default function WalkInDesk({
         contact,
       });
       setBooking(result.booking);
-      setList([
-        { id: result.booking.id, primaryName: name },
-        ...list.filter((row) => row.id !== result.booking.id),
-      ]);
+      setBookingId(result.booking.id);
       return;
     }
     const quote = await quoteItems(items);
@@ -1069,11 +1054,7 @@ export default function WalkInDesk({
                   type="button"
                   className={buttonClass}
                   aria-pressed={booking?.id === row.id}
-                  onClick={() => {
-                    void api(`/${row.id}`)
-                      .then(setBooking)
-                      .catch((error) => setMessage(error.message));
-                  }}
+                  onClick={() => setBookingId(row.id)}
                 >
                   {row.primaryName}
                 </button>

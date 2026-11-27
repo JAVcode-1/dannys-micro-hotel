@@ -156,7 +156,10 @@ for (const committed of [false, true]) {
     });
     fireEvent.click(checkout);
     if (!committed) {
-      fireEvent.focus(dom.window);
+      const { apiQueryClient, invalidateApiDomains } =
+        await import("../src/api-query");
+      void invalidateApiDomains(apiQueryClient, ["stay"]);
+      await waitFor(() => assert.equal(typeof finishStaleRead, "function"));
       finishInterruptedCheckout();
     }
     await screen.findByText(/Checkout could not be confirmed/);

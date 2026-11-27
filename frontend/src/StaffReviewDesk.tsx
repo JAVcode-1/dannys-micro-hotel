@@ -1,5 +1,6 @@
+import { useApiQuery, writeApi } from "./api-query";
 import { readableLabel } from "./presentation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import StaffLoadingSkeleton, { SkeletonBlock } from "./StaffLoadingSkeleton";
 import type { FormEvent } from "react";
 import { apiBase } from "./staff-auth";
@@ -22,30 +23,19 @@ export default function StaffReviewDesk({
   token: string;
   feedback?: boolean;
 }) {
-  const [entries, setEntries] = useState<Entry[]>();
   const [page, setPage] = useState(1);
-  const [refresh, setRefresh] = useState(0);
-  const [message, setMessage] = useState("");
+  const [actionMessage, setMessage] = useState("");
   const [contact, setContact] = useState<string>();
   const [pairing, setPairing] = useState<string>();
   const [busy, setBusy] = useState(false);
   const path = feedback ? "/staff/private-feedback" : "/staff/reviews";
-  useEffect(() => {
-    const controller = new AbortController();
-    void fetch(apiBase + path + "?page=" + page, {
-      signal: controller.signal,
-      headers: { Authorization: "Bearer " + token },
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Inbox unavailable.");
-        const data = await response.json();
-        if (!controller.signal.aborted) setEntries(data.entries);
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setMessage("Inbox unavailable.");
-      });
-    return () => controller.abort();
-  }, [path, page, token, refresh]);
+  const inbox = useApiQuery<{ entries: Entry[] }>(
+    path + "?page=" + page,
+    token,
+    { live: true },
+  );
+  const entries = inbox.data?.entries;
+  const message = actionMessage || (inbox.isError ? "Inbox unavailable." : "");
   async function action(event: FormEvent<HTMLFormElement>, id: string) {
     event.preventDefault();
     if (busy) return;
@@ -55,7 +45,7 @@ export default function StaffReviewDesk({
     setMessage("");
     setContact(undefined);
     try {
-      const response = await fetch(apiBase + path + "/" + id + "/" + next, {
+      const response = await writeApi(apiBase + path + "/" + id + "/" + next, {
         method: "POST",
         headers: {
           Authorization: "Bearer " + token,
@@ -69,7 +59,7 @@ export default function StaffReviewDesk({
       });
       if (!response.ok) throw new Error((await response.json()).error);
       if (next === "contact_access") setContact((await response.json()).email);
-      else setRefresh((v) => v + 1);
+      else void inbox.refetch({ cancelRefetch: false });
       setMessage("Action recorded.");
       notifySuccess("Review or feedback action recorded.");
     } catch (error) {
@@ -89,7 +79,7 @@ export default function StaffReviewDesk({
     setBusy(true);
     setMessage("");
     try {
-      const response = await fetch(
+      const response = await writeApi(
         apiBase +
           (pairingRequest
             ? "/staff/review-enrollment"
@@ -312,7 +302,6 @@ export default function StaffReviewDesk({
             onClick={() => {
               setPage(page - 1);
               setContact(undefined);
-              setEntries(undefined);
             }}
           >
             Previous page
@@ -323,7 +312,6 @@ export default function StaffReviewDesk({
             onClick={() => {
               setPage(page + 1);
               setContact(undefined);
-              setEntries(undefined);
             }}
           >
             Next page

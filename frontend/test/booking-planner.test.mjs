@@ -73,7 +73,12 @@ test("verified guest submits reviewed server price, contact, acknowledgement and
   const client = {
     auth: {
       getSession: async () => ({
-        data: { session: { access_token: "guest-token" } },
+        data: {
+          session: {
+            access_token: "guest-token",
+            user: { id: "verified-guest", email: "guest@example.test" },
+          },
+        },
         error: null,
       }),
       onAuthStateChange: () => ({
@@ -183,10 +188,7 @@ test("verified guest submits reviewed server price, contact, acknowledgement and
     assert.equal(phone.getAttribute("aria-invalid"), "true", value);
   }
   assert.equal(phone.getAttribute("placeholder"), "09XX XXX XXXX");
-  assert.equal(
-    phone.getAttribute("aria-describedby"),
-    "booking-phone-error",
-  );
+  assert.equal(phone.getAttribute("aria-describedby"), "booking-phone-error");
   fireEvent.change(phone, { target: { value: "09170000000" } });
   assert.equal(phone.hasAttribute("aria-describedby"), false);
   fireEvent.submit(submit.closest("form"));

@@ -41,6 +41,7 @@ test("guest session restores, verifies refreshed tokens and clears private acces
         data: {
           session: {
             access_token: "first",
+            user: { id: "guest", email: "first@example.test" },
             expires_at: Math.floor(Date.now() / 1000) + 3600,
           },
         },
@@ -77,6 +78,7 @@ test("guest session restores, verifies refreshed tokens and clears private acces
   await act(async () =>
     notify("TOKEN_REFRESHED", {
       access_token: "second",
+      user: { id: "guest", email: "second@example.test" },
       expires_at: Math.floor(Date.now() / 1000) + 3600,
     }),
   );

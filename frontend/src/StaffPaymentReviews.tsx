@@ -1,3 +1,4 @@
+import { useApiQuery, writeApi } from "./api-query";
 import TimePartInput, { manilaClock } from "./TimePartInput";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
@@ -540,56 +541,26 @@ export function PaymentReviewPanel({
 }
 
 export default function StaffPaymentReviews({ token }: { token: string }) {
-  const [reviews, setReviews] = useState<StaffPaymentReview[]>([]);
   const [selected, setSelected] = useState("");
-  const [enabled, setEnabled] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [revision, setRevision] = useState(0);
   const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
-  useEffect(() => {
-    const controller = new AbortController();
-    setMessage(null);
-    setReviews([]);
-    setEnabled(false);
-    void fetch(`${apiBase}/staff/payment-reviews?page=${page}`, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok)
-          throw new Error(
-            "Review queue is unavailable. Staff authorization and the approved O03 migration are required.",
-          );
-        const data = (await response.json()) as {
-          reviews: StaffPaymentReview[];
-          confirmationEnabled: boolean;
-          hasMore: boolean;
-        };
-        if (controller.signal.aborted) return;
-        setReviews(data.reviews);
-        setEnabled(data.confirmationEnabled);
-        setHasMore(data.hasMore);
-        setMessage(
-          data.reviews.length ? "" : "No submitted proofs await review.",
-        );
-      })
-      .catch((error) => {
-        if (!controller.signal.aborted) {
-          setReviews([]);
-          setEnabled(false);
-          setMessage(
-            error instanceof Error
-              ? error.message
-              : "Review queue unavailable.",
-          );
-        }
-      });
-    return () => controller.abort();
-  }, [token, revision, page]);
+  const queue = useApiQuery<{
+    reviews: StaffPaymentReview[];
+    confirmationEnabled: boolean;
+    hasMore: boolean;
+  }>("/staff/payment-reviews?page=" + page, token, { live: true });
+  const reviews = queue.data?.reviews ?? [];
+  const enabled = queue.data?.confirmationEnabled === true && !queue.isError;
+  const hasMore = queue.data?.hasMore ?? false;
+  const message = queue.isError
+    ? "Review queue is unavailable. Staff authorization and the approved O03 migration are required."
+    : queue.isPending
+      ? "Loading payment reviews…"
+      : !reviews.length
+        ? "No submitted proofs await review."
+        : "";
   const current = reviews.find((row) => row.id === selected) ?? reviews[0];
   async function request(path: string, body?: PaymentReviewInput) {
-    const response = await fetch(
+    const response = await writeApi(
       `${apiBase}/staff/payment-reviews/${current.id}/${path}`,
       {
         method: body ? "POST" : "GET",
@@ -613,7 +584,7 @@ export default function StaffPaymentReviews({ token }: { token: string }) {
         <h1 className="text-2xl font-bold">Payment review</h1>
         <button
           type="button"
-          onClick={() => setRevision((value) => value + 1)}
+          onClick={() => void queue.refetch({ cancelRefetch: false })}
           className="rounded-lg border border-subtle px-4 py-2 text-primary"
         >
           Refresh queue
@@ -684,7 +655,10 @@ export default function StaffPaymentReviews({ token }: { token: string }) {
       )}
       {current && (
         <div className="staff-payment-layout grid gap-5">
-          <nav aria-label="Payment review queue" className="staff-payment-queue space-y-2">
+          <nav
+            aria-label="Payment review queue"
+            className="staff-payment-queue space-y-2"
+          >
             {reviews.map((row) => (
               <button
                 key={row.id}
@@ -712,7 +686,7 @@ export default function StaffPaymentReviews({ token }: { token: string }) {
             onProof={() => request("proof")}
             onDecision={async (body) => {
               await request("decision", body);
-              setRevision((value) => value + 1);
+              void queue.refetch({ cancelRefetch: false });
             }}
           />
         </div>

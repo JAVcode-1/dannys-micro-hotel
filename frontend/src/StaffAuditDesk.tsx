@@ -1,8 +1,8 @@
+import { ApiReadError, useApiQuery } from "./api-query";
 import { readableLabel } from "./presentation";
 import React from "react";
 import StaffLoadingSkeleton, { SkeletonBlock } from "./StaffLoadingSkeleton";
 import type { StaffAuditPage } from "@staytrack/shared";
-import { apiBase } from "./staff-auth";
 
 const auditTime = new Intl.DateTimeFormat("en-PH", {
   timeZone: "Asia/Manila",
@@ -13,43 +13,17 @@ const auditTime = new Intl.DateTimeFormat("en-PH", {
 
 export default function StaffAuditDesk({ token }: { token: string }) {
   const [search, setSearch] = React.useState({ filters: "", cursor: "" });
-  const [page, setPage] = React.useState<StaffAuditPage | null>(null);
-  const [error, setError] = React.useState("");
-  const [loading, setLoading] = React.useState(true);
-  React.useEffect(() => {
-    const controller = new AbortController();
-    const query = new URLSearchParams(search.filters);
-    if (search.cursor) query.set("cursor", search.cursor);
-    setLoading(true);
-    setError("");
-    setPage(null);
-    void (async () => {
-      try {
-        const response = await fetch(`${apiBase}/staff/audit?${query}`, {
-          headers: { Authorization: `Bearer ${token}` },
-          signal: controller.signal,
-        });
-        if (!response.ok)
-          throw new Error(
-            response.status === 400
-              ? "Check the filters and date range."
-              : "Audit search is unavailable. Try again.",
-          );
-        const data: StaffAuditPage = await response.json();
-        if (!controller.signal.aborted) setPage(data);
-      } catch (cause) {
-        if (!controller.signal.aborted)
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : "Audit search is unavailable.",
-          );
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    })();
-    return () => controller.abort();
-  }, [search, token]);
+  const query = new URLSearchParams(search.filters);
+  if (search.cursor) query.set("cursor", search.cursor);
+  const audit = useApiQuery<StaffAuditPage>("/staff/audit?" + query, token);
+  const page = audit.data;
+  const loading = audit.isPending;
+  const error =
+    audit.error instanceof ApiReadError && audit.error.status === 400
+      ? "Check the filters and date range."
+      : audit.isError
+        ? "Audit search is unavailable. Try again."
+        : "";
 
   const field =
     "mt-1 min-h-11 w-full rounded-lg border border-subtle bg-white px-3";

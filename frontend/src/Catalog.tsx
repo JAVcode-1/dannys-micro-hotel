@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { apiBase } from "./staff-auth";
+import { useApiQuery } from "./api-query";
 
 type Package = {
   code: string;
@@ -14,21 +13,9 @@ export default function Catalog({
 }: {
   hallEnabled?: boolean;
 }) {
-  const [packages, setPackages] = useState<Package[]>([]);
-  const [error, setError] = useState("");
-  useEffect(() => {
-    const controller = new AbortController();
-    void fetch(`${apiBase}/catalog`, { signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) throw new Error();
-        setPackages((await response.json()) as Package[]);
-      })
-      .catch(() => {
-        if (!controller.signal.aborted)
-          setError("Rates are temporarily unavailable.");
-      });
-    return () => controller.abort();
-  }, []);
+  const rates = useApiQuery<Package[]>("/catalog");
+  const packages = rates.data ?? [];
+  const error = rates.isError ? "Rates are temporarily unavailable." : "";
   return (
     <section className="guest-catalog text-main">
       <div className="mx-auto max-w-5xl">
@@ -53,7 +40,7 @@ export default function Catalog({
             {error}
           </p>
         )}
-        {!error && packages.length === 0 && (
+        {rates.isPending && (
           <p role="status" className="mt-8 text-muted">
             Loading current rates…
           </p>

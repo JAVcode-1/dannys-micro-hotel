@@ -1,3 +1,4 @@
+import { useApiQuery, writeApi } from "./api-query";
 import TimePartInput, {
   hourPattern,
   manilaClock,
@@ -227,16 +228,21 @@ export default function BookingPlanner({
   const [hall, setHall] = useState<HallDraft | null>(() =>
     hallEnabled ? restoreHall() : null,
   );
-  const [rates, setRates] = useState<Rate[]>([]);
+  const catalog = useApiQuery<Rate[]>("/catalog");
+  const rates = catalog.data ?? [];
   const [quote, setQuote] = useState<BookingQuote | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const [bookingEnabled, setBookingEnabled] = useState(false);
-  const [policy, setPolicy] = useState<{
-    version: string;
-    text: string;
-    pendingOwnerApproval?: boolean;
-  } | null>(null);
+  const capabilities = useApiQuery<{
+    enabled?: boolean;
+    bookingEnabled?: boolean;
+    policy?: { version: string; text: string; pendingOwnerApproval?: boolean };
+  }>("/guest/booking-status");
+  const bookingEnabled =
+    !capabilities.isError &&
+    (capabilities.data?.enabled === true ||
+      capabilities.data?.bookingEnabled === true);
+  const policy = capabilities.data?.policy ?? null;
   const [primaryName, setPrimaryName] = useState("");
   const [phone, setPhone] = useState("");
   const [scheduleAttempted, setScheduleAttempted] = useState(false);
@@ -277,84 +283,66 @@ export default function BookingPlanner({
       /* Continue without draft recovery. */
     }
   }, [items]);
+  const initializedRates = useRef(false);
   useEffect(() => {
-    const controller = new AbortController();
-    void fetch(`${apiBase}/guest/booking-status`, { signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) return;
-        const status = (await response.json()) as {
-          enabled?: boolean;
-          bookingEnabled?: boolean;
-          policy?: typeof policy;
-        };
-        if (!controller.signal.aborted) {
-          setBookingEnabled(
-            status.enabled === true || status.bookingEnabled === true,
-          );
-          setPolicy(status.policy ?? null);
-        }
-      })
-      .catch(() => {});
-    return () => controller.abort();
-  }, []);
-  useEffect(() => {
-    const controller = new AbortController();
-    const category = new URLSearchParams(window.location.search).get(
-      "category",
+    const currentRates = catalog.data;
+    if (!currentRates) return;
+    const initialized = initializedRates.current;
+    initializedRates.current = currentRates.length > 0;
+    if (initialized) {
+      setQuote(null);
+      setAvailability(null);
+      setCheckedHall(undefined);
+    }
+    const category = initialized
+      ? null
+      : new URLSearchParams(window.location.search).get("category");
+    if (!currentRates.length) {
+      setMessage("No stay lengths are currently available.");
+      return;
+    }
+    const preferredRate = currentRates.reduce<Rate | undefined>(
+      (preferred, rate) =>
+        rate.code === category &&
+        (!preferred || rate.duration_minutes < preferred.duration_minutes)
+          ? rate
+          : preferred,
+      undefined,
     );
-    void fetch(`${apiBase}/catalog`, { signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) throw new Error();
-        const currentRates = (await response.json()) as Rate[];
-        setRates(currentRates);
-        if (!currentRates.length) {
-          setMessage("No stay lengths are currently available.");
-          return;
-        }
-        const preferredRate = currentRates.reduce<Rate | undefined>(
-          (preferred, rate) =>
-            rate.code === category &&
-            (!preferred || rate.duration_minutes < preferred.duration_minutes)
-              ? rate
-              : preferred,
-          undefined,
-        );
-        setItems((current) =>
-          current.map((item) => {
-            const rate =
-              (item.id === 1 ? preferredRate : undefined) ??
-              currentRates.find(
+    setItems((current) =>
+      current.map((item) => {
+        const rate =
+          (item.id === 1 ? preferredRate : undefined) ??
+          currentRates.find(
+            (row) =>
+              row.code === item.category &&
+              row.duration_minutes === item.blocks[0],
+          ) ??
+          currentRates[0];
+        return {
+          ...item,
+          category: rate.code,
+          blocks:
+            (!preferredRate || item.category === preferredRate.code) &&
+            item.blocks.every((block) =>
+              currentRates.some(
                 (row) =>
-                  row.code === item.category &&
-                  row.duration_minutes === item.blocks[0],
-              ) ??
-              currentRates[0];
-            return {
-              ...item,
-              category: rate.code,
-              blocks:
-                (!preferredRate || item.category === preferredRate.code) &&
-                item.blocks.every((block) =>
-                  currentRates.some(
-                    (row) =>
-                      row.code === rate.code && row.duration_minutes === block,
-                  ),
-                )
-                  ? item.blocks
-                  : [rate.duration_minutes],
-              extraBed: rate.code === "family_executive" && item.extraBed,
-            };
-          }),
-        );
-      })
-      .catch(() => {
-        if (!controller.signal.aborted)
-          setMessage(
-            "Current stay lengths are unavailable. Please try again later.",
-          );
-      });
-    return () => controller.abort();
-  }, []);
+                  row.code === rate.code && row.duration_minutes === block,
+              ),
+            )
+              ? item.blocks
+              : [rate.duration_minutes],
+          extraBed: rate.code === "family_executive" && item.extraBed,
+        };
+      }),
+    );
+  }, [catalog.data]);
+  useEffect(() => {
+    if (catalog.isError && !catalog.data)
+      setMessage(
+        "Current stay lengths are unavailable. Please try again later.",
+      );
+  }, [catalog.isError, catalog.data]);
   function update(id: number, patch: Partial<Draft>) {
     setItems((current) =>
       current.map((item) => (item.id === id ? { ...item, ...patch } : item)),
@@ -516,7 +504,7 @@ export default function BookingPlanner({
               window.sessionStorage,
             );
       setRequest({ body, key });
-      const response = await fetch(`${apiBase}/guest/reservations`, {
+      const response = await writeApi(`${apiBase}/guest/reservations`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${guest.access.token}`,

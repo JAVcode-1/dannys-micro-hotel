@@ -8,10 +8,11 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src test vite.config.ts",
-    "test": "npm run build && node --import tsx --test test/*.test.mjs"
+    "test": "npm run build && node --import tsx --import ./test/reset-query-cache.mjs --test --test-force-exit test/*.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",
+    "@tanstack/react-query": "^5.108.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router": "^7.18.6",

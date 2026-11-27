@@ -1,5 +1,14 @@
 # Hosted development: rooms, OTP and booking emails
 
+## Staff Realtime on D-040 (2026-11-27)
+
+Migration `20261127003500` is applied to the approved hosted development database. Realtime was already enabled. Anonymous and signed-in non-staff private joins were denied. A committed catalog update refreshed two separate staff browser sessions and left their dashboard queries cached. See [[14-milestones]] for the verification record.
+
+1. Run `npm run dev`. Sign in as two authorized staff members in separate browser profiles and open the same operational page.
+2. Make an authorized development-only change in one profile. Check that the matching page in the other profile refreshes without reloading.
+3. Interrupt only the Realtime socket in one foreground profile. On the dashboard, check the disconnect notice and allow up to 30 seconds for the Express fallback. Restore the socket and verify the notice clears and data refreshes.
+4. Sign out, then sign in as another staff member in that profile. Check that the previous session's data is gone. If several profiles receive HTTP 429, follow the response's `Retry-After` before retrying.
+
 ## Hosted turnover and cash migrations applied (2026-11-24)
 
 The owner approved migrations 20261124002900 and 20261124003000 for the linked Supabase development project. Both were previewed in a rolled-back transaction and committed together through the project-pinned PostgreSQL connection after the CLI login-role request returned HTTP 403. One outstanding turnover block ended at its recorded Ready time. Hosted API readiness returned HTTP 200, and npm run dev started the API and Vite. The verification server was stopped afterward. The application test suite and end-to-end cash receipt check were not run.

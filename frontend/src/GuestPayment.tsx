@@ -1,3 +1,4 @@
+import { useApiQuery, useCurrentSignedMedia, writeApi } from "./api-query";
 import { useEffect, useId, useState } from "react";
 import type { FormEvent } from "react";
 import type { PaymentSession } from "@staytrack/shared";
@@ -11,27 +12,36 @@ const referencePattern = /^[0-9]{10,13}$/;
 export function PaymentPanel({
   session,
   preview = false,
+  receivedAt,
   onSubmit,
 }: {
   session: PaymentSession;
   preview?: boolean;
+  receivedAt?: number;
   onSubmit(reference: string, file: File): Promise<void>;
 }) {
   const [elapsed, setElapsed] = useState(0);
   const [reference, setReference] = useState("");
   const referenceHintId = useId();
   const [file, setFile] = useState<File | null>(null);
-  const [pending, setPending] = useState(session.status === "pending_review");
+  const [submittedAgainst, setSubmittedAgainst] = useState<string>();
+  const pending =
+    session.status === "pending_review" ||
+    submittedAgainst === session.serverNow;
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   useEffect(() => {
-    const started = performance.now();
+    const started =
+      receivedAt && performance.timeOrigin
+        ? receivedAt - performance.timeOrigin
+        : performance.now();
+    setElapsed(Math.max(0, performance.now() - started));
     const timer = window.setInterval(
       () => setElapsed(performance.now() - started),
       1000,
     );
     return () => window.clearInterval(timer);
-  }, [session.serverNow]);
+  }, [session.serverNow, receivedAt]);
   const remaining = Math.max(
     0,
     Date.parse(session.proofDeadlineAt) -
@@ -67,7 +77,7 @@ export function PaymentPanel({
     setBusy(true);
     try {
       await onSubmit(reference, file);
-      setPending(true);
+      setSubmittedAgainst(session.serverNow);
       setFile(null);
       setReference("");
     } catch (error) {
@@ -323,35 +333,19 @@ export default function GuestPayment({
   reservationId: string;
   token: string;
 }) {
-  const [session, setSession] = useState<PaymentSession | null>(null);
-  const [message, setMessage] = useState("");
-  const [refresh, setRefresh] = useState(0);
-  useEffect(() => {
-    setSession(null);
-    setMessage("");
-    const controller = new AbortController();
-    void fetch(`${apiBase}/guest/payments/${reservationId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        const data = (await response.json()) as PaymentSession & {
-          error?: string;
-        };
-        if (!response.ok)
-          throw new Error(data.error || "Payment details unavailable.");
-        if (!controller.signal.aborted) setSession(data);
-      })
-      .catch((error) => {
-        if (!controller.signal.aborted)
-          setMessage(
-            error instanceof Error
-              ? error.message
-              : "Payment details unavailable.",
-          );
-      });
-    return () => controller.abort();
-  }, [reservationId, token, refresh]);
+  const payment = useApiQuery<PaymentSession>(
+    "/guest/payments/" + reservationId,
+    token,
+    { live: true, signedMedia: true },
+  );
+  const qrUrl = useCurrentSignedMedia(
+    payment.data?.qrUrl,
+    payment.dataUpdatedAt,
+  );
+  const session = payment.data ? { ...payment.data, qrUrl } : undefined;
+  const message =
+    payment.error?.message ??
+    (payment.isPending ? "Loading payment details…" : "");
   return (
     <div>
       {message && (
@@ -361,10 +355,11 @@ export default function GuestPayment({
       )}
       {session && (
         <PaymentPanel
-          key={session.serverNow}
+          key={reservationId}
+          receivedAt={payment.dataUpdatedAt}
           session={session}
           onSubmit={async (reference, file) => {
-            const response = await fetch(
+            const response = await writeApi(
               `${apiBase}/guest/payments/${reservationId}/proof`,
               {
                 method: "POST",
@@ -388,7 +383,7 @@ export default function GuestPayment({
       )}
       <button
         className="mt-3 min-h-11 text-sm font-semibold text-primary"
-        onClick={() => setRefresh((value) => value + 1)}
+        onClick={() => void payment.refetch({ cancelRefetch: false })}
       >
         Refresh payment
       </button>

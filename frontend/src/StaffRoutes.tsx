@@ -35,6 +35,7 @@ import StayChangesDesk from "./StayChangesDesk";
 import StayMonitor from "./StayMonitor";
 import WalkInDesk from "./WalkInDesk";
 import { staffAuth } from "./staff-auth";
+import StaffDataSync from "./StaffDataSync";
 
 const signInPath = "/staff/sign-in";
 
@@ -137,7 +138,11 @@ function StaffDashboardPage({ token }: { token: string }) {
     identity: string;
   }>();
   return (
-    <StaffDashboard token={token} hallEnabled={hallEnabled} identity={identity} />
+    <StaffDashboard
+      token={token}
+      hallEnabled={hallEnabled}
+      identity={identity}
+    />
   );
 }
 
@@ -252,13 +257,15 @@ function StaffRouteGuard({
     return <Navigate to={location.state?.returnTo || "/staff"} replace />;
 
   return (
-    <StaffLayout
-      authClient={authClient}
-      token={access.token}
-      identity={access.identity}
-      notice={notice}
-      {...layout}
-    />
+    <StaffDataSync token={access.token}>
+      <StaffLayout
+        authClient={authClient}
+        token={access.token}
+        identity={access.identity}
+        notice={notice}
+        {...layout}
+      />
+    </StaffDataSync>
   );
 }
 

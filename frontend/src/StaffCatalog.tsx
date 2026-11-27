@@ -1,3 +1,4 @@
+import { useApiQuery, writeApi } from "./api-query";
 import React from "react";
 import StaffLoadingSkeleton, {
   SkeletonBlock,
@@ -19,13 +20,18 @@ type Package = {
 };
 
 export default function StaffCatalog({ token }: { token: string }) {
-  const [packages, setPackages] = React.useState<Package[]>([]);
+  const catalog = useApiQuery<Package[]>("/staff/catalog", token, {
+    live: true,
+  });
+  const history = Array.isArray(catalog.data) ? catalog.data : [];
+  const packages = history.filter((row) => row.active && row.category_active);
   const [selected, setSelected] = React.useState("");
   const [price, setPrice] = React.useState("");
-  const [message, setMessage] = React.useState("");
+  const [actionMessage, setMessage] = React.useState("");
+  const message =
+    actionMessage || (catalog.isError ? "Current rates are unavailable." : "");
   const [busy, setBusy] = React.useState(false);
-  const [loading, setLoading] = React.useState(true);
-  const [history, setHistory] = React.useState<Package[]>([]);
+  const loading = catalog.isPending;
   const [categoryNames, setCategoryNames] = React.useState<
     Record<string, string>
   >({});
@@ -33,7 +39,7 @@ export default function StaffCatalog({ token }: { token: string }) {
     setBusy(true);
     setMessage("");
     try {
-      const response = await fetch(`${apiBase}/staff/catalog/categories`, {
+      const response = await writeApi(`${apiBase}/staff/catalog/categories`, {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -59,7 +65,7 @@ export default function StaffCatalog({ token }: { token: string }) {
     setBusy(true);
     setMessage("");
     try {
-      const response = await fetch(`${apiBase}/staff/catalog/categories`, {
+      const response = await writeApi(`${apiBase}/staff/catalog/categories`, {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -81,24 +87,13 @@ export default function StaffCatalog({ token }: { token: string }) {
       setBusy(false);
     }
   }
-  async function load(signal?: AbortSignal) {
-    const response = await fetch(`${apiBase}/staff/catalog`, {
-      signal,
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!response.ok) throw new Error();
-    const rows: unknown = await response.json();
-    if (!Array.isArray(rows)) throw new Error();
-    setHistory(rows as Package[]);
-    setPackages(
-      (rows as Package[]).filter((row) => row.active && row.category_active),
-    );
-  }
+  const load = () =>
+    catalog.refetch({ cancelRefetch: false, throwOnError: true });
   async function toggle(item: Package) {
     setBusy(true);
     setMessage("");
     try {
-      const response = await fetch(`${apiBase}/staff/catalog/packages`, {
+      const response = await writeApi(`${apiBase}/staff/catalog/packages`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -120,18 +115,6 @@ export default function StaffCatalog({ token }: { token: string }) {
       setBusy(false);
     }
   }
-  React.useEffect(() => {
-    const controller = new AbortController();
-    void load(controller.signal)
-      .catch(() => {
-        if (!controller.signal.aborted)
-          setMessage("Current rates are unavailable.");
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, []);
   async function save(event: FormEvent) {
     event.preventDefault();
     const item = packages.find(
@@ -148,18 +131,21 @@ export default function StaffCatalog({ token }: { token: string }) {
     setBusy(true);
     setMessage("");
     try {
-      const response = await fetch(`${apiBase}/staff/catalog/package-price`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const response = await writeApi(
+        `${apiBase}/staff/catalog/package-price`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            categoryCode: item.code,
+            durationMinutes: item.duration_minutes,
+            priceCentavos: amount,
+          }),
         },
-        body: JSON.stringify({
-          categoryCode: item.code,
-          durationMinutes: item.duration_minutes,
-          priceCentavos: amount,
-        }),
-      });
+      );
       if (!response.ok) throw new Error();
       notifySuccess("Room rate updated.");
       await load();

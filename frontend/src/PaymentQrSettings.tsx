@@ -1,45 +1,31 @@
-import { useEffect, useState } from "react";
+import { useApiQuery, useCurrentSignedMedia, writeApi } from "./api-query";
+import { useState } from "react";
 import type { FormEvent } from "react";
 import { notifySuccess } from "./notifications";
 import { apiBase } from "./staff-auth";
 import StaffLoadingSkeleton, { SkeletonBlock } from "./StaffLoadingSkeleton";
 
 export default function PaymentQrSettings({ token }: { token: string }) {
-  const [label, setLabel] = useState("");
+  const payment = useApiQuery<{
+    payeeLabel: string | null;
+    qrUrl: string | null;
+  }>("/staff/payment-qr", token, {
+    live: true,
+    clock: true,
+    signedMedia: true,
+  });
+  const [draft, setLabel] = useState<string>();
+  const label = draft ?? payment.data?.payeeLabel ?? "";
   const [file, setFile] = useState<File | null>(null);
-  const [qr, setQr] = useState<string | null>(null);
-  const [message, setMessage] = useState("");
+  const qr = useCurrentSignedMedia(payment.data?.qrUrl, payment.dataUpdatedAt);
+  const [actionMessage, setMessage] = useState("");
+  const message =
+    actionMessage ||
+    (payment.isError
+      ? "The payment QR is unavailable. Contact your administrator."
+      : "");
   const [busy, setBusy] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [refresh, setRefresh] = useState(0);
-  useEffect(() => {
-    setQr(null);
-    setLoading(true);
-    const controller = new AbortController();
-    void fetch(`${apiBase}/staff/payment-qr`, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error();
-        const data = (await response.json()) as {
-          payeeLabel: string | null;
-          qrUrl: string | null;
-        };
-        setQr(data.qrUrl);
-        setLabel(data.payeeLabel ?? "");
-      })
-      .catch(() => {
-        if (!controller.signal.aborted)
-          setMessage(
-            "The payment QR is unavailable. Contact your administrator.",
-          );
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, [token, refresh]);
+  const loading = payment.isPending;
   async function submit(event: FormEvent) {
     event.preventDefault();
     setMessage("");
@@ -57,7 +43,7 @@ export default function PaymentQrSettings({ token }: { token: string }) {
     }
     setBusy(true);
     try {
-      const response = await fetch(`${apiBase}/staff/payment-qr`, {
+      const response = await writeApi(`${apiBase}/staff/payment-qr`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -70,7 +56,8 @@ export default function PaymentQrSettings({ token }: { token: string }) {
       setMessage(
         "QR configuration saved and audited. Guest payments remain disabled.",
       );
-      setRefresh((value) => value + 1);
+      await payment.refetch({ cancelRefetch: false });
+      setLabel(undefined);
       notifySuccess("GCash QR configuration saved.");
     } catch {
       setMessage(

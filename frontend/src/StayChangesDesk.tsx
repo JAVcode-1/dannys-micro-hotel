@@ -1,6 +1,13 @@
+import { useInfiniteQuery } from "@tanstack/react-query";
+import {
+  accessDenied,
+  apiRead,
+  useApiReadOptions,
+  writeApi,
+} from "./api-query";
 import ManilaDateTimeInput from "./ManilaDateTimeInput";
 import { parsePesoInput } from "./peso-input";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import StaffLoadingSkeleton, { SkeletonBlock } from "./StaffLoadingSkeleton";
 import type { StayChangeRow } from "@staytrack/shared";
 import { apiBase } from "./staff-auth";
@@ -748,57 +755,38 @@ export default function StayChangesDesk({
   token?: string;
   previewRows?: StayChangeRow[];
 }) {
-  const [rows, setRows] = useState<StayChangeRow[]>(previewRows ?? []),
-    [enabled, setEnabled] = useState(false),
-    [payeeLabel, setPayeeLabel] = useState<string | null>(null),
-    [message, setMessage] = useState("");
+  type DeskPage = {
+    items: StayChangeRow[];
+    enabled: boolean;
+    payeeLabel?: string;
+  };
   const pageSize = 20;
-  const page = useRef(0);
-  const request = useRef(0);
-  const [hasMore, setHasMore] = useState(false);
-  const [loading, setLoading] = useState(!previewRows);
-  async function refresh(throughPage = page.current) {
-    if (previewRows) return;
-    const requestId = ++request.current;
-    setLoading(true);
-    try {
-      const refreshed: StayChangeRow[] = [];
-      let latestEnabled = false;
-      let firstPayee: string | null = null;
-      let hasNextPage = false;
-      for (let index = 0; index <= throughPage; index++) {
-        const response = await fetch(
-          `${apiBase}/staff/stay-changes?page=${index}&pageSize=${pageSize}`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
-        const data = await response.json();
-        if (requestId !== request.current) return;
-        if (!response.ok) throw new Error(data.error ?? "Desk unavailable");
-        refreshed.push(...data.items);
-        latestEnabled = data.enabled === true;
-        if (index === 0) firstPayee = data.payeeLabel ?? null;
-        hasNextPage = data.items.length === pageSize;
-        if (!hasNextPage) break;
-      }
-      page.current = Math.max(0, Math.ceil(refreshed.length / pageSize) - 1);
-      setRows(refreshed);
-      setEnabled(latestEnabled);
-      setPayeeLabel(firstPayee);
-      setHasMore(hasNextPage);
-      setMessage("");
-    } catch (e) {
-      if (requestId === request.current) {
-        setMessage(e instanceof Error ? e.message : "Desk unavailable");
-      }
-    } finally {
-      if (requestId === request.current) setLoading(false);
-    }
-  }
-  useEffect(() => {
-    void refresh();
-  }, [token]); // existing item components retain their drafts on refresh
+  const path = "/staff/stay-changes?pageSize=" + pageSize;
+  const read = useApiReadOptions<DeskPage>(previewRows ? null : path, token, {
+    live: true,
+  });
+  const desk = useInfiniteQuery(
+    {
+      ...read.options,
+      queryFn: ({ pageParam, signal }) =>
+        apiRead<DeskPage>(path + "&page=" + pageParam, token, signal),
+      initialPageParam: 0,
+      getNextPageParam: (last, pages) =>
+        last.items.length === pageSize ? pages.length : undefined,
+    },
+    read.client,
+  );
+  const pages = accessDenied(desk.error) ? undefined : desk.data?.pages;
+  const rows = previewRows ?? pages?.flatMap((page) => page.items) ?? [];
+  const enabled = !desk.isError && pages?.at(-1)?.enabled === true;
+  const payeeLabel = pages?.[0]?.payeeLabel ?? null;
+  const hasMore = desk.hasNextPage;
+  const loading = !previewRows && desk.isPending;
+  const message = desk.isError ? desk.error.message : "";
+  const refresh = () =>
+    previewRows ? undefined : desk.refetch({ cancelRefetch: false });
   const submit: Submit = async (path, body) => {
-    const response = await fetch(apiBase + path, {
+    const response = await writeApi(apiBase + path, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -878,7 +866,7 @@ export default function StayChangesDesk({
         <button
           className={button}
           disabled={loading}
-          onClick={() => void refresh(page.current + 1)}
+          onClick={() => void desk.fetchNextPage({ cancelRefetch: false })}
         >
           Load more stays
         </button>

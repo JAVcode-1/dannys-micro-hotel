@@ -106,7 +106,11 @@ test("refresh at a protected URL hides sign-in during restoration and membership
   );
   assert.equal(screen.queryByLabelText("Password"), null);
   await act(async () =>
-    restore({ data: { session: { access_token: "restored-token" } } }),
+    restore({
+      data: {
+        session: { access_token: "restored-token", user: { id: "staff" } },
+      },
+    }),
   );
   assert.match(
     screen.getByRole("status").textContent,
@@ -473,7 +477,11 @@ test("unrelated null Auth event does not discard a stored session", async () => 
   render(createElement(App, { staffAuthClient: auth }));
   act(() => auth.emit("USER_UPDATED", null));
   await act(async () =>
-    resolveInitial({ data: { session: { access_token: "stored-token" } } }),
+    resolveInitial({
+      data: {
+        session: { access_token: "stored-token", user: { id: "staff" } },
+      },
+    }),
   );
   await waitFor(() =>
     assert.ok(screen.getByText("Signed in as stored@example.test")),

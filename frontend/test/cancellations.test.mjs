@@ -28,15 +28,15 @@ afterEach(() => {
 test("a guest can report the PHP amount they received and see the open refund report", async () => {
   const originalFetch = globalThis.fetch;
   const submitted = [];
+  let currentIssue = null;
   globalThis.fetch = async (url, options) => {
     assert.match(url, /\/guest\/refund-issues\/hall\/test-item$/);
     if (options.method !== "POST")
-      return globalThis.Response.json({ issue: null });
+      return globalThis.Response.json({ issue: currentIssue });
     const issue = JSON.parse(options.body);
     submitted.push(issue);
-    return globalThis.Response.json({
-      issue: { ...issue, status: "open", resolution: null },
-    });
+    currentIssue = { ...issue, status: "open", resolution: null };
+    return globalThis.Response.json({ issue: currentIssue });
   };
   try {
     render(

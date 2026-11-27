@@ -1,3 +1,4 @@
+import { useApiQuery, writeApi } from "./api-query";
 import RoomMaintenancePanel from "./RoomMaintenancePanel";
 import React from "react";
 import StaffLoadingSkeleton, { SkeletonBlock } from "./StaffLoadingSkeleton";
@@ -28,46 +29,24 @@ function roomNeedsAttention(room: OperationalRoom) {
 }
 
 export default function StaffRooms({ token }: { token: string }) {
-  const [rooms, setRooms] = React.useState<OperationalRoom[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState("");
+  const roomQuery = useApiQuery<OperationalRoom[]>("/staff/rooms", token, {
+    live: true,
+    clock: true,
+  });
+  const rooms = roomQuery.data ?? [];
+  const loading = roomQuery.isPending;
+  const [actionError, setError] = React.useState("");
+  const error =
+    actionError ||
+    (roomQuery.isError
+      ? "Room board is unavailable. Check staff access and try again."
+      : "");
   const [busy, setBusy] = React.useState(false);
   const [checks, setChecks] = React.useState<Record<string, boolean>>({});
   const retries = React.useRef<Record<string, HousekeepingInput>>({});
-  const load = React.useCallback(
-    async (signal?: AbortSignal) => {
-      const response = await fetch(`${apiBase}/staff/rooms`, {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-        signal,
-      });
-      if (!response.ok)
-        throw new Error(
-          "Room board is unavailable. Check staff access and try again.",
-        );
-      setRooms((await response.json()) as StaffRoom[]);
-    },
-    [token],
-  );
-  React.useEffect(() => {
-    const controller = new AbortController();
-    setRooms([]);
-    setError("");
-    setLoading(true);
-    setChecks({});
-    retries.current = {};
-    void load(controller.signal)
-      .catch(() => {
-        if (!controller.signal.aborted)
-          setError(
-            "Room board is unavailable. Check staff access and try again.",
-          );
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, [token, load]);
+  const load = async () => {
+    await roomQuery.refetch({ cancelRefetch: false, throwOnError: true });
+  };
   async function act(room: StaffRoom, action: HousekeepingAction) {
     if (!room.checkout_id || busy) return;
     const cycle = `${room.id}:${room.checkout_id}`;
@@ -82,7 +61,7 @@ export default function StaffRooms({ token }: { token: string }) {
     setBusy(true);
     setError("");
     try {
-      const response = await fetch(
+      const response = await writeApi(
         `${apiBase}/staff/rooms/${room.id}/housekeeping`,
         {
           method: "POST",
@@ -426,7 +405,7 @@ function RoomRegistration({
         setMessage("");
         void (async () => {
           try {
-            const response = await fetch(`${apiBase}/staff/rooms`, {
+            const response = await writeApi(`${apiBase}/staff/rooms`, {
               method: "POST",
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -437,9 +416,7 @@ function RoomRegistration({
             const result = await response.json();
             if (!response.ok)
               throw new Error(result.error || "Registration failed.");
-            notifySuccess(
-              "Room registered as inactive and Unverified.",
-            );
+            notifySuccess("Room registered as inactive and Unverified.");
             retry.current = null;
             setCode("");
             setNote("");
@@ -567,7 +544,7 @@ function RoomReadinessActions({
           ? prior
           : { payload, key: crypto.randomUUID() };
       retries.current[action] = attempt;
-      const response = await fetch(
+      const response = await writeApi(
         `${apiBase}/staff/rooms/${room.id}/${action}`,
         {
           method: inspection ? "POST" : "PATCH",

@@ -1,3 +1,4 @@
+import { useApiQuery, writeApi } from "./api-query";
 import { readableLabel } from "./presentation";
 import { useEffect, useEffectEvent, useState } from "react";
 import { Link, useSearchParams } from "react-router";
@@ -1039,9 +1040,7 @@ function HallSetupTime({ minutes }: { minutes: number }) {
 
 export default function HallDesk({ token }: { token: string }) {
   const [searchParams] = useSearchParams();
-  const [entries, setEntries] = useState<Row[]>([]);
-  const [settings, setSettings] = useState<Record<string, number>>();
-  const [message, setMessage] = useState("");
+  const [actionMessage, setMessage] = useState("");
   const [quoteMessage, setQuoteMessage] = useState("");
   const [quoteDeposit, setQuoteDeposit] = useState<number>();
   const [busy, setBusy] = useState(false);
@@ -1052,97 +1051,76 @@ export default function HallDesk({ token }: { token: string }) {
     id: string;
     action: HallCardAction;
   }>();
-  const [hall, setHall] = useState<HallStatus>();
   const [tab, setTab] = useState("calendar");
   const [retry, setRetry] = useState<{ payload: string; key: string }>();
   const [pending, setPending] = useState<PendingHallCommand>();
   const [recoveryFailed, setRecoveryFailed] = useState(false);
   const [selected, setSelected] = useState(searchParams.get("item") ?? "");
-  const [finances, setFinances] = useState<Record<string, Finances>>({});
-  const [failedFinancesId, setFailedFinancesId] = useState<string>();
-  const [calendarLoading, setCalendarLoading] = useState(true);
+  const calendar = useApiQuery<{ entries: Row[]; hall: HallStatus }>(
+    "/staff/hall/reservations?page=" + page,
+    token,
+    { live: true, clock: true },
+  );
+  const config = useApiQuery<Record<string, number>>(
+    "/staff/hall/settings",
+    token,
+    { live: true },
+  );
+  const finance = useApiQuery<Finances>(
+    selected ? "/staff/hall/reservations/" + selected + "/finances" : null,
+    token,
+    { live: true },
+  );
+  const [refundRefresh, setRefundRefresh] = useState<string>();
+  const refetchFinance = finance.refetch;
+  const entries = calendar.data?.entries ?? [];
+  const hall = calendar.data?.hall;
+  const settings = config.data;
+  const calendarLoading = calendar.isPending || config.isPending;
+  const message =
+    actionMessage ||
+    (calendar.isError || config.isError
+      ? "Function Hall is unavailable."
+      : finance.isError
+        ? "Financial history unavailable."
+        : "");
+  const finances: Record<string, Finances> =
+    finance.data && !finance.isError && refundRefresh !== selected
+      ? { [selected]: finance.data }
+      : {};
+  const failedFinancesId = finance.isError ? selected : undefined;
+  function refreshHall() {
+    setRevision((value) => value + 1);
+    void calendar.refetch({ cancelRefetch: false });
+    void config.refetch({ cancelRefetch: false });
+    if (selected) void finance.refetch({ cancelRefetch: false });
+  }
   useEffect(() => {
-    setEntries([]);
-    setHall(undefined);
     setActiveAction(undefined);
-    setFinances({});
-    setFailedFinancesId(undefined);
     setRecoveryFailed(false);
     setPending(pendingHallCommand(sessionStorage, token).load());
-    const timer = setInterval(() => setRevision((v) => v + 1), 30000);
-    return () => clearInterval(timer);
   }, [token]);
-  useEffect(() => {
-    if (!selected) return;
-    const controller = new AbortController();
-    void fetch(apiBase + "/staff/hall/reservations/" + selected + "/finances", {
-      headers: { Authorization: "Bearer " + token },
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Financial history unavailable.");
-        const result = await response.json();
-        if (!controller.signal.aborted) {
-          setFailedFinancesId((current) =>
-            current === selected ? undefined : current,
-          );
-          setFinances((current) => ({ ...current, [selected]: result }));
-        }
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) {
-          setFailedFinancesId(selected);
-          setMessage("Financial history unavailable.");
-        }
-      });
-    return () => controller.abort();
-  }, [selected, token, revision]);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
   useEffect(() => {
-    const controller = new AbortController();
-    const headers = { Authorization: "Bearer " + token };
-    setCalendarLoading(true);
-    void Promise.all(
-      ["reservations?page=" + page, "settings"].map(async (path) => {
-        const response = await fetch(apiBase + "/staff/hall/" + path, {
-          headers,
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error("Function Hall is unavailable.");
-        return response.json();
-      }),
-    )
-      .then(([calendar, config]) => {
-        if (!controller.signal.aborted) {
-          setEntries(calendar.entries);
-          setHall(calendar.hall);
-          setSettings(config);
-        }
-      })
-      .catch(() => {
-        if (!controller.signal.aborted)
-          setMessage("Function Hall is unavailable.");
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setCalendarLoading(false);
-      });
-    return () => controller.abort();
-  }, [token, revision, page]);
+    if (!refundRefresh || refundRefresh !== selected) return;
+    let active = true;
+    void refetchFinance({ cancelRefetch: false }).then(() => {
+      if (active) setRefundRefresh(undefined);
+    });
+    return () => {
+      active = false;
+    };
+  }, [refundRefresh, selected, refetchFinance]);
   function clearQuote() {
     setQuoteMessage("");
     setQuoteDeposit(undefined);
   }
   function loadFreshRefund(id: string) {
+    setRefundRefresh(id);
     setSelected(id);
-    setFailedFinancesId(undefined);
-    setFinances((current) => {
-      const next = { ...current };
-      delete next[id];
-      return next;
-    });
   }
   function showWalkInBooking(id: string) {
     setSelected(id);
@@ -1239,7 +1217,7 @@ export default function HallDesk({ token }: { token: string }) {
         pendingHallCommand(sessionStorage, token).save(submitted);
         command = submitted;
       }
-      const response = await fetch(apiBase + "/staff/hall/" + path, {
+      const response = await writeApi(apiBase + "/staff/hall/" + path, {
         method: "POST",
         headers: { ...headers, "Idempotency-Key": key },
         body: payload,
@@ -1260,7 +1238,7 @@ export default function HallDesk({ token }: { token: string }) {
             setMessage(
               `Payment recorded. The extension was not applied. ${result.issue}`,
             );
-            setRevision((v) => v + 1);
+            refreshHall();
             return;
           }
           if (directBooking && result.receiptId && result.id) {
@@ -1269,10 +1247,10 @@ export default function HallDesk({ token }: { token: string }) {
             setMessage(
               `Payment recorded. The booking is still an inquiry. ${result.issue}`,
             );
-            setRevision((v) => v + 1);
+            refreshHall();
             return;
           }
-          setRevision((v) => v + 1);
+          refreshHall();
         }
         throw new Error(result.error ?? result.issue ?? "Action unavailable.");
       }
@@ -1344,7 +1322,7 @@ export default function HallDesk({ token }: { token: string }) {
         else if (reservationId) setSelected(reservationId);
         if (!keepRefundOpen) setActiveAction(undefined);
         notifySuccess("Function Hall action recorded.");
-        setRevision((v) => v + 1);
+        refreshHall();
       }
     } catch (error) {
       const errorMessage =
@@ -1394,7 +1372,7 @@ export default function HallDesk({ token }: { token: string }) {
       );
       if (!recovered.issue && !recovered.error)
         notifySuccess("Function Hall action recorded.");
-      setRevision((v) => v + 1);
+      refreshHall();
     },
   );
   useEffect(() => {
@@ -1415,7 +1393,7 @@ export default function HallDesk({ token }: { token: string }) {
         if (controller.signal.aborted) return;
         let result = record.result;
         if (lookup.status === 404 && typeof record.error === "string") {
-          const replay = await fetch(base + pending.path, {
+          const replay = await writeApi(base + pending.path, {
             method: "POST",
             headers: {
               ...headers,
@@ -1716,7 +1694,11 @@ export default function HallDesk({ token }: { token: string }) {
               );
               return (
                 grouped.length > 0 && (
-                  <section key={group} className="staff-hall-events" aria-label={group}>
+                  <section
+                    key={group}
+                    className="staff-hall-events"
+                    aria-label={group}
+                  >
                     <h3 className="text-lg font-semibold">
                       {group}{" "}
                       <span className="text-sm text-muted">
@@ -1968,7 +1950,7 @@ export default function HallDesk({ token }: { token: string }) {
                             choose={(action) => {
                               if (action === "manage_refund") {
                                 loadFreshRefund(row.id);
-                                setRevision((v) => v + 1);
+                                refreshHall();
                               }
                               setActiveAction({ id: row.id, action });
                             }}
@@ -1976,7 +1958,7 @@ export default function HallDesk({ token }: { token: string }) {
                             loadHistory={() => setSelected(row.id)}
                             reloadRefund={() => {
                               loadFreshRefund(row.id);
-                              setRevision((v) => v + 1);
+                              refreshHall();
                             }}
                           />
                           {row.unifiedReservationId &&

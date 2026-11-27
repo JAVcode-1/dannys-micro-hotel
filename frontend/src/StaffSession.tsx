@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { apiBase, staffAuth } from "./staff-auth";
 import { notifySuccess } from "./notifications";
+import PrivateDataScope from "./PrivateDataScope";
 
 type StaffAccess =
   | { status: "loading" }
@@ -184,7 +185,14 @@ export function StaffSessionProvider({
         finishRecovery: () => setRecovering(false),
       }}
     >
-      {children}
+      <PrivateDataScope
+        role="staff"
+        userId={
+          access.status === "unauthenticated" ? undefined : session?.user.id
+        }
+      >
+        {children}
+      </PrivateDataScope>
     </StaffSessionContext.Provider>
   );
 }

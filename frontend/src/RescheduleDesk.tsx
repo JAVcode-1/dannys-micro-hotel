@@ -1,3 +1,4 @@
+import { useApiQuery, writeApi } from "./api-query";
 import {
   hours,
   minutes,
@@ -313,7 +314,7 @@ export function GuestRescheduleForm({
 }
 
 async function api(path: string, token: string, body?: unknown) {
-  const response = await fetch(`${apiBase}${path}`, {
+  const response = await writeApi(`${apiBase}${path}`, {
     method: body ? "POST" : "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -585,35 +586,26 @@ export default function RescheduleDesk({
   token?: string;
   guest?: boolean;
 }) {
-  const [rows, setRows] = useState<RescheduleRecord[]>(token ? [] : fixtures);
-  const [enabled, setEnabled] = useState(!token);
+  const [demoRows, setRows] = useState<RescheduleRecord[]>(
+    token ? [] : fixtures,
+  );
   const [page, setPage] = useState(0);
-  const [message, setMessage] = useState("");
-  const [refresh, setRefresh] = useState(0);
-  const [loaded, setLoaded] = useState(!token);
-  const loading = token && !guest && !loaded && !message;
-  useEffect(() => {
-    if (!token) return;
-    let active = true;
-    setLoaded(false);
-    setEnabled(false);
-    setMessage("");
-    void api(`/${guest ? "guest" : "staff"}/reschedules?page=${page}`, token)
-      .then((data) => {
-        if (active) {
-          setRows(data.items);
-          setEnabled(data.enabled);
-          setMessage("");
-          setLoaded(true);
-        }
-      })
-      .catch((e) => {
-        if (active) setMessage(e.message);
-      });
-    return () => {
-      active = false;
-    };
-  }, [token, guest, page, refresh]);
+  const requests = useApiQuery<{ items: RescheduleRecord[]; enabled: boolean }>(
+    token
+      ? "/" + (guest ? "guest" : "staff") + "/reschedules?page=" + page
+      : null,
+    token,
+    { live: true },
+  );
+  const rows = token ? (requests.data?.items ?? []) : demoRows;
+  const enabled =
+    !token || (requests.data?.enabled === true && !requests.isError);
+  const message = requests.isError
+    ? "Schedule change requests are unavailable."
+    : "";
+  const loaded = !token || Boolean(requests.data);
+  const loading = token && !guest && requests.isPending;
+  const refresh = requests.dataUpdatedAt;
   return (
     <section
       aria-label="Rescheduling"
@@ -633,12 +625,15 @@ export default function RescheduleDesk({
       {message && <p role="alert">{message}</p>}
       <button
         className="mt-3 min-h-11 font-semibold text-primary"
-        onClick={() => setRefresh((x) => x + 1)}
+        onClick={() => void requests.refetch({ cancelRefetch: false })}
       >
         Refresh requests
       </button>
-      {token && !guest && !rows.length && !message && (
-        loaded ? (
+      {token &&
+        !guest &&
+        !rows.length &&
+        !message &&
+        (loaded ? (
           <p className="staff-change-empty">
             <StaffIcon name="changes" />
             No schedule change requests on this page.
@@ -666,8 +661,7 @@ export default function RescheduleDesk({
               <SkeletonBlock className="h-10 w-44" />
             </article>
           </StaffLoadingSkeleton>
-        )
-      )}
+        ))}
       {rows.map((row) =>
         guest ? (
           <article

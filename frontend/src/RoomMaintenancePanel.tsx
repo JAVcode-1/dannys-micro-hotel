@@ -1,4 +1,5 @@
-﻿import React from "react";
+import { writeApi } from "./api-query";
+import React from "react";
 import type { MaintenanceAction, StaffRoom } from "@staytrack/shared";
 import { notifySuccess } from "./notifications";
 import { readableLabel } from "./presentation";
@@ -43,7 +44,7 @@ export default function RoomMaintenancePanel({
     setSaving(true);
     setError("");
     try {
-      const response = await fetch(
+      const response = await writeApi(
         `${apiBase}/staff/rooms/${room.id}/maintenance`,
         {
           method: "POST",
@@ -79,7 +80,7 @@ export default function RoomMaintenancePanel({
     setSaving(true);
     setError("");
     try {
-      const response = await fetch(
+      const response = await writeApi(
         `${apiBase}/staff/rooms/${room.id}/reassign`,
         {
           method: "POST",

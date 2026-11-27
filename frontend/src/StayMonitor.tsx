@@ -1,3 +1,4 @@
+import { useApiQuery, writeApi } from "./api-query";
 import { useEffect, useRef, useState } from "react";
 import { apiBase } from "./staff-auth";
 import { notifySuccess } from "./notifications";
@@ -47,7 +48,7 @@ const money = (n: number) =>
     n / 100,
   );
 export default function StayMonitor({ token }: { token?: string }) {
-  const [items, setItems] = useState<Item[]>(() => {
+  const [demoItems, setItems] = useState<Item[]>(() => {
     if (token) return [];
     try {
       return (
@@ -58,29 +59,50 @@ export default function StayMonitor({ token }: { token?: string }) {
     }
   });
   useEffect(() => {
-    if (!token) sessionStorage.setItem(demoKey, JSON.stringify(items));
-  }, [items, token]);
-  const [reminderMinutes, setReminderMinutes] = useState<number | null>(
-    token ? null : 30,
-  );
-  const [anchor, setAnchor] = useState<ClockAnchor>({
+    if (!token) sessionStorage.setItem(demoKey, JSON.stringify(demoItems));
+  }, [demoItems, token]);
+  const stayQuery = useApiQuery<{
+    items: Item[];
+    serverNow: string;
+    enabled: boolean;
+    warningMinutes?: number[];
+  }>(token ? "/staff/stays" : null, token, { live: true, clock: true });
+  const items = token ? (stayQuery.data?.items ?? []) : demoItems;
+  const reminderMinutes = token
+    ? (stayQuery.data?.warningMinutes?.[0] ?? null)
+    : 30;
+  const [localAnchor, setLocalAnchor] = useState<ClockAnchor>({
     serverMs: Date.now(),
     receivedMs: performance.now(),
   });
-  const [tick, setTick] = useState(performance.now());
-  const [syncState, setSyncState] = useState<"loading" | "ready" | "error">(
-    token ? "loading" : "ready",
-  );
+  const [tick, setTick] = useState(() => performance.now());
+  const [uncertainAt, setUncertainAt] = useState(0);
+  const serverMs = Date.parse(stayQuery.data?.serverNow ?? "");
+  const anchor = Number.isFinite(serverMs)
+    ? {
+        serverMs,
+        receivedMs: performance.timeOrigin
+          ? stayQuery.dataUpdatedAt - performance.timeOrigin
+          : performance.now(),
+      }
+    : localAnchor;
+  const hasLoaded = !token || Boolean(stayQuery.data);
+  const syncState = !token
+    ? "ready"
+    : stayQuery.isError ||
+        (uncertainAt > 0 && stayQuery.dataUpdatedAt <= uncertainAt) ||
+        (hasLoaded && !Number.isFinite(serverMs))
+      ? "error"
+      : hasLoaded
+        ? "ready"
+        : "loading";
   const synced = syncState === "ready";
-  const [hasLoaded, setHasLoaded] = useState(!token);
-  const [enabled, setEnabled] = useState(!token);
+  const enabled = !token || (stayQuery.data?.enabled === true && synced);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const keys = useRef(new Map<string, { key: string; reason: string }>());
-  const syncRevision = useRef(0);
-  const refresh = useRef<() => Promise<void>>(async () => {});
-  const clockNow = serverTime(anchor, tick);
+  const clockNow = serverTime(anchor, Math.max(tick, anchor.receivedMs));
   const hasRunningCountdown = items.some(
     (item) => !item.checked_out_at && Date.parse(item.checkout_at) > clockNow,
   );
@@ -89,68 +111,6 @@ export default function StayMonitor({ token }: { token?: string }) {
     const timer = setInterval(() => setTick(performance.now()), 1000);
     return () => clearInterval(timer);
   }, [hasRunningCountdown]);
-  useEffect(() => {
-    let active = true;
-    let inFlight = false;
-    const controller = new AbortController();
-    setSyncState(token ? "loading" : "ready");
-    setHasLoaded(!token);
-    async function load() {
-      if (!token) {
-        setTick(performance.now());
-        return;
-      }
-      if (inFlight || !active) return;
-      inFlight = true;
-      const revision = syncRevision.current;
-      try {
-        const response = await fetch(`${apiBase}/staff/stays`, {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: "no-store",
-          signal: controller.signal,
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error);
-        const serverMs = Date.parse(data.serverNow);
-        if (!Number.isFinite(serverMs)) throw new Error("Invalid server time");
-        if (active && revision === syncRevision.current) {
-          setItems(data.items);
-          setReminderMinutes(data.warningMinutes?.[0] ?? null);
-          setAnchor({
-            serverMs,
-            receivedMs: performance.now(),
-          });
-          setTick(performance.now());
-          setSyncState("ready");
-          setHasLoaded(true);
-          setEnabled(data.enabled);
-          setMessage("");
-        }
-      } catch {
-        if (active) {
-          setSyncState("error");
-          setEnabled(false);
-        }
-      } finally {
-        inFlight = false;
-      }
-    }
-    refresh.current = load;
-    void load();
-    const poll = setInterval(() => void load(), 15000);
-    const resume = () => {
-      if (document.visibilityState !== "hidden") void load();
-    };
-    window.addEventListener("focus", resume);
-    document.addEventListener("visibilitychange", resume);
-    return () => {
-      active = false;
-      controller.abort();
-      clearInterval(poll);
-      window.removeEventListener("focus", resume);
-      document.removeEventListener("visibilitychange", resume);
-    };
-  }, [token]);
   async function depart(item: Item) {
     setBusy(true);
     setMessage("");
@@ -169,7 +129,7 @@ export default function StayMonitor({ token }: { token?: string }) {
           );
         const attempt = prior ?? { key: crypto.randomUUID(), reason };
         keys.current.set(item.id, attempt);
-        const response = await fetch(
+        const response = await writeApi(
           `${apiBase}/staff/stays/${item.id}/checkout`,
           {
             method: "POST",
@@ -200,8 +160,8 @@ export default function StayMonitor({ token }: { token?: string }) {
           !Number.isFinite(Date.parse(data.checked_out_at))
         ) {
           // A read started before the interruption cannot reconcile the checkout.
-          syncRevision.current += 1;
-          setSyncState("error");
+          setUncertainAt(Date.now());
+          void stayQuery.refetch();
           throw new Error(
             "Checkout could not be confirmed. Synchronize and check the stay status before retrying.",
           );
@@ -219,12 +179,11 @@ export default function StayMonitor({ token }: { token?: string }) {
             }
           : row,
       );
-      setItems(next);
-      if (!token) sessionStorage.setItem(demoKey, JSON.stringify(next));
+      if (!token) setItems(next);
       setMessage(
         "Departure recorded. Needs Cleaning. No automatic overtime charge.",
       );
-      if (token) await refresh.current();
+      if (token) await stayQuery.refetch({ cancelRefetch: false });
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Checkout unavailable.",
@@ -300,7 +259,7 @@ export default function StayMonitor({ token }: { token?: string }) {
             Server time could not be refreshed. Countdown may be stale. Checkout
             is paused until the connection is restored.
           </p>
-          <button type="button" onClick={() => void refresh.current()}>
+          <button type="button" onClick={() => void stayQuery.refetch()}>
             Retry synchronization
           </button>
         </div>
@@ -401,7 +360,9 @@ export default function StayMonitor({ token }: { token?: string }) {
                             data-clock={clock.state}
                           >
                             <span role="status">
-                              {clock.state === "overdue" ? "Package expired" : ""}
+                              {clock.state === "overdue"
+                                ? "Package expired"
+                                : ""}
                             </span>
                             {clock.state !== "overdue" && (
                               <>
@@ -424,7 +385,8 @@ export default function StayMonitor({ token }: { token?: string }) {
                           </dl>
                           {item.balance_centavos > 0 && (
                             <label className="grid gap-1">
-                              Unpaid-departure exception reason · {item.room_code}
+                              Unpaid-departure exception reason ·{" "}
+                              {item.room_code}
                               <textarea
                                 className="rounded-lg border border-subtle p-2"
                                 maxLength={1000}
@@ -471,7 +433,10 @@ export default function StayMonitor({ token }: { token?: string }) {
             sessionStorage.removeItem(demoKey);
             setItems(fixtures());
             setReasons({});
-            setAnchor({ serverMs: Date.now(), receivedMs: performance.now() });
+            setLocalAnchor({
+              serverMs: Date.now(),
+              receivedMs: performance.now(),
+            });
             setTick(performance.now());
             setMessage("");
           }}

@@ -212,8 +212,14 @@ test("dashboard keeps loading distinct from zero and hides disabled Hall navigat
 
 test("dashboard presents authoritative counts and actionable queue links", async () => {
   let authorization;
-  globalThis.fetch = async (_url, options) => {
+  globalThis.fetch = async (url, options) => {
     authorization = options.headers.Authorization;
+    if (url.endsWith("/staff/rooms")) return globalThis.$1.json([]);
+    if (url.endsWith("/staff/stays"))
+      return globalThis.$1.json({
+        items: [],
+        serverNow: new Date().toISOString(),
+      });
     return {
       ok: true,
       json: async () => ({
@@ -254,7 +260,7 @@ test("dashboard presents authoritative counts and actionable queue links", async
 });
 
 test("dashboard failure retains working queue links without fabricated counts", async () => {
-  globalThis.fetch = async () => ({ ok: false });
+  globalThis.fetch = async () => new globalThis.$1(null, { status: 503 });
   view();
   await waitFor(() => assert.ok(screen.getByText(/Live summary unavailable/)));
   assert.equal(screen.queryByText("0"), null);
@@ -414,9 +420,7 @@ test("staff shell preserves outlet context, capability gates and menu controls",
     "Front desk",
   );
   assert.equal(
-    screen
-      .getByRole("link", { name: "New walk-in" })
-      .getAttribute("href"),
+    screen.getByRole("link", { name: "New walk-in" }).getAttribute("href"),
     "/staff/walkins",
   );
   fireEvent.click(screen.getByRole("button", { name: "Sign out" }));

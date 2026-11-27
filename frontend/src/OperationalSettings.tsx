@@ -1,3 +1,4 @@
+import { useApiQuery, writeApi } from "./api-query";
 import React from "react";
 import { useOutletContext } from "react-router";
 import { apiBase } from "./staff-auth";
@@ -21,35 +22,26 @@ export default function OperationalSettings({ token }: { token: string }) {
   const { signOut } =
     useOutletContext<{ signOut?: () => Promise<void> } | null>() ?? {};
   const [signingOut, setSigningOut] = React.useState(false);
-  const [value, setValue] = React.useState<Settings | null>(null);
-  const [message, setMessage] = React.useState("");
+  const settings = useApiQuery<Settings>("/staff/settings", token, {
+    live: true,
+  });
+  const [draft, setValue] = React.useState<Settings>();
+  const value = settings.data ? (draft ?? settings.data) : undefined;
+  const [actionMessage, setMessage] = React.useState("");
+  const message =
+    actionMessage ||
+    (settings.isError
+      ? "Settings are unavailable until the approved migration is applied."
+      : "");
   const [busy, setBusy] = React.useState(false);
 
-  React.useEffect(() => {
-    const controller = new AbortController();
-    void fetch(`${apiBase}/staff/settings`, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error();
-        setValue((await response.json()) as Settings);
-      })
-      .catch(() => {
-        if (!controller.signal.aborted)
-          setMessage(
-            "Settings are unavailable until the approved migration is applied.",
-          );
-      });
-    return () => controller.abort();
-  }, [token]);
   async function save(event: React.FormEvent) {
     event.preventDefault();
     if (!value) return;
     setMessage("");
     setBusy(true);
     try {
-      const response = await fetch(`${apiBase}/staff/settings`, {
+      const response = await writeApi(`${apiBase}/staff/settings`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -58,6 +50,8 @@ export default function OperationalSettings({ token }: { token: string }) {
         body: JSON.stringify(value),
       });
       if (!response.ok) throw new Error();
+      await settings.refetch({ cancelRefetch: false });
+      setValue(undefined);
       setMessage("Operational settings saved and audited.");
       notifySuccess("Operational settings saved.");
     } catch {

@@ -1,4 +1,5 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useApiQuery, writeApi } from "./api-query";
+import { useState, type FormEvent } from "react";
 import StaffLoadingSkeleton, { SkeletonBlock } from "./StaffLoadingSkeleton";
 import { apiBase } from "./staff-auth";
 import { parsePesoInput } from "./peso-input";
@@ -37,35 +38,16 @@ export function StaffRefundIssue(props: Props) {
 }
 
 export function StaffRefundIssueQueue({ token }: { token: string }) {
-  const [items, setItems] = useState<
-    {
+  const reports = useApiQuery<{
+    items: {
       kind: Props["kind"];
       itemId: string;
       reservationId: string;
       reportedAt: string;
-    }[]
-  >();
-  const [failed, setFailed] = useState(false);
-  const [revision, setRevision] = useState(0);
-  useEffect(() => {
-    const controller = new AbortController();
-    void fetch(`${apiBase}/staff/refund-issues`, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error();
-        const result = await response.json();
-        if (!controller.signal.aborted) {
-          setItems(result.items);
-          setFailed(false);
-        }
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setFailed(true);
-      });
-    return () => controller.abort();
-  }, [token, revision]);
+    }[];
+  }>("/staff/refund-issues", token, { live: true });
+  const items = reports.data?.items;
+  const failed = reports.isError;
   return (
     <section
       aria-label="Open refund reports"
@@ -75,7 +57,7 @@ export function StaffRefundIssueQueue({ token }: { token: string }) {
       <button
         type="button"
         className="min-h-11 font-semibold text-primary"
-        onClick={() => setRevision((value) => value + 1)}
+        onClick={() => void reports.refetch({ cancelRefetch: false })}
       >
         Refresh refund reports
       </button>
@@ -129,34 +111,23 @@ function RefundIssue({
   role,
 }: Props & { role: "guest" | "staff" }) {
   const [open, setOpen] = useState(false);
-  const [issue, setIssue] = useState<Issue | null>();
   const [amount, setAmount] = useState("");
   const [text, setText] = useState("");
-  const [error, setError] = useState("");
+  const [actionError, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const path = `${apiBase}/${role}/refund-issues/${kind}/${encodeURIComponent(itemId)}`;
-  useEffect(() => {
-    if (!open) return;
-    const controller = new AbortController();
-    setIssue(undefined);
-    setError("");
-    void fetch(path, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error();
-        const result = (await response.json()) as { issue: Issue | null };
-        if (!controller.signal.aborted) setIssue(result.issue);
-      })
-      .catch(() => {
-        if (!controller.signal.aborted)
-          setError(
-            "Refund reports are unavailable. Close and reopen to try again.",
-          );
-      });
-    return () => controller.abort();
-  }, [open, path, token]);
+  const path =
+    "/" + role + "/refund-issues/" + kind + "/" + encodeURIComponent(itemId);
+  const report = useApiQuery<{ issue: Issue | null }>(
+    open ? path : null,
+    token,
+    { live: true },
+  );
+  const issue = report.data?.issue;
+  const error =
+    actionError ||
+    (report.isError
+      ? "Refund reports are unavailable. Close and reopen to try again."
+      : "");
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -168,7 +139,7 @@ function RefundIssue({
         role === "staff"
           ? { resolution: text }
           : { details: text, receivedCentavos: parsePesoInput(amount) };
-      const response = await fetch(path, {
+      const response = await writeApi(apiBase + path, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -182,7 +153,7 @@ function RefundIssue({
       };
       if (!response.ok || !result.issue)
         throw new Error(result.error ?? "Refund report could not be saved.");
-      setIssue(result.issue);
+      await report.refetch({ cancelRefetch: false });
       setText("");
     } catch (failure) {
       setError(
@@ -196,7 +167,8 @@ function RefundIssue({
   }
 
   const canSubmit =
-    role === "guest" ? issue === null : issue?.status === "open";
+    !report.isError &&
+    (role === "guest" ? issue === null : issue?.status === "open");
   return (
     <details
       className="mt-3 text-sm"

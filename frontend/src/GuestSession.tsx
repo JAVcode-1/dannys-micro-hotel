@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { apiBase, guestAuth } from "./staff-auth";
 import { notifySuccess } from "./notifications";
+import PrivateDataScope from "./PrivateDataScope";
 
 type GuestAccess =
   | { status: "loading" }
@@ -143,7 +144,15 @@ export function GuestSessionProvider({
         },
       }}
     >
-      {children}
+      <PrivateDataScope
+        role="guest"
+        userId={
+          access.status === "unauthenticated" ? undefined : session?.user.id
+        }
+        accessTag={session?.user.email}
+      >
+        {children}
+      </PrivateDataScope>
     </GuestContext.Provider>
   );
 }

@@ -1,29 +1,12 @@
 import type { PublishedReviewPage } from "@staytrack/shared";
-import { useEffect, useState } from "react";
-import { apiBase } from "./staff-auth";
+import { useState } from "react";
+import { useApiQuery } from "./api-query";
 
 export default function GuestReviews() {
   const [page, setPage] = useState(1);
-  const [data, setData] = useState<PublishedReviewPage>();
-  const [error, setError] = useState(false);
-  useEffect(() => {
-    const controller = new AbortController();
-    void fetch(apiBase + "/reviews?page=" + page, { signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Reviews unavailable");
-        const result: PublishedReviewPage = await response.json();
-        if (!controller.signal.aborted) setData(result);
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setError(true);
-      });
-    return () => controller.abort();
-  }, [page]);
-  function navigate(next: number) {
-    setData(undefined);
-    setError(false);
-    setPage(next);
-  }
+  const { data, isError: error } = useApiQuery<PublishedReviewPage>(
+    "/reviews?page=" + page,
+  );
   return (
     <section className="mx-auto max-w-3xl space-y-5">
       <h1 className="text-3xl font-semibold">Verified guest reviews</h1>
@@ -80,10 +63,10 @@ export default function GuestReviews() {
           ))}
           <div className="flex gap-3">
             {page > 1 && (
-              <button onClick={() => navigate(page - 1)}>Previous page</button>
+              <button onClick={() => setPage(page - 1)}>Previous page</button>
             )}
             {data.count > page * 20 && (
-              <button onClick={() => navigate(page + 1)}>Next page</button>
+              <button onClick={() => setPage(page + 1)}>Next page</button>
             )}
           </div>
         </>

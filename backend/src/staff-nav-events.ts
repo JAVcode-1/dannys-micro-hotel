@@ -1,7 +1,6 @@
 import type { Express, RequestHandler, Response } from "express";
+import { writeDomain } from "@staytrack/shared/data-domains";
 
-const queueWrites =
-  /^\/(?:guest\/(?:payments\/[^/]+\/proof|cancellations|reschedules|hall\/[^/]+\/(?:cancel|reschedule))|staff\/(?:payment-reviews|rooms|walkins|check-ins|stays|stay-extensions|cancellations|reschedules|hall\/actions))(?:\/|$)/;
 const streamsByApp = new WeakMap<Express, Set<Response>>();
 
 export function closeStaffNavEvents(app: Express) {
@@ -34,20 +33,17 @@ export function registerStaffNavEvents(app: Express, staff: RequestHandler) {
       clearTimeout(expire);
       streams.delete(res);
     });
-    res.write("data: refresh\n\n");
+    res.write("data: connected\n\n");
   });
 
   app.use((req, res, next) => {
-    if (
-      (req.method === "POST" || req.method === "PATCH") &&
-      queueWrites.test(req.path) &&
-      !req.path.endsWith("/quote")
-    ) {
+    const domain = writeDomain(req.method, req.path);
+    if (domain) {
       res.once("finish", () => {
         if (res.statusCode < 200 || res.statusCode >= 300) return;
         for (const stream of streams)
           if (!stream.writableEnded && !stream.writableNeedDrain)
-            stream.write("data: refresh\n\n");
+            stream.write(`data: ${domain}\n\n`);
       });
     }
     next();

@@ -207,6 +207,8 @@ export function createApp(
     },
   );
 
+  registerStaffNavEvents(app, catalogStaff);
+
   app.get("/health", (_request, response) => {
     const body: HealthResponse = { status: "ok" };
     response.json(body);
@@ -697,7 +699,6 @@ export function createApp(
     response.setHeader("Cache-Control", "no-store");
     response.json(result);
   });
-  registerStaffNavEvents(app, catalogStaff);
   registerPaymentRoutes(app, catalogStaff, guestVerifier, paymentOptions);
   registerGuestHall(
     app,
